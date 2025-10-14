@@ -29,8 +29,8 @@ jobs:
 
       - name: List build outputs
         run: |
-          dir bin\Debug-x64 /s
-        
+          dir "bin\Debug-x64" -Recurse
+
       - name: Smoke Test (Run Sandbox for a few seconds)
         run: |
           Start-Process -FilePath .\bin\Debug-x64\Sandbox\SandboxApp.exe
