@@ -3,6 +3,8 @@
 #include "Platform/WindowsWindow.h"
 #include "Pillar/Events/ApplicationEvent.h"
 
+#include <memory>
+
 namespace Pillar
 {
 
