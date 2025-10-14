@@ -1,0 +1,47 @@
+name: Windows CMake Build
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  BUILD_TYPE: Debug
+
+jobs:
+  build:
+    name: Build on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+      - name: Build
+        run: |
+          cmake --build build --config ${{env.BUILD_TYPE}} --parallel
+
+      - name: List build outputs
+        run: |
+          dir "bin\Debug-x64" -Recurse
+
+      # Flaky so commenting out for now
+      # - name: Smoke Test (Run Sandbox for a few seconds)
+      #   run: |
+      #     $p = Start-Process -FilePath .\bin\Debug-x64\Sandbox\SandboxApp.exe -PassThru
+      #     Start-Sleep -Seconds 3
+      #     Stop-Process -Id $p.Id -ErrorAction Stop
+
+  # test:
+  #   name: Run Tests
+  #   needs: build
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Run Tests
