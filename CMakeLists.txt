@@ -44,6 +44,19 @@ FetchContent_Declare(
   GIT_TAG 3.4
 )
 
+# GLAD
+FetchContent_Declare(
+  glad
+  GIT_REPOSITORY https://github.com/Dav1dde/glad.git
+  GIT_TAG v0.1.36
+)
+
+# Configure GLAD before fetching
+set(GLAD_PROFILE "core" CACHE STRING "")
+set(GLAD_API "gl=4.6" CACHE STRING "")
+set(GLAD_GENERATOR "c" CACHE STRING "")
+set(GLAD_INSTALL OFF CACHE BOOL "" FORCE)
+
 # Configure GLFW options before making it available
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -51,7 +64,7 @@ set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
 # Make dependencies available
-FetchContent_MakeAvailable(spdlog glfw)
+FetchContent_MakeAvailable(spdlog glfw glad)
 
 # Add subdirectories
 add_subdirectory(Pillar)

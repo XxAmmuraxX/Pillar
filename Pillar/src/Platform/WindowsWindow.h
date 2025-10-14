@@ -2,7 +2,7 @@
 #include <string>
 #include "Pillar/Window.h"
 
-#include "GLFW/glfw3.h"
+struct GLFWwindow; // forward declaration to avoid including GLFW in header
 
 namespace Pillar
 {

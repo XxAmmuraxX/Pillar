@@ -1,6 +1,8 @@
 #include "WindowsWindow.h"
 
 #include "Pillar/Logger.h"
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 
 namespace Pillar
 {
@@ -45,6 +47,16 @@ namespace Pillar
 		}
 
 		glfwMakeContextCurrent(m_Window);
+
+		// Initialize GLAD after context creation
+		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+		{
+			PIL_CORE_ERROR("Failed to initialize GLAD");
+			glfwDestroyWindow(m_Window);
+			m_Window = nullptr;
+			glfwTerminate();
+			return;
+		}
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 		SetVSync(true);
 	}

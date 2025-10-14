@@ -36,6 +36,7 @@ target_link_libraries(Pillar
     PUBLIC 
         spdlog::spdlog
         glfw
+        glad
 )
 
 # For Windows, link additional system libraries that GLFW needs
@@ -47,3 +48,11 @@ endif()
 
 # Define this so symbols are exported from DLL
 target_compile_definitions(Pillar PRIVATE PIL_EXPORT)
+
+# Copy Pillar DLL next to the Sandbox executable whenever Pillar is built
+add_custom_command(TARGET Pillar POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${EXECUTABLE_OUTPUT_DIR}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        $<TARGET_FILE:Pillar>
+        ${EXECUTABLE_OUTPUT_DIR}
+)
