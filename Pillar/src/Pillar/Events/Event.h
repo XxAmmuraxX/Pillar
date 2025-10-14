@@ -61,24 +61,25 @@ namespace Pillar
 
 	class PIL_API EventDispatcher
 	{
-		public:
-			EventDispatcher(Event& event)
-			: m_Event(event) {}
+		template<typename T>
+		using EventFunc = std::function<bool(T&)>;
+	public:
+		EventDispatcher(Event& event)
+		: m_Event(event) {}
 
-			using EventFunc = std::function<bool(Event&)>;
-			template<typename T>
-			bool Dispatch(const EventFunc& func)
+		template<typename T>
+		bool Dispatch(EventFunc<T> func)
+		{
+			if (m_Event.GetEventType() == T::GetStaticType())
 			{
-				if (m_Event.GetEventType() == T::GetStaticType())
-				{
-					m_Event.Handled = func(m_Event);
-					return true;
-				}
-				return false;
+				m_Event.Handled = func(*(T*)&m_Event);
+				return true;
 			}
+			return false;
+		}
 
-		private:
-			Event& m_Event;
+	private:
+		Event& m_Event;
 	};
 
 
