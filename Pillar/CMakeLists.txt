@@ -6,7 +6,9 @@ add_library(Pillar SHARED
     src/Pillar/Logger.cpp
     src/Pillar/Events/ApplicationEvent.cpp
     src/Platform/WindowsWindow.cpp
-)
+    src/Layer.cpp
+    src/Pillar/LayerStack.cpp
+    src/Pillar/ImGuiLayer.cpp)
 
 # Override for all configurations
 foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)
@@ -37,6 +39,7 @@ target_link_libraries(Pillar
         spdlog::spdlog
         glfw
         glad
+        imgui
 )
 
 # For Windows, link additional system libraries that GLFW needs

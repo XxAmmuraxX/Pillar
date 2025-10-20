@@ -66,6 +66,36 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 # Make dependencies available
 FetchContent_MakeAvailable(spdlog glfw glad)
 
+# Dear ImGui (docking)
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG docking
+)
+
+FetchContent_MakeAvailable(spdlog glfw glad imgui)
+
+# Create imgui library from sources
+set(IMGUI_DIR ${imgui_SOURCE_DIR})
+add_library(imgui STATIC
+    ${IMGUI_DIR}/imgui.cpp
+    ${IMGUI_DIR}/imgui_demo.cpp
+    ${IMGUI_DIR}/imgui_draw.cpp
+    ${IMGUI_DIR}/imgui_tables.cpp
+    ${IMGUI_DIR}/imgui_widgets.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+    ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+)
+
+target_include_directories(imgui PUBLIC
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
+)
+
+target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLAD)
+
+target_link_libraries(imgui PUBLIC glfw)
+
 # Add subdirectories
 add_subdirectory(Pillar)
 add_subdirectory(Sandbox)

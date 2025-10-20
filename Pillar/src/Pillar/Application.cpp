@@ -2,6 +2,7 @@
 #include "stdio.h"
 #include "Application.h"
 #include "Pillar/Logger.h"
+#include <chrono>
 
 
 namespace Pillar
@@ -9,14 +10,24 @@ namespace Pillar
 
 #define BIND_EVENT_FN(fn) std::bind(&fn, this, std::placeholders::_1)
 
+	Application* Application::s_Instance = nullptr;
+
 	Application::Application()
 	{
+		PIL_CORE_ASSERT(!s_Instance, "Application already exists!");
+		s_Instance = this;
 		m_Window = std::unique_ptr<Window>(Window::Create(WindowProps("Pillar Engine", 1280, 720)));
 		m_Window->SetEventCallback(BIND_EVENT_FN(Application::OnEvent));
 
 	}
 	Application::~Application()
 	{
+		// Ensure layers are detached and destroyed via LayerStack destructor
+	}
+
+	Application& Application::Get()
+	{
+		return *s_Instance;
 	}
 
 	void Application::OnEvent(Event& e)
@@ -24,6 +35,14 @@ namespace Pillar
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(Application::OnWindowClose));
 		PIL_CORE_TRACE("{0}", e.ToString());
+
+		// Propagate to layers in reverse order (top-most first)
+		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
+		{
+			(*it)->OnEvent(e);
+			if (e.Handled)
+				break;
+		}
 	}
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
@@ -32,6 +51,14 @@ namespace Pillar
 		return true;
 	}
 
+	void Application::PushLayer(Layer* layer)
+	{
+		m_LayerStack.PushLayer(layer);
+	}
+	void Application::PushOverlay(Layer* overlay)
+	{
+		m_LayerStack.PushOverlay(overlay);
+	}
 
 	void Application::Run()
 	{
@@ -40,14 +67,27 @@ namespace Pillar
 		PIL_CORE_INFO("Application is running...");
 		PIL_CORE_ERROR("This is an error message for demonstration purposes.");
 		PIL_CORE_WARN("This is a warning message for demonstration purposes.");
+
+		auto lastTime = std::chrono::high_resolution_clock::now();
 		while (m_Running)
 		{// Simulate application running
+			// Delta time
+			auto now = std::chrono::high_resolution_clock::now();
+			std::chrono::duration<float> dt = now - lastTime;
+			lastTime = now;
+			float deltaTime = dt.count();
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnUpdate(deltaTime);
+			}
+
+			for (Layer* layer : m_LayerStack)
+			{
+				layer->OnImGuiRender();
+			}
+
 			m_Window->OnUpdate();
-
-			// Here you would typically handle events, update the application state, render, etc.
-			// For demonstration purposes, we will just sleep for a while.
-			//std::this_thread::sleep_for(std::chrono::seconds(1));
-
 		}
 	}
 }

@@ -2,6 +2,7 @@
 #include "Core.h"
 #include "Platform/WindowsWindow.h"
 #include "Pillar/Events/ApplicationEvent.h"
+#include "Pillar/LayerStack.h"
 
 #include <memory>
 
@@ -17,10 +18,22 @@ namespace Pillar
 		void Run();
 		void OnEvent(Event& e);
 
+		// Layers API
+		void PushLayer(Layer* layer);
+		void PushOverlay(Layer* overlay);
+
+		inline Window& GetWindow() { return *m_Window; }
+		inline const LayerStack& GetLayerStack() const { return m_LayerStack; }
+
+		static Application& Get();
+
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 		std::unique_ptr<Window> m_Window;
 		bool m_Running = true;
+		LayerStack m_LayerStack;
+
+		static Application* s_Instance;
 	};
 
 	Application* CreateApplication();
