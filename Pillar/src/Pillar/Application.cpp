@@ -3,7 +3,7 @@
 #include "Application.h"
 #include "Pillar/Logger.h"
 #include <chrono>
-
+#include "Pillar/Input.h"
 
 namespace Pillar
 {

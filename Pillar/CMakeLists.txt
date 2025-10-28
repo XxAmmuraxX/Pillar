@@ -6,10 +6,11 @@ add_library(Pillar SHARED
     src/Pillar/Logger.cpp
     src/Pillar/Events/ApplicationEvent.cpp
     src/Platform/WindowsWindow.cpp
-    src/Layer.cpp
+    src/Pillar/Layer.cpp
     src/Pillar/LayerStack.cpp
     src/Pillar/ImGuiLayer.cpp
-)
+    src/Pillar/Input.cpp
+    src/Pillar/KeyCodes.h)
 
 # Override for all configurations
 foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)
