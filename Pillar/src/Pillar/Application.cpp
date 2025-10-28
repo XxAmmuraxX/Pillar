@@ -3,7 +3,7 @@
 #include "Application.h"
 #include "Pillar/Logger.h"
 #include <chrono>
-
+#include "Pillar/Input.h"
 
 namespace Pillar
 {
@@ -34,7 +34,6 @@ namespace Pillar
 	{
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(Application::OnWindowClose));
-		PIL_CORE_TRACE("{0}", e.ToString());
 
 		// Propagate to layers in reverse order (top-most first)
 		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
