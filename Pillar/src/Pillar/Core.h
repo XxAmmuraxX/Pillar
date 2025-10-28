@@ -15,3 +15,6 @@
 	#define PIL_ASSERT(x, ...)
 #define PIL_CORE_ASSERT(x, ...)
 #endif
+
+// Macro to bind member functions to event callbacks
+#define BIND_EVENT_FN(fn) [this](auto&&... args) -> decltype(auto) { return this->fn(std::forward<decltype(args)>(args)...); }
