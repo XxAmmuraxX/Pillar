@@ -19,6 +19,9 @@ namespace Pillar
 		m_Window = std::unique_ptr<Window>(Window::Create(WindowProps("Pillar Engine", 1280, 720)));
 		m_Window->SetEventCallback(BIND_EVENT_FN(Application::OnEvent));
 
+		// Create and push ImGui layer as an overlay
+		m_ImGuiLayer = new ImGuiLayer();
+		PushOverlay(m_ImGuiLayer);
 	}
 	Application::~Application()
 	{
@@ -34,7 +37,6 @@ namespace Pillar
 	{
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(Application::OnWindowClose));
-		PIL_CORE_TRACE("{0}", e.ToString());
 
 		// Propagate to layers in reverse order (top-most first)
 		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
@@ -82,10 +84,13 @@ namespace Pillar
 				layer->OnUpdate(deltaTime);
 			}
 
+			// Render ImGui
+			m_ImGuiLayer->Begin();
 			for (Layer* layer : m_LayerStack)
 			{
 				layer->OnImGuiRender();
 			}
+			m_ImGuiLayer->End();
 
 			m_Window->OnUpdate();
 		}

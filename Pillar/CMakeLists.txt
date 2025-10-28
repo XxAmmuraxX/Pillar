@@ -8,7 +8,8 @@ add_library(Pillar SHARED
     src/Platform/WindowsWindow.cpp
     src/Layer.cpp
     src/Pillar/LayerStack.cpp
-    src/Pillar/ImGuiLayer.cpp)
+    src/Pillar/ImGuiLayer.cpp
+)
 
 # Override for all configurations
 foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)

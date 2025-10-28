@@ -3,6 +3,7 @@
 #include "Platform/WindowsWindow.h"
 #include "Pillar/Events/ApplicationEvent.h"
 #include "Pillar/LayerStack.h"
+#include "Pillar/ImGuiLayer.h"
 
 #include <memory>
 
@@ -30,6 +31,7 @@ namespace Pillar
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);
 		std::unique_ptr<Window> m_Window;
+		ImGuiLayer* m_ImGuiLayer;
 		bool m_Running = true;
 		LayerStack m_LayerStack;
 
