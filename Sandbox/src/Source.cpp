@@ -7,7 +7,7 @@ class Sandbox : public Pillar::Application
 public:
 	Sandbox()
 	{
-		PushLayer(new Pillar::ExampleLayer());
+		PushLayer(new ExampleLayer());
 		PushOverlay(new Pillar::ImGuiLayer());
 	}
 	~Sandbox()

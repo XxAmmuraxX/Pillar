@@ -2,6 +2,8 @@
 
 #include "Pillar/Core.h"
 #include "Pillar/Events/Event.h"
+#include "Pillar/Events/KeyEvent.h"
+#include "Pillar/Events/MouseEvent.h"
 #include "Pillar/Logger.h"
 
 #include <string>
