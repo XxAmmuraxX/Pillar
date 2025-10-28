@@ -39,7 +39,7 @@ public:
     }
     void OnEvent(Pillar::Event& event) override
     {
-        if(event.GetEventType() == Pillar::EventType::KeyPressed)
+        if (event.GetEventType() == Pillar::EventType::KeyPressed)
         {
 			Pillar::KeyPressedEvent& keyEvent = static_cast<Pillar::KeyPressedEvent&>(event);
 			PIL_INFO("Key Pressed: {0} (repeats: {1})", keyEvent.GetKeyCode(), keyEvent.GetRepeatCount());
