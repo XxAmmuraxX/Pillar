@@ -1,3 +1,5 @@
+# Added this line so i know where the fuck i am
+# This is root cmake
 cmake_minimum_required(VERSION 3.16)
 project(Pillar)
 
@@ -51,6 +53,13 @@ FetchContent_Declare(
   GIT_TAG v0.1.36
 )
 
+# GLM 
+FetchContent_Declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG 0af55ccecd98d4e5a8d1fad7de25ba429d60e863 # 1.0.1
+)
+
 # Configure GLAD before fetching
 set(GLAD_PROFILE "core" CACHE STRING "")
 set(GLAD_API "gl=4.6" CACHE STRING "")
@@ -63,9 +72,6 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
-# Make dependencies available
-FetchContent_MakeAvailable(spdlog glfw glad)
-
 # Dear ImGui (docking)
 FetchContent_Declare(
   imgui
@@ -73,7 +79,8 @@ FetchContent_Declare(
   GIT_TAG docking
 )
 
-FetchContent_MakeAvailable(spdlog glfw glad imgui)
+# Make dependencies available (single call including glm and imgui)
+FetchContent_MakeAvailable(spdlog glfw glad glm imgui)
 
 # Create imgui library from sources
 set(IMGUI_DIR ${imgui_SOURCE_DIR})
