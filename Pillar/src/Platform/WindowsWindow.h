@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
+#include <memory>
 #include "Pillar/Window.h"
+#include "Pillar/Renderer/GraphicsContext.h"
 
 struct GLFWwindow; // forward declaration to avoid including GLFW in header
 
@@ -21,7 +23,10 @@ namespace Pillar
 	private:
 		virtual void Init(const WindowProps& props);
 		virtual void Shutdown();
+		
 		GLFWwindow* m_Window;
+		std::unique_ptr<GraphicsContext> m_Context;
+		
 		struct WindowData
 		{
 			std::string Title;

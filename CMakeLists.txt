@@ -51,6 +51,13 @@ FetchContent_Declare(
   GIT_TAG v0.1.36
 )
 
+# GLM
+FetchContent_Declare(
+  glm
+  GIT_REPOSITORY https://github.com/g-truc/glm.git
+  GIT_TAG 0.9.9.8
+)
+
 # Configure GLAD before fetching
 set(GLAD_PROFILE "core" CACHE STRING "")
 set(GLAD_API "gl=4.6" CACHE STRING "")
@@ -63,8 +70,11 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
+# Configure GLM options
+set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
+
 # Make dependencies available
-FetchContent_MakeAvailable(spdlog glfw glad)
+FetchContent_MakeAvailable(spdlog glfw glad glm)
 
 # Dear ImGui (docking)
 FetchContent_Declare(
@@ -73,7 +83,7 @@ FetchContent_Declare(
   GIT_TAG docking
 )
 
-FetchContent_MakeAvailable(spdlog glfw glad imgui)
+FetchContent_MakeAvailable(imgui)
 
 # Create imgui library from sources
 set(IMGUI_DIR ${imgui_SOURCE_DIR})
