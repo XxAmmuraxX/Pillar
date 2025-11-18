@@ -1,4 +1,4 @@
-# Added this line so i know where the fuck i am
+# Added this line for clarity about file location
 # This is pillar cmake
 # ==============================
 # Pillar Engine (Shared Library - DLL)

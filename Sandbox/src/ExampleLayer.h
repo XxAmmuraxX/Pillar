@@ -12,8 +12,6 @@ public:
 	void OnDetach() override { Layer::OnDetach(); }
     void OnUpdate(float dt) override
     {
-     
-
         // Test keyboard input using Pillar keycodes
         if (Pillar::Input::IsKeyPressed(PIL_KEY_SPACE))
         {
