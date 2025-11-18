@@ -1,3 +1,5 @@
+# Added this line for clarity about file location
+# This is pillar cmake
 # ==============================
 # Pillar Engine (Shared Library - DLL)
 # ==============================
@@ -35,13 +37,14 @@ target_include_directories(Pillar PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
-# Link libraries - GLFW includes its own headers when linked properly
+# Link libraries - add glm::glm
 target_link_libraries(Pillar 
     PUBLIC 
         spdlog::spdlog
         glfw
         glad
         imgui
+        glm::glm
 )
 
 # For Windows, link additional system libraries that GLFW needs

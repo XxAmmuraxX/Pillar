@@ -1,3 +1,5 @@
+# Added this line for clarity about file location
+# This is sandbox cmake
 # ==============================
 # Sandbox Application (Executable)
 # ==============================

@@ -231,3 +231,6 @@ These instructions are comprehensive and verified against the actual codebase st
 - The information contradicts observed behavior
 
 When in doubt about architecture or patterns, refer back to this document before exploring the codebase.
+
+## Review and Update
+Periodically review these instructions for accuracy as the codebase evolves. Update sections as needed to reflect new dependencies, build steps, or architectural changes.

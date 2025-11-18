@@ -41,9 +41,11 @@ namespace Pillar {
         // Enable Multi-Viewport / Platform Windows
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
+        // Configure ImGui ini file for docking layout persistence
+        io.IniFilename = "imgui.ini";
+
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
-        // ImGui::StyleColorsLight();
 
         // When viewports are enabled we tweak WindowRounding/WindowBg 
         // so platform windows can look identical to regular ones.
@@ -78,9 +80,62 @@ namespace Pillar {
 
     void ImGuiLayer::OnImGuiRender()
     {
+        // Create dockspace over the main viewport
+        static bool dockspaceOpen = true;
+        static bool opt_fullscreen = true;
+        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+        if (opt_fullscreen)
+        {
+            ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImGui::SetNextWindowPos(viewport->Pos);
+            ImGui::SetNextWindowSize(viewport->Size);
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse;
+            window_flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+            window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+        }
+
+        if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+            window_flags |= ImGuiWindowFlags_NoBackground;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("DockSpace", &dockspaceOpen, window_flags);
+        ImGui::PopStyleVar();
+
+        if (opt_fullscreen)
+            ImGui::PopStyleVar(2);
+
+        // DockSpace
+        ImGuiIO& io = ImGui::GetIO();
+        if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+        {
+            ImGuiID dockspace_id = ImGui::GetID("PillarDockSpace");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+        }
+
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Exit"))
+                {
+                    WindowCloseEvent closeEvent;
+                    Application::Get().OnEvent(closeEvent);
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+
+        ImGui::End();
+
         // Example ImGui window
-        static bool show = true;
-        ImGui::ShowDemoWindow(&show);
+        static bool show_demo = true;
+        ImGui::ShowDemoWindow(&show_demo);
     }
 
     void ImGuiLayer::Begin()
@@ -93,9 +148,6 @@ namespace Pillar {
     void ImGuiLayer::End()
     {
         ImGuiIO& io = ImGui::GetIO();
-        Application& app = Application::Get();
-        io.DisplaySize = ImVec2((float)app.GetWindow().GetWidth(), 
-                                (float)app.GetWindow().GetHeight());
 
         // Rendering
         ImGui::Render();
@@ -116,61 +168,9 @@ namespace Pillar {
         if (m_BlockEvents)
         {
             ImGuiIO& io = ImGui::GetIO();
-            event.Handled |= event.IsInCategory(EventCategoryMouse) & io.WantCaptureMouse;
-            event.Handled |= event.IsInCategory(EventCategoryKeyboard) & io.WantCaptureKeyboard;
+            event.Handled |= event.IsInCategory(EventCategoryMouse) && io.WantCaptureMouse;
+            event.Handled |= event.IsInCategory(EventCategoryKeyboard) && io.WantCaptureKeyboard;
         }
-
-        // Dispatch to specific handlers for custom processing if needed
-        EventDispatcher dispatcher(event);
-        dispatcher.Dispatch<MouseButtonPressedEvent>(BIND_EVENT_FN(ImGuiLayer::OnMouseButtonPressed));
-        dispatcher.Dispatch<MouseButtonReleasedEvent>(BIND_EVENT_FN(ImGuiLayer::OnMouseButtonReleased));
-        dispatcher.Dispatch<MouseMovedEvent>(BIND_EVENT_FN(ImGuiLayer::OnMouseMoved));
-        dispatcher.Dispatch<MouseScrolledEvent>(BIND_EVENT_FN(ImGuiLayer::OnMouseScrolled));
-        dispatcher.Dispatch<KeyPressedEvent>(BIND_EVENT_FN(ImGuiLayer::OnKeyPressed));
-        dispatcher.Dispatch<KeyReleasedEvent>(BIND_EVENT_FN(ImGuiLayer::OnKeyReleased));
-        dispatcher.Dispatch<WindowResizeEvent>(BIND_EVENT_FN(ImGuiLayer::OnWindowResize));
-    }
-
-    bool ImGuiLayer::OnMouseButtonPressed(MouseButtonPressedEvent& e)
-    {
-        // ImGui backend handles this automatically via ImGui_ImplGlfw callbacks
-        return false;
-    }
-
-    bool ImGuiLayer::OnMouseButtonReleased(MouseButtonReleasedEvent& e)
-    {
-        // ImGui backend handles this automatically via ImGui_ImplGlfw callbacks
-        return false;
-    }
-
-    bool ImGuiLayer::OnMouseMoved(MouseMovedEvent& e)
-    {
-        // ImGui backend handles this automatically via ImGui_ImplGlfw callbacks
-        return false;
-    }
-
-    bool ImGuiLayer::OnMouseScrolled(MouseScrolledEvent& e)
-    {
-        // ImGui backend handles this automatically via ImGui_ImplGlfw callbacks
-        return false;
-    }
-
-    bool ImGuiLayer::OnKeyPressed(KeyPressedEvent& e)
-    {
-        // ImGui backend handles this automatically via ImGui_ImplGlfw callbacks
-        return false;
-    }
-
-    bool ImGuiLayer::OnKeyReleased(KeyReleasedEvent& e)
-    {
-        // ImGui backend handles this automatically via ImGui_ImplGlfw callbacks
-        return false;
-    }
-
-    bool ImGuiLayer::OnWindowResize(WindowResizeEvent& e)
-    {
-        // ImGui will handle this automatically in Begin()
-        return false;
     }
 
 }
