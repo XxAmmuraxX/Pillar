@@ -2,6 +2,7 @@
 #include "stdio.h"
 #include "Application.h"
 #include "Pillar/Logger.h"
+#include "Pillar/Renderer/Renderer.h"
 #include <chrono>
 #include "Pillar/Input.h"
 
@@ -19,13 +20,18 @@ namespace Pillar
 		m_Window = std::unique_ptr<Window>(Window::Create(WindowProps("Pillar Engine", 1280, 720)));
 		m_Window->SetEventCallback(BIND_EVENT_FN(Application::OnEvent));
 
+		// Initialize Renderer
+		Renderer::Init();
+
 		// Create and push ImGui layer as an overlay
 		m_ImGuiLayer = new ImGuiLayer();
 		PushOverlay(m_ImGuiLayer);
 	}
+	
 	Application::~Application()
 	{
 		// Ensure layers are detached and destroyed via LayerStack destructor
+		Renderer::Shutdown();
 	}
 
 	Application& Application::Get()
@@ -37,6 +43,12 @@ namespace Pillar
 	{
 		EventDispatcher dispatcher(e);
 		dispatcher.Dispatch<WindowCloseEvent>(BIND_EVENT_FN(Application::OnWindowClose));
+
+		// Handle window resize for renderer viewport
+		dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
+			Renderer::SetViewport(0, 0, event.GetWidth(), event.GetHeight());
+			return false;
+		});
 
 		// Propagate to layers in reverse order (top-most first)
 		for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it)
@@ -57,6 +69,7 @@ namespace Pillar
 	{
 		m_LayerStack.PushLayer(layer);
 	}
+	
 	void Application::PushOverlay(Layer* overlay)
 	{
 		m_LayerStack.PushOverlay(overlay);
@@ -79,10 +92,20 @@ namespace Pillar
 			lastTime = now;
 			float deltaTime = dt.count();
 
+			// Clear screen
+			Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
+			Renderer::Clear();
+
+			// Begin scene
+			Renderer::BeginScene();
+
 			for (Layer* layer : m_LayerStack)
 			{
 				layer->OnUpdate(deltaTime);
 			}
+
+			// End scene
+			Renderer::EndScene();
 
 			// Render ImGui
 			m_ImGuiLayer->Begin();

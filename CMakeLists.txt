@@ -72,6 +72,11 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 
+# Configure GLM options
+set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
+
+
+
 # Dear ImGui (docking)
 FetchContent_Declare(
   imgui
@@ -79,7 +84,7 @@ FetchContent_Declare(
   GIT_TAG docking
 )
 
-# Make dependencies available (single call including glm and imgui)
+# Make dependencies available
 FetchContent_MakeAvailable(spdlog glfw glad glm imgui)
 
 # Create imgui library from sources

@@ -7,5 +7,11 @@
 #include "Pillar/Layer.h"
 #include "Pillar/ImguiLayer.h"
 
+// Renderer
+#include "Pillar/Renderer/Renderer.h"
+#include "Pillar/Renderer/RenderAPI.h"
+#include "Pillar/Renderer/Shader.h"
+#include "Pillar/Renderer/Buffer.h"
+
 #include "Pillar/EntryPoint.h"
 

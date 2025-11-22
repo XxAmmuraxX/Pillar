@@ -12,7 +12,18 @@ add_library(Pillar SHARED
     src/Pillar/LayerStack.cpp
     src/Pillar/ImGuiLayer.cpp
     src/Pillar/Input.cpp
-    src/Pillar/KeyCodes.h)
+    src/Pillar/KeyCodes.h
+    # Renderer
+    src/Pillar/Renderer/RenderAPI.cpp
+    src/Pillar/Renderer/Renderer.cpp
+    src/Pillar/Renderer/Shader.cpp
+    src/Pillar/Renderer/Buffer.cpp
+    # Platform - OpenGL
+    src/Platform/OpenGL/OpenGLRenderAPI.cpp
+    src/Platform/OpenGL/OpenGLContext.cpp
+    src/Platform/OpenGL/OpenGLShader.cpp
+    src/Platform/OpenGL/OpenGLBuffer.cpp
+)
 
 # Override for all configurations
 foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)

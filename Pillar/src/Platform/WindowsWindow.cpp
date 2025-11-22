@@ -1,9 +1,9 @@
 #include "WindowsWindow.h"
+#include "Platform/OpenGL/OpenGLContext.h"
 #include "Pillar/Events/ApplicationEvent.h"
 #include "Pillar/Events/KeyEvent.h"
 #include "Pillar/Events/MouseEvent.h"
 #include "Pillar/Logger.h"
-#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 namespace Pillar
@@ -52,17 +52,10 @@ namespace Pillar
 			return;
 		}
 
-		glfwMakeContextCurrent(m_Window);
+		// Create and initialize graphics context
+		m_Context = std::make_unique<OpenGLContext>(m_Window);
+		m_Context->Init();
 
-		// Initialize GLAD after context creation
-		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-		{
-			PIL_CORE_ERROR("Failed to initialize GLAD");
-			glfwDestroyWindow(m_Window);
-			m_Window = nullptr;
-			glfwTerminate();
-			return;
-		}
 		glfwSetWindowUserPointer(m_Window, &m_Data);
 		SetVSync(true);
 
@@ -185,7 +178,7 @@ namespace Pillar
 	void WindowsWindow::OnUpdate()
 	{
 		glfwPollEvents();
-		glfwSwapBuffers(m_Window);
+		m_Context->SwapBuffers();
 	}
 
 	void WindowsWindow::SetVSync(bool enabled)
