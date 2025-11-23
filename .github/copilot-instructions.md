@@ -253,11 +253,13 @@ PILLAR_/
 - Steps:
   1. Checkout code
   2. Install Ninja
-  3. Configure: `cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Debug`
-  4. Build: `cmake --build build --config Debug --parallel`
-  5. List outputs: `dir "bin\Debug-x64" -Recurse`
-  6. Run tests: `.\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml`
-  7. Publish test results using EnricoMi/publish-unit-test-result-action
+  3. Setup Mesa3D for software OpenGL rendering (allows GUI tests in CI)
+  4. Configure: `cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Debug`
+  5. Build: `cmake --build build --config Debug --parallel`
+  6. List outputs: `dir "bin\Debug-x64" -Recurse`
+  7. Run tests: `.\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml`
+  8. Publish test results using EnricoMi/publish-unit-test-result-action
+- **Mesa3D**: Uses software OpenGL rendering (llvmpipe) to enable window/input tests without hardware GPU
 - Smoke test for Sandbox is commented out (flaky in CI)
 
 ## Common Development Tasks
