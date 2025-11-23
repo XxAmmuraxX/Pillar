@@ -228,20 +228,22 @@ TEST_F(ApplicationTest, Application_OnEvent_LayerCanHandleEvent) {
 TEST_F(ApplicationTest, Application_OnEvent_ReverseLayerOrder) {
     class OrderTrackingLayer : public Layer {
     public:
-        OrderTrackingLayer(const std::string& name, std::vector<std::string>& order)
+        OrderTrackingLayer(const std::string& name, std::vector<std::string>* order)
             : Layer(name), m_Order(order) {}
         
         void OnEvent(Event& event) override {
-            m_Order.push_back(GetName());
+            if (m_Order) {
+                m_Order->push_back(GetName());
+            }
         }
         
-        std::vector<std::string>& m_Order;
+        std::vector<std::string>* m_Order;
     };
     
     std::vector<std::string> order;
-    OrderTrackingLayer* layer1 = new OrderTrackingLayer("Layer1", order);
-    OrderTrackingLayer* layer2 = new OrderTrackingLayer("Layer2", order);
-    OrderTrackingLayer* overlay1 = new OrderTrackingLayer("Overlay1", order);
+    OrderTrackingLayer* layer1 = new OrderTrackingLayer("Layer1", &order);
+    OrderTrackingLayer* layer2 = new OrderTrackingLayer("Layer2", &order);
+    OrderTrackingLayer* overlay1 = new OrderTrackingLayer("Overlay1", &order);
     
     m_App->PushLayer(layer1);
     m_App->PushLayer(layer2);
@@ -269,6 +271,11 @@ TEST_F(ApplicationTest, Application_OnEvent_ReverseLayerOrder) {
     
     // Layer2 should come before Layer1 (reverse order)
     EXPECT_LT(it2 - order.begin(), it1 - order.begin());
+    
+    // Clear the pointer to prevent use-after-free during cleanup
+    layer1->m_Order = nullptr;
+    layer2->m_Order = nullptr;
+    overlay1->m_Order = nullptr;
 }
 
 // ==============================
