@@ -111,3 +111,4 @@ target_link_libraries(imgui PUBLIC glfw)
 # Add subdirectories
 add_subdirectory(Pillar)
 add_subdirectory(Sandbox)
+add_subdirectory(Tests)

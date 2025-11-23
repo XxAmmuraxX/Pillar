@@ -18,6 +18,14 @@ jobs:
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
+      
+      - name: Setup Mesa3D for Software OpenGL
+        run: |
+          # Download and install Mesa3D for software rendering
+          curl -L -o mesa.7z https://github.com/pal1000/mesa-dist-win/releases/download/23.2.1/mesa3d-23.2.1-release-msvc.7z
+          7z x mesa.7z -omesa
+          # Copy OpenGL32.dll to system (software renderer)
+          Copy-Item "mesa\x64\opengl32.dll" -Destination "$env:WINDIR\System32\" -Force
 
       - name: Configure CMake
         run: |
@@ -31,17 +39,19 @@ jobs:
         run: |
           dir "bin\Debug-x64" -Recurse
 
+      - name: Run Unit Tests
+        run: |
+          .\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/windows@v2
+        if: always()
+        with:
+          files: test-results.xml
+
       # Flaky so commenting out for now
       # - name: Smoke Test (Run Sandbox for a few seconds)
       #   run: |
       #     $p = Start-Process -FilePath .\bin\Debug-x64\Sandbox\SandboxApp.exe -PassThru
       #     Start-Sleep -Seconds 3
       #     Stop-Process -Id $p.Id -ErrorAction Stop
-
-  # test:
-  #   name: Run Tests
-  #   needs: build
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Run Tests
