@@ -33,7 +33,7 @@ namespace Pillar
 	Application::~Application()
 	{
 		// Ensure layers are detached and destroyed via LayerStack destructor
-			Renderer2D::Shutdown();
+		Renderer2D::Shutdown();
 		Renderer::Shutdown();
 	}
 
@@ -99,14 +99,12 @@ namespace Pillar
 			Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
 			Renderer::Clear();
 
-			// Begin scene
 
 			for (Layer* layer : m_LayerStack)
 			{
 				layer->OnUpdate(deltaTime);
 			}
 
-			// End scene
 
 			// Render ImGui
 			m_ImGuiLayer->Begin();
