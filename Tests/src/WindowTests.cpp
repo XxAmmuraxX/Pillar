@@ -9,22 +9,33 @@
 using namespace Pillar;
 
 // ==============================
+// GLFW Test Environment
+// ==============================
+
+// Global test environment to initialize/terminate GLFW once for all tests
+class GLFWTestEnvironment : public ::testing::Environment {
+public:
+    void SetUp() override {
+        if (!glfwInit()) {
+            throw std::runtime_error("Failed to initialize GLFW");
+        }
+    }
+
+    void TearDown() override {
+        glfwTerminate();
+    }
+};
+
+// Register the global environment
+::testing::Environment* const glfw_env = 
+    ::testing::AddGlobalTestEnvironment(new GLFWTestEnvironment);
+
+// ==============================
 // Window Creation Tests
 // ==============================
 
 class WindowTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        // Initialize GLFW if not already initialized
-        if (!glfwInit()) {
-            FAIL() << "Failed to initialize GLFW";
-        }
-    }
-
-    void TearDown() override {
-        // Clean up is handled by Window destructor
-    }
-    
     // Helper to set up a dummy event callback for windows that call OnUpdate()
     void SetDummyCallback(Window* window) {
         window->SetEventCallback([](Event& e) {
@@ -133,18 +144,24 @@ TEST_F(WindowTest, Window_SetEventCallback_CallbackIsSet) {
     std::unique_ptr<Window> window(Window::Create(props));
     
     bool callbackCalled = false;
-    window->SetEventCallback([&callbackCalled](Event& e) {
+    EventType receivedEventType = EventType::None;
+    
+    window->SetEventCallback([&callbackCalled, &receivedEventType](Event& e) {
         callbackCalled = true;
+        receivedEventType = e.GetEventType();
     });
     
-    // Simulate a window event by triggering GLFW callback manually
+    // Manually trigger a window resize event by calling glfwSetWindowSize
+    // This will invoke the WindowSizeCallback which calls our event callback
     GLFWwindow* glfwWindow = static_cast<GLFWwindow*>(window->GetNativeWindow());
     
-    // Trigger window close callback
-    glfwSetWindowShouldClose(glfwWindow, GLFW_TRUE);
-    glfwPollEvents(); // This should trigger our callback
+    // Set a different size to trigger the callback
+    glfwSetWindowSize(glfwWindow, 640, 480);
+    glfwPollEvents(); // Process the event
     
-    EXPECT_NO_THROW(window->SetEventCallback([](Event& e) {}));
+    // Verify the callback was invoked with a WindowResize event
+    EXPECT_TRUE(callbackCalled);
+    EXPECT_EQ(receivedEventType, EventType::WindowResize);
 }
 
 TEST_F(WindowTest, Window_EventCallback_ReceivesEvents) {
@@ -333,10 +350,10 @@ TEST_F(WindowTest, Window_NativeWindow_IsGLFWWindow) {
     EXPECT_GT(height, 0);
     
     // Allow some tolerance for window decorations (typically borders reduce size)
-    EXPECT_GE(width, 800);  // Should be at least reasonably sized
-    EXPECT_LE(width, 1500); // But not huge
-    EXPECT_GE(height, 480); // Should be at least reasonably sized
-    EXPECT_LE(height, 900); // But not huge
+    EXPECT_GE(width, 800);
+    EXPECT_LE(width, 1500);
+    EXPECT_GE(height, 480);
+    EXPECT_LE(height, 900);
 }
 
 TEST_F(WindowTest, Window_NativeWindow_CanBeUsedWithGLFW) {

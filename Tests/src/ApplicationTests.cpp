@@ -53,63 +53,68 @@ public:
 };
 
 // ==============================
+// Application Test Fixture
+// ==============================
+
+class ApplicationTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        // Create a fresh application for each test
+        m_App = new TestApp();
+    }
+    
+    void TearDown() override {
+        // Clean up application automatically
+        if (m_App) {
+            m_App->StopRunning();
+            delete m_App;
+            m_App = nullptr;
+        }
+    }
+    
+    TestApp* m_App = nullptr;
+};
+
+// ==============================
 // Application Singleton Tests
 // ==============================
 
-TEST(ApplicationTests, Application_Singleton_GetInstance) {
-    // Create an application
-    TestApp* app = new TestApp();
-    
+TEST_F(ApplicationTest, Application_Singleton_GetInstance) {
     // Get singleton instance
     Application& instance = Application::Get();
     
-    EXPECT_EQ(&instance, app);
-    
-    // Manually stop and delete to avoid infinite loop
-    app->StopRunning();
-    delete app;
+    EXPECT_EQ(&instance, m_App);
 }
 
-TEST(ApplicationTests, Application_HasWindow) {
-    TestApp* app = new TestApp();
-    
-    Window& window = app->GetWindow();
+TEST_F(ApplicationTest, Application_HasWindow) {
+    Window& window = m_App->GetWindow();
     
     EXPECT_GT(window.GetWidth(), 0);
     EXPECT_GT(window.GetHeight(), 0);
-    
-    app->StopRunning();
-    delete app;
 }
 
 // ==============================
 // Application Window Tests
 // ==============================
 
-TEST(ApplicationTests, Application_GetWindow_ReturnsValidWindow) {
-    TestApp* app = new TestApp();
-    
-    Window& window = app->GetWindow();
+TEST_F(ApplicationTest, Application_GetWindow_ReturnsValidWindow) {
+    Window& window = m_App->GetWindow();
     
     // Window should have valid dimensions
     EXPECT_EQ(window.GetWidth(), 1280);
     EXPECT_EQ(window.GetHeight(), 720);
-    
-    app->StopRunning();
-    delete app;
 }
 
 // ==============================
 // Application Layer Management Tests
 // ==============================
 
-TEST(ApplicationTests, Application_PushLayer_AddsLayer) {
-    TestApp* app = new TestApp();
+TEST_F(ApplicationTest, Application_PushLayer_AddsLayer) {
     TrackingLayer* layer = new TrackingLayer("TestLayer");
     
-    app->PushLayer(layer);
+    m_App->PushLayer(layer);
     
-    LayerStack& stack = const_cast<LayerStack&>(app->GetLayerStack());
+    LayerStack& stack = const_cast<LayerStack&>(m_App->GetLayerStack());
     bool found = false;
     for (auto l : stack) {
         if (l == layer) {
@@ -120,18 +125,14 @@ TEST(ApplicationTests, Application_PushLayer_AddsLayer) {
     
     EXPECT_TRUE(found);
     EXPECT_TRUE(layer->m_OnAttachCalled); // Layer should be attached
-    
-    app->StopRunning();
-    delete app;
 }
 
-TEST(ApplicationTests, Application_PushOverlay_AddsOverlay) {
-    TestApp* app = new TestApp();
+TEST_F(ApplicationTest, Application_PushOverlay_AddsOverlay) {
     TrackingLayer* overlay = new TrackingLayer("TestOverlay");
     
-    app->PushOverlay(overlay);
+    m_App->PushOverlay(overlay);
     
-    LayerStack& stack = const_cast<LayerStack&>(app->GetLayerStack());
+    LayerStack& stack = const_cast<LayerStack&>(m_App->GetLayerStack());
     bool found = false;
     for (auto l : stack) {
         if (l == overlay) {
@@ -142,20 +143,16 @@ TEST(ApplicationTests, Application_PushOverlay_AddsOverlay) {
     
     EXPECT_TRUE(found);
     EXPECT_TRUE(overlay->m_OnAttachCalled);
-    
-    app->StopRunning();
-    delete app;
 }
 
-TEST(ApplicationTests, Application_LayerStack_OverlaysAfterLayers) {
-    TestApp* app = new TestApp();
+TEST_F(ApplicationTest, Application_LayerStack_OverlaysAfterLayers) {
     TrackingLayer* layer = new TrackingLayer("Layer");
     TrackingLayer* overlay = new TrackingLayer("Overlay");
     
-    app->PushLayer(layer);
-    app->PushOverlay(overlay);
+    m_App->PushLayer(layer);
+    m_App->PushOverlay(overlay);
     
-    LayerStack& stack = const_cast<LayerStack&>(app->GetLayerStack());
+    LayerStack& stack = const_cast<LayerStack&>(m_App->GetLayerStack());
     std::vector<Layer*> layers;
     for (auto l : stack) {
         // Skip ImGuiLayer that's auto-added
@@ -171,59 +168,41 @@ TEST(ApplicationTests, Application_LayerStack_OverlaysAfterLayers) {
     EXPECT_TRUE(layerPos != layers.end());
     EXPECT_TRUE(overlayPos != layers.end());
     EXPECT_LT(layerPos - layers.begin(), overlayPos - layers.begin());
-    
-    app->StopRunning();
-    delete app;
 }
 
 // ==============================
 // Application Event Handling Tests
 // ==============================
 
-TEST(ApplicationTests, Application_OnEvent_DispatchesToLayers) {
-    TestApp* app = new TestApp();
+TEST_F(ApplicationTest, Application_OnEvent_DispatchesToLayers) {
     TrackingLayer* layer = new TrackingLayer("TestLayer");
-    app->PushLayer(layer);
+    m_App->PushLayer(layer);
     
     KeyPressedEvent event(65, 0); // 'A' key
-    app->TestOnEvent(event);
+    m_App->TestOnEvent(event);
     
     EXPECT_TRUE(layer->m_OnEventCalled);
     EXPECT_EQ(layer->m_ReceivedEventType, EventType::KeyPressed);
-    
-    app->StopRunning();
-    delete app;
 }
 
-TEST(ApplicationTests, Application_OnEvent_WindowClose_StopsApp) {
-    TestApp* app = new TestApp();
-    
+TEST_F(ApplicationTest, Application_OnEvent_WindowClose_StopsApp) {
     WindowCloseEvent event;
-    app->TestOnEvent(event);
+    m_App->TestOnEvent(event);
     
     // Event should be handled
     EXPECT_TRUE(event.Handled);
-    
-    delete app;
 }
 
-TEST(ApplicationTests, Application_OnEvent_WindowResize_NotHandled) {
-    TestApp* app = new TestApp();
-    
+TEST_F(ApplicationTest, Application_OnEvent_WindowResize_NotHandled) {
     WindowResizeEvent event(1920, 1080);
-    app->TestOnEvent(event);
+    m_App->TestOnEvent(event);
     
     // Window resize event should be processed but not marked as handled
     // (returns false in lambda)
     EXPECT_FALSE(event.Handled);
-    
-    app->StopRunning();
-    delete app;
 }
 
-TEST(ApplicationTests, Application_OnEvent_LayerCanHandleEvent) {
-    TestApp* app = new TestApp();
-    
+TEST_F(ApplicationTest, Application_OnEvent_LayerCanHandleEvent) {
     // Create a layer that handles events
     class EventHandlingLayer : public Layer {
     public:
@@ -236,22 +215,17 @@ TEST(ApplicationTests, Application_OnEvent_LayerCanHandleEvent) {
     EventHandlingLayer* layer1 = new EventHandlingLayer();
     TrackingLayer* layer2 = new TrackingLayer("Layer2");
     
-    app->PushLayer(layer1);
-    app->PushLayer(layer2);
+    m_App->PushLayer(layer1);
+    m_App->PushLayer(layer2);
     
     KeyPressedEvent event(65, 0);
-    app->TestOnEvent(event);
+    m_App->TestOnEvent(event);
     
     // Event should stop propagating after first layer handles it
     EXPECT_TRUE(event.Handled);
-    
-    app->StopRunning();
-    delete app;
 }
 
-TEST(ApplicationTests, Application_OnEvent_ReverseLayerOrder) {
-    TestApp* app = new TestApp();
-    
+TEST_F(ApplicationTest, Application_OnEvent_ReverseLayerOrder) {
     class OrderTrackingLayer : public Layer {
     public:
         OrderTrackingLayer(const std::string& name, std::vector<std::string>& order)
@@ -269,12 +243,12 @@ TEST(ApplicationTests, Application_OnEvent_ReverseLayerOrder) {
     OrderTrackingLayer* layer2 = new OrderTrackingLayer("Layer2", order);
     OrderTrackingLayer* overlay1 = new OrderTrackingLayer("Overlay1", order);
     
-    app->PushLayer(layer1);
-    app->PushLayer(layer2);
-    app->PushOverlay(overlay1);
+    m_App->PushLayer(layer1);
+    m_App->PushLayer(layer2);
+    m_App->PushOverlay(overlay1);
     
     KeyPressedEvent event(65, 0);
-    app->TestOnEvent(event);
+    m_App->TestOnEvent(event);
     
     // Events should propagate from top to bottom (reverse order)
     // So overlays first, then layers in reverse
@@ -295,43 +269,30 @@ TEST(ApplicationTests, Application_OnEvent_ReverseLayerOrder) {
     
     // Layer2 should come before Layer1 (reverse order)
     EXPECT_LT(it2 - order.begin(), it1 - order.begin());
-    
-    app->StopRunning();
-    delete app;
 }
 
 // ==============================
 // Application Lifecycle Tests
 // ==============================
 
-TEST(ApplicationTests, Application_Constructor_InitializesRenderer) {
-    // Creating an application should initialize the renderer
-    TestApp* app = new TestApp();
-    
-    // If renderer is initialized, we can call renderer functions
-    // without crashing
+TEST_F(ApplicationTest, Application_Constructor_InitializesRenderer) {
+    // If renderer is initialized, we can call renderer functions without crashing
     EXPECT_NO_THROW({
         Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
     });
-    
-    app->StopRunning();
-    delete app;
 }
 
-TEST(ApplicationTests, Application_Destructor_ShutsDownRenderer) {
-    TestApp* app = new TestApp();
-    app->StopRunning();
-    
-    // Destructor should clean up properly
+TEST_F(ApplicationTest, Application_Destructor_ShutsDownRenderer) {
+    // Destructor should clean up properly (tested via TearDown)
     EXPECT_NO_THROW({
-        delete app;
+        m_App->StopRunning();
+        delete m_App;
+        m_App = nullptr; // Prevent double-delete in TearDown
     });
 }
 
-TEST(ApplicationTests, Application_GetLayerStack_ReturnsStack) {
-    TestApp* app = new TestApp();
-    
-    LayerStack& stack = const_cast<LayerStack&>(app->GetLayerStack());
+TEST_F(ApplicationTest, Application_GetLayerStack_ReturnsStack) {
+    LayerStack& stack = const_cast<LayerStack&>(m_App->GetLayerStack());
     
     // Should at least have ImGuiLayer
     int count = 0;
@@ -340,19 +301,14 @@ TEST(ApplicationTests, Application_GetLayerStack_ReturnsStack) {
     }
     
     EXPECT_GT(count, 0); // ImGuiLayer is auto-added
-    
-    app->StopRunning();
-    delete app;
 }
 
 // ==============================
 // Application ImGuiLayer Tests
 // ==============================
 
-TEST(ApplicationTests, Application_HasImGuiLayerByDefault) {
-    TestApp* app = new TestApp();
-    
-    LayerStack& stack = const_cast<LayerStack&>(app->GetLayerStack());
+TEST_F(ApplicationTest, Application_HasImGuiLayerByDefault) {
+    LayerStack& stack = const_cast<LayerStack&>(m_App->GetLayerStack());
     bool hasImGuiLayer = false;
     
     for (auto layer : stack) {
@@ -363,30 +319,23 @@ TEST(ApplicationTests, Application_HasImGuiLayerByDefault) {
     }
     
     EXPECT_TRUE(hasImGuiLayer);
-    
-    app->StopRunning();
-    delete app;
 }
 
 // ==============================
 // Application Multiple Event Tests
 // ==============================
 
-TEST(ApplicationTests, Application_OnEvent_MultipleEventsHandled) {
-    TestApp* app = new TestApp();
+TEST_F(ApplicationTest, Application_OnEvent_MultipleEventsHandled) {
     TrackingLayer* layer = new TrackingLayer("TestLayer");
-    app->PushLayer(layer);
+    m_App->PushLayer(layer);
     
     KeyPressedEvent keyEvent(65, 0);
-    app->TestOnEvent(keyEvent);
+    m_App->TestOnEvent(keyEvent);
     EXPECT_TRUE(layer->m_OnEventCalled);
     
     layer->m_OnEventCalled = false; // Reset
     
     WindowResizeEvent resizeEvent(800, 600);
-    app->TestOnEvent(resizeEvent);
+    m_App->TestOnEvent(resizeEvent);
     EXPECT_TRUE(layer->m_OnEventCalled);
-    
-    app->StopRunning();
-    delete app;
 }

@@ -11,11 +11,6 @@ using namespace Pillar;
 // Mock Application for Input Tests
 // ==============================
 
-// Forward declare the CreateApplication function
-namespace Pillar {
-    Application* CreateApplication();
-}
-
 class MockApplication : public Application {
 public:
     MockApplication() : Application() {}
@@ -35,18 +30,24 @@ namespace Pillar {
 
 class InputTest : public ::testing::Test {
 protected:
-    void SetUp() override {
-        // Create an Application instance (which creates its own window)
-        // This makes Input::Get() work properly
-        m_Application = std::unique_ptr<Application>(CreateApplication());
+    // Static application shared across all tests in this suite
+    static std::unique_ptr<Application> s_Application;
+
+    // Called once before all tests in this suite
+    static void SetUpTestSuite() {
+        // Create application once for all tests
+        s_Application = std::unique_ptr<Application>(CreateApplication());
     }
     
-    void TearDown() override {
-        m_Application.reset();
+    // Called once after all tests in this suite
+    static void TearDownTestSuite() {
+        // Clean up the shared application
+        s_Application.reset();
     }
-    
-    std::unique_ptr<Application> m_Application;
 };
+
+// Define the static member
+std::unique_ptr<Application> InputTest::s_Application = nullptr;
 
 TEST_F(InputTest, IsKeyPressed_ReturnsFalseForUnpressedKey) {
     // Without simulating input, keys should be unpressed

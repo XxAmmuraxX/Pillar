@@ -139,8 +139,6 @@ TEST(LoggerMacroTests, CoreMacros_Compile) {
     PIL_CORE_INFO("Info");
     PIL_CORE_WARN("Warn");
     PIL_CORE_ERROR("Error");
-    
-    SUCCEED();
 }
 
 TEST(LoggerMacroTests, ClientMacros_Compile) {
@@ -149,8 +147,6 @@ TEST(LoggerMacroTests, ClientMacros_Compile) {
     PIL_INFO("Info");
     PIL_WARN("Warn");
     PIL_ERROR("Error");
-    
-    SUCCEED();
 }
 
 TEST(LoggerMacroTests, FormattedMacros_Compile) {
@@ -158,6 +154,4 @@ TEST(LoggerMacroTests, FormattedMacros_Compile) {
     int value = 42;
     PIL_CORE_INFO("Value: {0}", value);
     PIL_INFO("Value: {0}", value);
-    
-    SUCCEED();
 }
