@@ -20,6 +20,13 @@ foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)
     )
 endforeach()
 
+# Create assets directory structure in the Sandbox source folder (for development)
+add_custom_command(TARGET Sandbox POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/assets
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/assets/textures
+    COMMENT "Creating Sandbox/assets directory structure"
+)
+
 # Copy the DLL after build
 add_custom_command(TARGET Sandbox POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -29,3 +36,5 @@ add_custom_command(TARGET Sandbox POST_BUILD
 
 # Link libraries
 target_link_libraries(Sandbox PRIVATE Pillar)
+
+target_compile_definitions(Sandbox PRIVATE $<$<CONFIG:Debug>:PIL_ENABLE_ASSERTS>)

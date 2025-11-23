@@ -1,6 +1,5 @@
 #include "Platform/OpenGL/OpenGLRenderAPI.h"
 #include "Pillar/Renderer/Buffer.h"
-#include "Pillar/Renderer/VertexArray.h" // Added include for complete type
 #include "Pillar/Logger.h"
 
 #include <glad/glad.h>
@@ -41,8 +40,6 @@ namespace Pillar {
 
     void OpenGLRenderAPI::DrawIndexed(const VertexArray* vertexArray)
     {
-        // Ensure vertex array bound before draw
-        vertexArray->Bind();
         glDrawElements(GL_TRIANGLES, vertexArray->GetIndexBuffer()->GetCount(), GL_UNSIGNED_INT, nullptr);
     }
 

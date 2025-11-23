@@ -13,12 +13,8 @@ namespace Pillar {
         virtual void Bind() const override;
         virtual void Unbind() const override;
 
-        virtual const BufferLayout& GetLayout() const override { return m_Layout; }
-        virtual void SetLayout(const BufferLayout& layout) override { m_Layout = layout; }
-
     private:
         uint32_t m_RendererID;
-        BufferLayout m_Layout;
     };
 
     class OpenGLIndexBuffer : public IndexBuffer
@@ -34,6 +30,25 @@ namespace Pillar {
     private:
         uint32_t m_RendererID;
         uint32_t m_Count;
+    };
+
+    class OpenGLVertexArray : public VertexArray
+    {
+    public:
+        OpenGLVertexArray();
+        virtual ~OpenGLVertexArray();
+
+        virtual void Bind() const override;
+        virtual void Unbind() const override;
+
+        virtual void AddVertexBuffer(VertexBuffer* vertexBuffer) override;
+        virtual void SetIndexBuffer(IndexBuffer* indexBuffer) override;
+
+        virtual IndexBuffer* GetIndexBuffer() const override { return m_IndexBuffer; }
+
+    private:
+        uint32_t m_RendererID;
+        IndexBuffer* m_IndexBuffer = nullptr;
     };
 
 }

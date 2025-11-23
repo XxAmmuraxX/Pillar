@@ -173,4 +173,9 @@ namespace Pillar {
         }
     }
 
+    ImGuiContext* ImGuiLayer::GetImGuiContext()
+    {
+        return ImGui::GetCurrentContext();
+    }
+
 }

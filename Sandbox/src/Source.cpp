@@ -1,4 +1,5 @@
 #include "Pillar.h"
+#include "Pillar/EntryPoint.h"
 #include "ExampleLayer.h"
 #include "Pillar/ImGuiLayer.h"
 

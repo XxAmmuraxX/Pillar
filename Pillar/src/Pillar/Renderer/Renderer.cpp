@@ -1,10 +1,14 @@
 #include "Pillar/Renderer/Renderer.h"
-#include "Pillar/Renderer/Buffer.h"
+#include "Pillar/Renderer/RenderCommand.h"
+#include "Pillar/Renderer/VertexArray.h"
+#include "Pillar/Renderer/Shader.h"
+#include "Pillar/Renderer/OrthographicCamera.h"
 #include "Platform/OpenGL/OpenGLRenderAPI.h"
 #include "Pillar/Logger.h"
 
 namespace Pillar {
 
+    std::unique_ptr<Renderer::SceneData> Renderer::s_SceneData = std::make_unique<Renderer::SceneData>();
     std::unique_ptr<RenderAPI> Renderer::s_RenderAPI = nullptr;
 
     void Renderer::Init()
@@ -24,6 +28,7 @@ namespace Pillar {
 
         if (s_RenderAPI)
         {
+            RenderCommand::SetAPI(s_RenderAPI.get());
             s_RenderAPI->Init();
             PIL_CORE_INFO("Renderer initialized successfully");
         }
@@ -35,14 +40,13 @@ namespace Pillar {
         s_RenderAPI.reset();
     }
 
-    void Renderer::BeginScene()
+    void Renderer::BeginScene(OrthographicCamera& camera)
     {
-        // In the future, this will handle camera setup, lighting, etc.
+        s_SceneData->ViewProjectionMatrix = camera.GetViewProjectionMatrix();
     }
 
     void Renderer::EndScene()
     {
-        // In the future, this will handle final render pass, post-processing, etc.
     }
 
     void Renderer::SetClearColor(const glm::vec4& color)
@@ -60,10 +64,13 @@ namespace Pillar {
         s_RenderAPI->SetViewport(x, y, width, height);
     }
 
-    void Renderer::Submit(const VertexArray* vertexArray)
+    void Renderer::Submit(const std::shared_ptr<Shader>& shader, const std::shared_ptr<VertexArray>& vertexArray)
     {
+        shader->Bind();
+        shader->SetMat4("u_ViewProjection", s_SceneData->ViewProjectionMatrix);
+
         vertexArray->Bind();
-        s_RenderAPI->DrawIndexed(vertexArray);
+        s_RenderAPI->DrawIndexed(vertexArray.get());
     }
 
 }
