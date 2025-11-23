@@ -1,17 +1,18 @@
-#include "Pillar/Renderer/Buffer.h"
-#include "Platform/OpenGL/OpenGLBuffer.h"
+#include "Pillar/Renderer/Texture.h"
 #include "Pillar/Renderer/RenderAPI.h"
+#include "Pillar/Utils/AssetManager.h"
+#include "Platform/OpenGL/OpenGLTexture.h"
 #include "Pillar/Logger.h"
 
 
 namespace Pillar {
 
-    VertexBuffer* VertexBuffer::Create(float* vertices, uint32_t size)
+    std::shared_ptr<Texture2D> Texture2D::Create(uint32_t width, uint32_t height)
     {
         switch (RenderAPI::GetAPI())
         {
             case RendererAPI::OpenGL:
-                return new OpenGLVertexBuffer(vertices, size);
+                return std::make_shared<OpenGLTexture2D>(width, height);
             case RendererAPI::None:
                 PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
                 return nullptr;
@@ -21,12 +22,14 @@ namespace Pillar {
         return nullptr;
     }
 
-    IndexBuffer* IndexBuffer::Create(uint32_t* indices, uint32_t count)
+    std::shared_ptr<Texture2D> Texture2D::Create(const std::string& path)
     {
+        std::string resolvedPath = AssetManager::GetTexturePath(path);
+        
         switch (RenderAPI::GetAPI())
         {
             case RendererAPI::OpenGL:
-                return new OpenGLIndexBuffer(indices, count);
+                return std::make_shared<OpenGLTexture2D>(resolvedPath);
             case RendererAPI::None:
                 PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
                 return nullptr;

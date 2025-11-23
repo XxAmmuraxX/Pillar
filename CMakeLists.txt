@@ -60,6 +60,13 @@ FetchContent_Declare(
   GIT_TAG 0af55ccecd98d4e5a8d1fad7de25ba429d60e863 # 1.0.1
 )
 
+# stb_image (single header library for image loading)
+FetchContent_Declare(
+  stb
+  GIT_REPOSITORY https://github.com/nothings/stb.git
+  GIT_TAG master
+)
+
 # Configure GLAD before fetching
 set(GLAD_PROFILE "core" CACHE STRING "")
 set(GLAD_API "gl=4.6" CACHE STRING "")
@@ -85,7 +92,7 @@ FetchContent_Declare(
 )
 
 # Make dependencies available
-FetchContent_MakeAvailable(spdlog glfw glad glm imgui)
+FetchContent_MakeAvailable(spdlog glfw glad glm stb imgui)
 
 # Create imgui library from sources
 set(IMGUI_DIR ${imgui_SOURCE_DIR})

@@ -53,4 +53,46 @@ namespace Pillar {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     }
 
+    // ===== OpenGLVertexArray =====
+
+    OpenGLVertexArray::OpenGLVertexArray()
+    {
+        glGenVertexArrays(1, &m_RendererID);
+    }
+
+    OpenGLVertexArray::~OpenGLVertexArray()
+    {
+        glDeleteVertexArrays(1, &m_RendererID);
+    }
+
+    void OpenGLVertexArray::Bind() const
+    {
+        glBindVertexArray(m_RendererID);
+    }
+
+    void OpenGLVertexArray::Unbind() const
+    {
+        glBindVertexArray(0);
+    }
+
+    void OpenGLVertexArray::AddVertexBuffer(VertexBuffer* vertexBuffer)
+    {
+        glBindVertexArray(m_RendererID);
+        vertexBuffer->Bind();
+
+        // 2D vertex layout: Position (2 floats for x, y)
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+
+        glBindVertexArray(0);
+    }
+
+    void OpenGLVertexArray::SetIndexBuffer(IndexBuffer* indexBuffer)
+    {
+        glBindVertexArray(m_RendererID);
+        indexBuffer->Bind();
+        m_IndexBuffer = indexBuffer;
+        glBindVertexArray(0);
+    }
+
 }
