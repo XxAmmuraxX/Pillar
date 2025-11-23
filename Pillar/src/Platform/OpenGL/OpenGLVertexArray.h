@@ -2,6 +2,7 @@
 
 #include "Pillar/Renderer/VertexArray.h"
 #include <vector>
+#include <cstdint>
 
 namespace Pillar {
 

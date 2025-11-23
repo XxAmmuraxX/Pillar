@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pillar/Renderer/Buffer.h"
+#include <cstdint>
 
 namespace Pillar {
 
