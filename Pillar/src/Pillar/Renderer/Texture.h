@@ -3,6 +3,7 @@
 #include "Pillar/Core.h"
 #include <string>
 #include <memory>
+#include <cstdint>
 
 namespace Pillar {
 

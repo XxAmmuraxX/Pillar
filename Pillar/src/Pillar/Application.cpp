@@ -1,4 +1,3 @@
-#pragma once
 #include "stdio.h"
 #include "Application.h"
 #include "Pillar/Logger.h"

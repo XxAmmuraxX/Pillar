@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pillar/Renderer/Shader.h"
+#include <cstdint>
 
 namespace Pillar {
 
