@@ -62,7 +62,6 @@ TEST_F(WindowTest, Window_Create_WithCustomProps) {
     EXPECT_EQ(window->GetHeight(), 600);
 }
 
-
 // ==============================
 // Window Properties Tests
 // ==============================
@@ -147,8 +146,11 @@ TEST_F(WindowTest, Window_SetEventCallback_CallbackIsSet) {
     EventType receivedEventType = EventType::None;
     
     window->SetEventCallback([&callbackCalled, &receivedEventType](Event& e) {
-        callbackCalled = true;
-        receivedEventType = e.GetEventType();
+        // Only capture WindowResize events, ignore others (like MouseScrolled in CI)
+        if (e.GetEventType() == EventType::WindowResize) {
+            callbackCalled = true;
+            receivedEventType = e.GetEventType();
+        }
     });
     
     // Manually trigger a window resize event by calling glfwSetWindowSize
@@ -160,8 +162,11 @@ TEST_F(WindowTest, Window_SetEventCallback_CallbackIsSet) {
     glfwPollEvents(); // Process the event
     
     // Verify the callback was invoked with a WindowResize event
+    // Note: In CI with Mesa3D, other events (like MouseScrolled) may also fire
     EXPECT_TRUE(callbackCalled);
-    EXPECT_EQ(receivedEventType, EventType::WindowResize);
+    if (callbackCalled) {
+        EXPECT_EQ(receivedEventType, EventType::WindowResize);
+    }
 }
 
 TEST_F(WindowTest, Window_EventCallback_ReceivesEvents) {
@@ -240,7 +245,6 @@ TEST_F(WindowTest, Window_Destructor_CleansUpProperly) {
     });
 }
 
-
 // ==============================
 // WindowProps Tests
 // ==============================
@@ -268,7 +272,6 @@ TEST(WindowPropsTests, WindowProps_TitleOnly) {
     EXPECT_EQ(props.Width, 1280);
     EXPECT_EQ(props.Height, 720);
 }
-
 
 // ==============================
 // Window Stress Tests
