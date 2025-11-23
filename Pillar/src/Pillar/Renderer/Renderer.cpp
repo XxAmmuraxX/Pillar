@@ -47,6 +47,7 @@ namespace Pillar {
 
     void Renderer::EndScene()
     {
+        // In the future, this will handle final render pass, post-processing, etc.
     }
 
     void Renderer::SetClearColor(const glm::vec4& color)
