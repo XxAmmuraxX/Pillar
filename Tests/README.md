@@ -125,25 +125,5 @@ Tests are automatically run in GitHub Actions on every push/PR. See `.github/wor
 **CI Environment:**
 - Uses Mesa3D software OpenGL rendering (llvmpipe driver) to run GUI tests without hardware GPU
 - All tests including `InputTests` and `ApplicationTests` run successfully in CI
-- Tests complete in under 10 seconds typically
-
-## Coverage Goals
-
-- ? Event System (100% coverage)
-- ? Layer System (100% coverage)
-- ? Logger System (90% coverage)
-- ? Input System (basic tests with window creation)
-- ? Application (integration tests with window/renderer)
-- ? Window System (basic tests)
-- ? Renderer (future - more comprehensive tests)
-- ? OpenGL specifics (future - requires mocking or fixture setup)
-
-## Notes
-
-- Window and input tests create real GLFW windows (work in CI via Mesa3D software rendering)
-- Some tests use Google Mock for creating test doubles
-- Tests are isolated and don't depend on each other
-- All tests should complete in under 10 seconds total
-- CI uses software rendering which is slower but ensures tests work without GPU
 
 

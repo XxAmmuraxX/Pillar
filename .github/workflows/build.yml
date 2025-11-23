@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "master" ]
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 env:
   BUILD_TYPE: Debug
 
