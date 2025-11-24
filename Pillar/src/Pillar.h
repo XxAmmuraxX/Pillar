@@ -20,6 +20,7 @@
 #include "Pillar/Renderer/VertexArray.h"
 #include "Pillar/Renderer/Texture.h"
 #include "Pillar/Renderer/OrthographicCamera.h"
+#include "Pillar/Renderer/OrthographicCameraController.h"
 
 
 

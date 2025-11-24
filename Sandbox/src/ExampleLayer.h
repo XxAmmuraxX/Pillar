@@ -10,9 +10,9 @@ class ExampleLayer : public Pillar::Layer
 {
 public:
 	ExampleLayer() 
-		: Layer("ExampleLayer"), m_Camera(-1.6f, 1.6f, -0.9f, 0.9f)
+		: Layer("ExampleLayer"), 
+		  m_CameraController(16.0f / 9.0f, true) // Aspect ratio, enable rotation
 	{
-		m_Camera.SetPosition({ 0.0f, 0.0f, 0.0f });
 	}
 
 	void OnAttach() override 
@@ -33,23 +33,8 @@ public:
 	
     void OnUpdate(float dt) override
     {
-		// Camera controls
-		float cameraSpeed = 2.0f * dt;
-		if (Pillar::Input::IsKeyPressed(PIL_KEY_A))
-			m_Camera.SetPosition(m_Camera.GetPosition() + glm::vec3(-cameraSpeed, 0.0f, 0.0f));
-		if (Pillar::Input::IsKeyPressed(PIL_KEY_D))
-			m_Camera.SetPosition(m_Camera.GetPosition() + glm::vec3(cameraSpeed, 0.0f, 0.0f));
-		if (Pillar::Input::IsKeyPressed(PIL_KEY_W))
-			m_Camera.SetPosition(m_Camera.GetPosition() + glm::vec3(0.0f, cameraSpeed, 0.0f));
-		if (Pillar::Input::IsKeyPressed(PIL_KEY_S))
-			m_Camera.SetPosition(m_Camera.GetPosition() + glm::vec3(0.0f, -cameraSpeed, 0.0f));
-
-		// Camera rotation
-		float rotationSpeed = 50.0f * dt;
-		if (Pillar::Input::IsKeyPressed(PIL_KEY_Q))
-			m_Camera.SetRotation(m_Camera.GetRotation() + rotationSpeed);
-		if (Pillar::Input::IsKeyPressed(PIL_KEY_E))
-			m_Camera.SetRotation(m_Camera.GetRotation() - rotationSpeed);
+		// Update camera controller
+		m_CameraController.OnUpdate(dt);
 
 		// Update animation time
 		m_Time += dt;
@@ -58,8 +43,8 @@ public:
 		Pillar::Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
 		Pillar::Renderer::Clear();
 
-		// Begin Renderer2D scene
-		Pillar::Renderer2D::BeginScene(m_Camera);
+		// Begin Renderer2D scene with camera from controller
+		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 
 		// Test 1: Draw colored quads
 		Pillar::Renderer2D::DrawQuad({ -0.75f, 0.5f }, { 0.5f, 0.5f }, { 1.0f, 0.0f, 0.0f, 1.0f });
@@ -82,6 +67,9 @@ public:
     
     void OnEvent(Pillar::Event& event) override
     {
+		// Pass events to camera controller (for zoom and resize)
+		m_CameraController.OnEvent(event);
+
         if (event.GetEventType() == Pillar::EventType::KeyPressed)
         {
 			Pillar::KeyPressedEvent& keyEvent = static_cast<Pillar::KeyPressedEvent&>(event);
@@ -94,26 +82,70 @@ public:
 	
 	void OnImGuiRender() override 
 	{
-		// Ensure we're using the correct ImGui context (DLL boundary issue)
-		ImGui::SetCurrentContext(Pillar::ImGuiLayer::GetImGuiContext());
-		
 		ImGui::Begin("Renderer2D Test");
 		ImGui::Text("Renderer2D and Texture Test");
-		ImGui::Text("Camera Controls: WASD to move, Q/E to rotate");
-		ImGui::Text("Time: %.2f", m_Time);
+		ImGui::Separator();
+		
+		// Camera debug panel
+		ImGui::Text("Camera Controls");
+		ImGui::BulletText("WASD: Move camera");
+		ImGui::BulletText("Q/E: Rotate camera");
+		ImGui::BulletText("Mouse Wheel: Zoom");
+		ImGui::Separator();
+		
+		// Camera stats
+		auto& camera = m_CameraController.GetCamera();
+		glm::vec3 pos = camera.GetPosition();
+		float rotation = camera.GetRotation();
+		float zoom = m_CameraController.GetZoomLevel();
+		
+		ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", pos.x, pos.y, pos.z);
+		ImGui::Text("Camera Rotation: %.2f deg", rotation);
+		ImGui::Text("Zoom Level: %.2fx", zoom);
+		ImGui::Separator();
+		
+		// Camera settings
+		float translationSpeed = m_CameraController.GetTranslationSpeed();
+		if (ImGui::SliderFloat("Move Speed", &translationSpeed, 1.0f, 20.0f))
+		{
+			m_CameraController.SetTranslationSpeed(translationSpeed);
+		}
+		
+		float rotationSpeed = m_CameraController.GetRotationSpeed();
+		if (ImGui::SliderFloat("Rotation Speed", &rotationSpeed, 10.0f, 360.0f))
+		{
+			m_CameraController.SetRotationSpeed(rotationSpeed);
+		}
+		
+		float zoomSpeed = m_CameraController.GetZoomSpeed();
+		if (ImGui::SliderFloat("Zoom Speed", &zoomSpeed, 0.1f, 1.0f))
+		{
+			m_CameraController.SetZoomSpeed(zoomSpeed);
+		}
+		
+		if (ImGui::Button("Reset Camera"))
+		{
+			m_CameraController.GetCamera().SetPosition({ 0.0f, 0.0f, 0.0f });
+			m_CameraController.GetCamera().SetRotation(0.0f);
+			m_CameraController.SetZoomLevel(1.0f);
+		}
+		
+		ImGui::Separator();
+		ImGui::Text("Scene Time: %.2f s", m_Time);
+		
 		if (m_Texture)
 		{
 			ImGui::Text("Texture Size: %dx%d", m_Texture->GetWidth(), m_Texture->GetHeight());
 		}
 		else
 		{
-			ImGui::Text("Texture: Failed to load!");
+			ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Texture: Failed to load!");
 		}
 		ImGui::End();
 	}
 
 private:
 	std::shared_ptr<Pillar::Texture2D> m_Texture;
-	Pillar::OrthographicCamera m_Camera;
+	Pillar::OrthographicCameraController m_CameraController;
 	float m_Time = 0.0f;
 };

@@ -27,14 +27,7 @@ add_custom_command(TARGET Sandbox POST_BUILD
     COMMENT "Creating Sandbox/assets directory structure"
 )
 
-# Copy the DLL after build
-add_custom_command(TARGET Sandbox POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:Pillar>
-        ${EXECUTABLE_OUTPUT_DIR}
-)
-
-# Link libraries
+# Link libraries - static linking, no DLL copy needed
 target_link_libraries(Sandbox PRIVATE Pillar)
 
-target_compile_definitions(Sandbox PRIVATE $<$<CONFIG:Debug>:PIL_ENABLE_ASSERTS>)
+target_compile_definitions(Sandbox PRIVATE PIL_STATIC_LIB)
