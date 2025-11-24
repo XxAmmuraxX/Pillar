@@ -133,9 +133,9 @@ namespace Pillar {
 
         ImGui::End();
 
-        // Example ImGui window
-        static bool show_demo = true;
-        ImGui::ShowDemoWindow(&show_demo);
+        // Demo window disabled
+        // static bool show_demo = true;
+        // ImGui::ShowDemoWindow(&show_demo);
     }
 
     void ImGuiLayer::Begin()

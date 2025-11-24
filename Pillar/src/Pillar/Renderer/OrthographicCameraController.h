@@ -62,14 +62,26 @@ namespace Pillar {
         void SetZoomLevel(float level);
 
         /**
-         * @brief Set the camera translation speed
+         * @brief Set the base camera translation speed (actual speed = base * zoom level)
+         * 
+         * @param speed Base movement speed in units per second
+         */
+        void SetBaseTranslationSpeed(float speed) { m_BaseTranslationSpeed = speed; }
+        
+        /**
+         * @brief Get the base camera translation speed
+         */
+        float GetBaseTranslationSpeed() const { return m_BaseTranslationSpeed; }
+
+        /**
+         * @brief Set the camera translation speed directly (overrides zoom adjustment)
          * 
          * @param speed Movement speed in units per second
          */
         void SetTranslationSpeed(float speed) { m_CameraTranslationSpeed = speed; }
         
         /**
-         * @brief Get the camera translation speed
+         * @brief Get the current camera translation speed
          */
         float GetTranslationSpeed() const { return m_CameraTranslationSpeed; }
 
@@ -111,6 +123,7 @@ namespace Pillar {
         glm::vec3 m_CameraPosition = { 0.0f, 0.0f, 0.0f };
         float m_CameraRotation = 0.0f; // In degrees, counter-clockwise
 
+        float m_BaseTranslationSpeed = 5.0f;  // Base speed before zoom adjustment
         float m_CameraTranslationSpeed = 5.0f;
         float m_CameraRotationSpeed = 180.0f;
         float m_ZoomSpeed = 0.25f;
