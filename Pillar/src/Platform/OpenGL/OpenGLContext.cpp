@@ -1,7 +1,6 @@
 #include "Platform/OpenGL/OpenGLContext.h"
 #include "Pillar/Logger.h"
-
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
 namespace Pillar {
@@ -18,9 +17,9 @@ namespace Pillar {
         
         glfwMakeContextCurrent(m_WindowHandle);
         
-        // Initialize GLAD
-        int status = gladLoadGLLoader((GLADloadproc)glfwGetProcAddress);
-        PIL_CORE_ASSERT(status, "Failed to initialize GLAD!");
+        // Initialize GLAD2
+        int version = gladLoadGL(glfwGetProcAddress);
+        PIL_CORE_ASSERT(version, "Failed to initialize GLAD!");
         
         PIL_CORE_INFO("OpenGL Context created successfully");
     }

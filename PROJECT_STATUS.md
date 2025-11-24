@@ -1,4 +1,4 @@
-# Pillar Engine - Project Status Document
+ # Pillar Engine - Project Status Document
 
 **Last Updated:** January 2025  
 **Version:** Pre-Alpha 0.3  
@@ -379,15 +379,17 @@ Tests/                      # Unit tests EXE (static linked)
 3. ? Added `OrthographicCamera` with manual controls
 4. ? Created `AssetManager` for path resolution
 5. ? Updated `ExampleLayer` to demonstrate Renderer2D capabilities
+6. ? Fixed ImGui duplicate context issue (PRIVATE linkage)
+7. ? Added comprehensive ImGui controls to ExampleLayer
 
 **Known Issues:**
-1. ?? ImGui linker errors in Sandbox (DLL export issue) - **CRITICAL**
+1. ? ImGui linker errors in Sandbox (DLL export issue) - **FIXED**
 2. ?? Vertex layout hardcoded to 2D position + texCoords
 3. ?? No batch rendering (performance bottleneck for many quads)
 
 **Immediate Next Steps (This Week):**
-1. **Fix ImGui linking** - Change to PUBLIC linkage in CMakeLists.txt (30 min)
-2. **Verify build and tests** - Ensure no regressions (15 min)
+1. ~~Fix ImGui linking~~ ? **COMPLETE** - Changed to PRIVATE linkage
+2. ~~Add ImGui controls to ExampleLayer~~ ? **COMPLETE** - Full parameter panel
 3. **Implement `OrthographicCameraController`** - Dedicated input handling class (2-3 hours)
 4. **Basic batch rendering** - Collect quads, submit in batches (4-6 hours)
 5. **Add tests for new features** - Camera controller, Renderer2D tests (1-2 hours)
@@ -446,38 +448,37 @@ cmake --build out/build/x64-Debug --config Debug --parallel
 **Executable:** `.\bin\Debug-x64\Sandbox\SandboxApp.exe`
 
 **Current Demo (ExampleLayer):**
-- Displays 1280x720 window ("Pillar Engine")
-- Renders 6 quads using Renderer2D:
-  1. Red quad (top-left)
-  2. Green quad (top-right)
-  3. Blue quad (bottom-left)
-  4. Textured quad (bottom-right) - static
-  5. Animated textured quad (center) - pulsing scale
-  6. Tinted textured quad (bottom-center) - color animation
-- Camera controls:
-  - **WASD** - Move camera
-  - **Q/E** - Rotate camera
-- Texture: `pillar_logo.png` (loaded from `Sandbox/assets/textures/`)
-- ImGui window: "Renderer2D Test" showing camera controls and texture info
-- ImGui demo window (dockable)
-- Menu bar with "File > Exit"
+- **Rendering:** Animated rotating 2D square with color-changing effects and pulsing scale
+- **Movement:** WASD keys to move square
+- **ImGui Controls Panel:** "ExampleLayer Controls" window with live parameter editing:
+  - Position (X, Y) drag controls
+  - Move speed slider
+  - Rotation speed (degrees/second)
+  - Base scale, pulse amplitude, pulse frequency
+  - Color animation toggle
+  - Animated color frequencies (R, G, B) when animation enabled
+  - Static color picker when animation disabled
+  - Reset to defaults button
+  - Live time display
+- **Background:** Subtle animated color gradient
+- **ImGui Features:**
+  - Dockable windows
+  - ImGui demo window available
+  - Menu bar with "File > Exit"
 
 **Known Demo Issues:**
-- ImGui context workaround required (`SetCurrentContext()`)
 - No visual grid or axis indicators
-- Camera bounds unlimited
+- Movement bounds unlimited
 
 ---
 
 ## Known Issues & Limitations
 
 ### Critical Issues
-1. **ImGui Linking Error** ??
-   - **Severity:** High
-   - **Impact:** Sandbox cannot call ImGui functions directly
-   - **Workaround:** Use `ImGui::SetCurrentContext()` at start of `OnImGuiRender()`
-   - **Root Cause:** ImGui linked PRIVATE to Pillar, symbols not exported
-   - **Fix:** Change to PUBLIC linkage in `Pillar/CMakeLists.txt`
+1. **ImGui Duplicate Context Issue** ? **RESOLVED**
+   - **Status:** Fixed as of November 2025
+   - **Solution:** Changed imgui to PRIVATE linkage in Pillar/CMakeLists.txt
+   - **Result:** Single Dear ImGui context, no more null GImGui crashes
 
 ### Design Limitations
 2. **Hardcoded Vertex Layout**
@@ -772,12 +773,12 @@ cmake --build out/build/x64-Debug --config Debug --parallel
 **Fix:** Check graphics drivers, ensure OpenGL 4.1+ support. Mesa3D software rendering available for CI.
 
 **Problem:** Linker errors with ImGui functions  
-**Fix:** See "Critical Issues #1" above. Change ImGui linkage to PUBLIC in `Pillar/CMakeLists.txt`.
+**Fix:** ? **RESOLVED** - ImGui now linked PRIVATE in Pillar/CMakeLists.txt to prevent duplicate context
 
 ### Runtime Issues
 
-**Problem:** Crash on startup in `ImGui::Begin()`  
-**Fix:** Ensure `ImGuiLayer::OnAttach()` called before `OnImGuiRender()`. Check layer stack order.
+**Problem:** Crash on startup in `ImGui::Begin()` with null GImGui  
+**Fix:** ? **RESOLVED** - Fixed by ensuring single Dear ImGui instance via PRIVATE linkage
 
 **Problem:** Texture not loading (white square instead)  
 **Fix:** Check asset path with `AssetManager::GetTexturePath()`. Ensure texture in `Sandbox/assets/textures/`. Check console for error messages.

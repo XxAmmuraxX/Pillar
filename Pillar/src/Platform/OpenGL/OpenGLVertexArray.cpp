@@ -1,7 +1,7 @@
 #include "Platform/OpenGL/OpenGLVertexArray.h"
 #include "Pillar/Renderer/Buffer.h"
 #include "Pillar/Logger.h"
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 namespace Pillar {
 

@@ -1,6 +1,6 @@
 #include "Platform/OpenGL/OpenGLBuffer.h"
 #include "Pillar/Logger.h"
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 namespace Pillar {
 

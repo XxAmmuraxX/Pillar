@@ -5,7 +5,7 @@
 #include "Platform/OpenGL/OpenGLRenderAPI.h"
 #include "Pillar.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 namespace Pillar {

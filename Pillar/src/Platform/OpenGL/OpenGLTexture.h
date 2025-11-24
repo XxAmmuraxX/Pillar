@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pillar/Renderer/Texture.h"
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 namespace Pillar {
 

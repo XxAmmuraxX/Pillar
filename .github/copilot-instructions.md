@@ -57,7 +57,7 @@ cmake --build out/build/x64-Debug --config Debug --parallel
 ```powershell
 .\bin\Debug-x64\Sandbox\SandboxApp.exe
 ```
-The application opens a window displaying an animated, rotating 2D square with color-changing effects. Use WASD keys to move the square. Press ESC or close window to exit.
+The application opens a window displaying an animated, rotating 2D square with color-changing effects. Use WASD keys to move the square. The ImGui panel "ExampleLayer Controls" allows real-time adjustment of all rendering parameters (position, rotation speed, scale, color animation). Press ESC or close window to exit.
 
 ### Running Tests
 ```powershell
@@ -95,6 +95,13 @@ See `Tests/README.md` for detailed testing information.
 **Issue 4: OpenGL shader version**
 - Shaders use `#version 410 core` (OpenGL 4.1) for compatibility
 - GLAD is configured for OpenGL 4.6 but actual version depends on system
+
+**Issue 5: ImGui duplicate context (RESOLVED)**
+- **Symptom:** `Read access violation` in `ImGui::Begin()` with null `GImGui` pointer
+- **Root Cause:** Dear ImGui was being linked into both Pillar.dll and SandboxApp.exe, creating duplicate static `GImGui` variables
+- **Fix:** Changed `imgui` linkage to PRIVATE in `Pillar/CMakeLists.txt` (was PUBLIC)
+- **Solution:** ImGui headers still exposed via PUBLIC include directories, but library linked only into Pillar
+- **Verification:** Ensure `SandboxApp.exe` does not list `imgui*.obj` in link step
 
 ## Project Architecture
 
@@ -226,7 +233,10 @@ PILLAR_/
   - Events: ApplicationEvent (cpp), Event.h, KeyEvent.h, MouseEvent.h
   - Renderer: RenderAPI, Renderer, Shader, Buffer
   - Platform: WindowsWindow, OpenGLContext, OpenGLRenderAPI, OpenGLShader, OpenGLBuffer
-- Links: spdlog, glfw, glad, imgui, glm, opengl32 (Windows)
+- Links PUBLIC: spdlog, glfw, glad, glm
+- Links PRIVATE: imgui (prevents duplicate Dear ImGui instances in client apps)
+- Includes PUBLIC: ImGui headers (${IMGUI_DIR}, ${IMGUI_DIR}/backends) for client app access
+- Opengl32 linked on Windows
 - POST_BUILD: Copies Pillar.dll to Sandbox directory
 - Per-configuration output directory overrides for Debug/Release/RelWithDebInfo/MinSizeRel
 

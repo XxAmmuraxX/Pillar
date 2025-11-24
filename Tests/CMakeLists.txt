@@ -21,6 +21,7 @@ enable_testing()
 add_executable(PillarTests
     src/EventTests.cpp
     src/LayerTests.cpp
+    src/CameraTests.cpp
     src/LoggerTests.cpp
     src/InputTests.cpp
     src/ApplicationTests.cpp

@@ -3,7 +3,7 @@
 #include "Pillar/Renderer/VertexArray.h" // Added include for complete type
 #include "Pillar/Logger.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 
 namespace Pillar {
 

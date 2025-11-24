@@ -61,7 +61,7 @@ target_link_libraries(Pillar
     PUBLIC 
         spdlog::spdlog
         glfw
-        glad
+        glad_gl_core_46
         glm::glm
         imgui
 )
