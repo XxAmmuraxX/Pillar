@@ -1,6 +1,8 @@
 #include "Pillar/Renderer/Shader.h"
 #include "Platform/OpenGL/OpenGLShader.h"
 #include "Pillar/Renderer/RenderAPI.h"
+#include "Pillar/Logger.h"
+
 
 namespace Pillar {
 

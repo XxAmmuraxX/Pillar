@@ -2,6 +2,7 @@
 
 #include "Pillar/Core.h"
 #include <glm/glm.hpp>
+#include <cstdint>
 
 namespace Pillar {
 

@@ -1,6 +1,6 @@
 # Added this line for clarity about file location
 # This is root cmake
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.5)
 project(Pillar)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -29,6 +29,34 @@ foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 endforeach()
 
+# Check for Python and jinja2 (required by GLAD2)
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+if(Python3_FOUND)
+    message(STATUS "Found Python: ${Python3_EXECUTABLE}")
+    
+    # Check if jinja2 is installed
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import jinja2"
+        RESULT_VARIABLE JINJA2_CHECK
+        OUTPUT_QUIET
+        ERROR_QUIET
+    )
+    
+    if(NOT JINJA2_CHECK EQUAL 0)
+        message(FATAL_ERROR 
+            "Python package 'jinja2' is required but not found!\n"
+            "Please install it using:\n"
+            "  ${Python3_EXECUTABLE} -m pip install jinja2\n"
+            "Or on Windows:\n"
+            "  python -m pip install jinja2"
+        )
+    else()
+        message(STATUS "Found jinja2 (required for GLAD2)")
+    endif()
+else()
+    message(FATAL_ERROR "Python 3 is required to build this project (needed for GLAD2 code generation)")
+endif()
+
 # Fetch external dependencies
 include(FetchContent)
 
@@ -46,11 +74,13 @@ FetchContent_Declare(
   GIT_TAG 3.4
 )
 
-# GLAD
+# GLAD2 - Fetch the generator
 FetchContent_Declare(
   glad
   GIT_REPOSITORY https://github.com/Dav1dde/glad.git
-  GIT_TAG v0.1.36
+  GIT_TAG v2.0.8
+  GIT_SHALLOW TRUE
+  SOURCE_SUBDIR cmake
 )
 
 # GLM 
@@ -60,11 +90,12 @@ FetchContent_Declare(
   GIT_TAG 0af55ccecd98d4e5a8d1fad7de25ba429d60e863 # 1.0.1
 )
 
-# Configure GLAD before fetching
-set(GLAD_PROFILE "core" CACHE STRING "")
-set(GLAD_API "gl=4.6" CACHE STRING "")
-set(GLAD_GENERATOR "c" CACHE STRING "")
-set(GLAD_INSTALL OFF CACHE BOOL "" FORCE)
+# stb_image (single header library for image loading)
+FetchContent_Declare(
+  stb
+  GIT_REPOSITORY https://github.com/nothings/stb.git
+  GIT_TAG master
+)
 
 # Configure GLFW options before making it available
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -75,8 +106,6 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 # Configure GLM options
 set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
 
-
-
 # Dear ImGui (docking)
 FetchContent_Declare(
   imgui
@@ -84,8 +113,14 @@ FetchContent_Declare(
   GIT_TAG docking
 )
 
-# Make dependencies available
-FetchContent_MakeAvailable(spdlog glfw glad glm imgui)
+# Make dependencies available (except glad - we'll handle it specially)
+FetchContent_MakeAvailable(spdlog glfw glm stb imgui)
+
+# Now make GLAD available and generate the loader
+FetchContent_MakeAvailable(glad)
+
+# Generate GLAD loader for OpenGL 4.6 Core
+glad_add_library(glad_gl_core_46 REPRODUCIBLE API gl:core=4.6)
 
 # Create imgui library from sources
 set(IMGUI_DIR ${imgui_SOURCE_DIR})
@@ -106,7 +141,7 @@ target_include_directories(imgui PUBLIC
 
 target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
-target_link_libraries(imgui PUBLIC glfw)
+target_link_libraries(imgui PUBLIC glfw glad_gl_core_46)
 
 # Add subdirectories
 add_subdirectory(Pillar)

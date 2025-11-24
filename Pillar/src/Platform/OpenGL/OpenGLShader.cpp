@@ -1,6 +1,6 @@
 #include "Platform/OpenGL/OpenGLShader.h"
 #include "Pillar/Logger.h"
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <vector>
 
 namespace Pillar {
@@ -107,6 +107,12 @@ namespace Pillar {
     void OpenGLShader::Unbind() const
     {
         glUseProgram(0);
+    }
+
+    void OpenGLShader::SetInt(const std::string& name, int value)
+    {
+        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
+        glUniform1i(location, value);
     }
 
     void OpenGLShader::SetFloat4(const std::string& name, const glm::vec4& value)

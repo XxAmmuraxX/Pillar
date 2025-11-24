@@ -1,8 +1,8 @@
-#pragma once
 #include "stdio.h"
 #include "Application.h"
 #include "Pillar/Logger.h"
 #include "Pillar/Renderer/Renderer.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include <chrono>
 #include "Pillar/Input.h"
 
@@ -22,6 +22,7 @@ namespace Pillar
 
 		// Initialize Renderer
 		Renderer::Init();
+		Renderer2D::Init();
 
 		// Create and push ImGui layer as an overlay
 		m_ImGuiLayer = new ImGuiLayer();
@@ -31,6 +32,7 @@ namespace Pillar
 	Application::~Application()
 	{
 		// Ensure layers are detached and destroyed via LayerStack destructor
+			Renderer2D::Shutdown();
 		Renderer::Shutdown();
 	}
 
@@ -97,7 +99,6 @@ namespace Pillar
 			Renderer::Clear();
 
 			// Begin scene
-			Renderer::BeginScene();
 
 			for (Layer* layer : m_LayerStack)
 			{
@@ -105,7 +106,6 @@ namespace Pillar
 			}
 
 			// End scene
-			Renderer::EndScene();
 
 			// Render ImGui
 			m_ImGuiLayer->Begin();

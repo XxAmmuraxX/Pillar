@@ -6,7 +6,7 @@
 
 #include "Pillar/Application.h"
 
-#include <glad/glad.h>
+#include <glad/gl.h>
 #include <GLFW/glfw3.h>
 
 namespace Pillar {
@@ -171,6 +171,11 @@ namespace Pillar {
             event.Handled |= event.IsInCategory(EventCategoryMouse) && io.WantCaptureMouse;
             event.Handled |= event.IsInCategory(EventCategoryKeyboard) && io.WantCaptureKeyboard;
         }
+    }
+
+    ImGuiContext* ImGuiLayer::GetImGuiContext()
+    {
+        return ImGui::GetCurrentContext();
     }
 
 }

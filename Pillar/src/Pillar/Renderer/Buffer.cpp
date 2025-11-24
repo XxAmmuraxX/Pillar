@@ -1,6 +1,8 @@
 #include "Pillar/Renderer/Buffer.h"
 #include "Platform/OpenGL/OpenGLBuffer.h"
 #include "Pillar/Renderer/RenderAPI.h"
+#include "Pillar/Logger.h"
+
 
 namespace Pillar {
 
@@ -25,21 +27,6 @@ namespace Pillar {
         {
             case RendererAPI::OpenGL:
                 return new OpenGLIndexBuffer(indices, count);
-            case RendererAPI::None:
-                PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
-                return nullptr;
-        }
-
-        PIL_CORE_ASSERT(false, "Unknown RendererAPI!");
-        return nullptr;
-    }
-
-    VertexArray* VertexArray::Create()
-    {
-        switch (RenderAPI::GetAPI())
-        {
-            case RendererAPI::OpenGL:
-                return new OpenGLVertexArray();
             case RendererAPI::None:
                 PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
                 return nullptr;

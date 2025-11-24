@@ -1,19 +1,28 @@
 #pragma once
 
+// Platform detection
 #ifdef PIL_WINDOWS
-	#ifdef PIL_EXPORT
-		#define PIL_API __declspec(dllexport)
+	// Static library - no DLL import/export needed
+	#ifdef PIL_STATIC_LIB
+		#define PIL_API
 	#else
-		#define PIL_API __declspec(dllimport)
+		// Legacy DLL support (not used anymore)
+		#ifdef PIL_EXPORT
+			#define PIL_API __declspec(dllexport)
+		#else
+			#define PIL_API __declspec(dllimport)
+		#endif
 	#endif
+#else
+	#define PIL_API
 #endif
 
 #ifdef PIL_ENABLE_ASSERTS
 	#define PIL_ASSERT(x, ...) { if(!(x)) { PIL_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
-#define PIL_CORE_ASSERT(x, ...) { if(!(x)) { PIL_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
+	#define PIL_CORE_ASSERT(x, ...) { if(!(x)) { PIL_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
 #else
 	#define PIL_ASSERT(x, ...)
-#define PIL_CORE_ASSERT(x, ...)
+	#define PIL_CORE_ASSERT(x, ...)
 #endif
 
 // Macro to bind member functions to event callbacks
