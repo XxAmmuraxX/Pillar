@@ -43,9 +43,11 @@ set_target_properties(Pillar PROPERTIES
     LIBRARY_OUTPUT_DIR ${LIBRARY_OUTPUT_DIR}
 )
 
-# Include directories
+# Include directories (add ImGui headers explicitly so Sandbox can include them without linking imgui again)
 target_include_directories(Pillar PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${IMGUI_DIR}
+    ${IMGUI_DIR}/backends
 )
 
 # Link libraries - add glm::glm
@@ -54,8 +56,9 @@ target_link_libraries(Pillar
         spdlog::spdlog
         glfw
         glad
-        imgui
         glm::glm
+    PRIVATE
+        imgui # Link imgui only into Pillar to ensure single Dear ImGui instance
 )
 
 # For Windows, link additional system libraries that GLFW needs
