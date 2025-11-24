@@ -33,6 +33,12 @@ add_library(Pillar STATIC
     src/Platform/OpenGL/OpenGLBuffer.cpp
     src/Platform/OpenGL/OpenGLVertexArray.cpp
     src/Platform/OpenGL/OpenGLTexture.cpp
+    # ECS - Entity Component System
+    src/Pillar/ECS/Scene.cpp
+    src/Pillar/ECS/Components/Core/TagComponent.h
+    src/Pillar/ECS/Components/Core/TransformComponent.h
+    src/Pillar/ECS/Components/Core/UUIDComponent.h
+    src/Pillar/ECS/Components/Core/HierarchyComponent.h
 )
 
 # Override for all configurations
@@ -64,6 +70,7 @@ target_link_libraries(Pillar
         glad_gl_core_46
         glm::glm
         imgui
+        EnTT::EnTT
 )
 
 # For Windows, link additional system libraries that GLFW needs

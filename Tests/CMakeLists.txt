@@ -26,6 +26,8 @@ add_executable(PillarTests
     src/InputTests.cpp
     src/ApplicationTests.cpp
     src/WindowTests.cpp
+    src/SceneTests.cpp
+    src/EntityTests.cpp
 )
 
 # Set output directory

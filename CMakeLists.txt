@@ -97,6 +97,13 @@ FetchContent_Declare(
   GIT_TAG master
 )
 
+# EnTT (Entity-Component-System library)
+FetchContent_Declare(
+  entt
+  GIT_REPOSITORY https://github.com/skypjack/entt.git
+  GIT_TAG v3.12.2
+)
+
 # Configure GLFW options before making it available
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -114,7 +121,7 @@ FetchContent_Declare(
 )
 
 # Make dependencies available (except glad - we'll handle it specially)
-FetchContent_MakeAvailable(spdlog glfw glm stb imgui)
+FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt)
 
 # Now make GLAD available and generate the loader
 FetchContent_MakeAvailable(glad)
