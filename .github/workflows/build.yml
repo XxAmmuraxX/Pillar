@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "master" ]
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 env:
   BUILD_TYPE: Debug
 
@@ -18,6 +23,9 @@ jobs:
 
       - name: Install Ninja
         uses: seanmiddleditch/gha-setup-ninja@v4
+      
+      - name: Setup Mesa3D (Software OpenGL)
+        uses: ssciwr/setup-mesa-dist-win@v2
 
       - name: Configure CMake
         run: |
@@ -31,17 +39,22 @@ jobs:
         run: |
           dir "bin\Debug-x64" -Recurse
 
+      - name: Run Unit Tests
+        run: |
+          .\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml
+        env:
+          # Ensure Mesa is used for OpenGL
+          GALLIUM_DRIVER: llvmpipe
+
+      - name: Publish Test Results
+        uses: EnricoMi/publish-unit-test-result-action/windows@v2
+        if: always()
+        with:
+          files: test-results.xml
+
       # Flaky so commenting out for now
       # - name: Smoke Test (Run Sandbox for a few seconds)
       #   run: |
       #     $p = Start-Process -FilePath .\bin\Debug-x64\Sandbox\SandboxApp.exe -PassThru
       #     Start-Sleep -Seconds 3
       #     Stop-Process -Id $p.Id -ErrorAction Stop
-
-  # test:
-  #   name: Run Tests
-  #   needs: build
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Run Tests
