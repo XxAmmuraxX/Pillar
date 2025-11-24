@@ -15,20 +15,13 @@ add_library(Pillar SHARED
     src/Pillar/KeyCodes.h
     # Utils
     src/Pillar/Utils/AssetManager.cpp
-    # Utils
-    src/Pillar/Utils/AssetManager.cpp
     # Renderer
     src/Pillar/Renderer/RenderAPI.cpp
     src/Pillar/Renderer/Renderer.cpp
     src/Pillar/Renderer/Renderer2D.cpp
     src/Pillar/Renderer/RenderCommand.cpp
-    src/Pillar/Renderer/Renderer2D.cpp
-    src/Pillar/Renderer/RenderCommand.cpp
     src/Pillar/Renderer/Shader.cpp
     src/Pillar/Renderer/Buffer.cpp
-    src/Pillar/Renderer/VertexArray.cpp
-    src/Pillar/Renderer/Texture.cpp
-    src/Pillar/Renderer/OrthographicCamera.cpp
     src/Pillar/Renderer/VertexArray.cpp
     src/Pillar/Renderer/Texture.cpp
     src/Pillar/Renderer/OrthographicCamera.cpp
@@ -37,8 +30,6 @@ add_library(Pillar SHARED
     src/Platform/OpenGL/OpenGLContext.cpp
     src/Platform/OpenGL/OpenGLShader.cpp
     src/Platform/OpenGL/OpenGLBuffer.cpp
-    src/Platform/OpenGL/OpenGLVertexArray.cpp
-    src/Platform/OpenGL/OpenGLTexture.cpp
     src/Platform/OpenGL/OpenGLVertexArray.cpp
     src/Platform/OpenGL/OpenGLTexture.cpp
 )
@@ -61,12 +52,12 @@ set_target_properties(Pillar PROPERTIES
     LIBRARY_OUTPUT_DIR ${LIBRARY_OUTPUT_DIR}
 )
 
-# Include directories (add ImGui headers explicitly so Sandbox can include them without linking imgui again)
+# Include directories
 target_include_directories(Pillar PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${stb_SOURCE_DIR}
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
+    ${stb_SOURCE_DIR}
 )
 
 # Link libraries - add glm::glm
@@ -76,8 +67,7 @@ target_link_libraries(Pillar
         glfw
         glad
         glm::glm
-    PRIVATE
-        imgui # Link imgui only into Pillar to ensure single Dear ImGui instance
+        imgui
 )
 
 # For Windows, link additional system libraries that GLFW needs
@@ -98,15 +88,6 @@ add_custom_command(TARGET Pillar POST_BUILD
         $<TARGET_FILE:Pillar>
         ${EXECUTABLE_OUTPUT_DIR}
 )
-
-
-
-
-
-
-
-
-
 
 
 
