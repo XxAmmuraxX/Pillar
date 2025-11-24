@@ -90,7 +90,6 @@ endif()
 # Define this so symbols are exported from DLL
 target_compile_definitions(Pillar PRIVATE PIL_EXPORT)
 target_compile_definitions(Pillar PRIVATE $<$<CONFIG:Debug>:PIL_ENABLE_ASSERTS>)
-target_compile_definitions(Pillar PRIVATE $<$<CONFIG:Debug>:PIL_ENABLE_ASSERTS>)
 
 # Copy Pillar DLL next to the Sandbox executable whenever Pillar is built
 add_custom_command(TARGET Pillar POST_BUILD

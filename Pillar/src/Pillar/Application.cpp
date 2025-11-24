@@ -3,7 +3,6 @@
 #include "Pillar/Logger.h"
 #include "Pillar/Renderer/Renderer.h"
 #include "Pillar/Renderer/Renderer2D.h"
-#include "Pillar/Renderer/Renderer2D.h"
 #include <chrono>
 #include "Pillar/Input.h"
 
@@ -23,7 +22,6 @@ namespace Pillar
 
 		// Initialize Renderer
 		Renderer::Init();
-		Renderer2D::Init();
 		Renderer2D::Init();
 
 		// Create and push ImGui layer as an overlay
