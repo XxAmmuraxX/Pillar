@@ -14,6 +14,10 @@ namespace Pillar {
 		float Rotation = 0.0f;      // Radians
 		glm::vec2 Scale = { 1.0f, 1.0f };
 
+		// Cached transform matrix for performance
+		mutable glm::mat4 CachedTransform = glm::mat4(1.0f);
+		mutable bool Dirty = true;
+
 		TransformComponent() = default;
 		TransformComponent(const TransformComponent&) = default;
 		TransformComponent(const glm::vec2& position)
@@ -21,11 +25,17 @@ namespace Pillar {
 
 		glm::mat4 GetTransform() const
 		{
-			glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), Rotation, glm::vec3(0, 0, 1));
+			if (Dirty)
+			{
+				glm::mat4 rotation = glm::rotate(glm::mat4(1.0f), Rotation, glm::vec3(0, 0, 1));
 
-			return glm::translate(glm::mat4(1.0f), glm::vec3(Position, 0.0f))
-				* rotation
-				* glm::scale(glm::mat4(1.0f), glm::vec3(Scale, 1.0f));
+				CachedTransform = glm::translate(glm::mat4(1.0f), glm::vec3(Position, 0.0f))
+					* rotation
+					* glm::scale(glm::mat4(1.0f), glm::vec3(Scale, 1.0f));
+				
+				Dirty = false;
+			}
+			return CachedTransform;
 		}
 	};
 

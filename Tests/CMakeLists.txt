@@ -28,6 +28,11 @@ add_executable(PillarTests
     src/WindowTests.cpp
     src/SceneTests.cpp
     src/EntityTests.cpp
+    src/VelocityIntegrationTests.cpp
+    src/BulletCollisionTests.cpp
+    src/SpatialHashGridTests.cpp
+    src/XPCollectionTests.cpp
+
 )
 
 # Set output directory

@@ -6,8 +6,9 @@
 
 namespace Pillar {
 
-	// Forward declaration
+	// Forward declarations
 	class Entity;
+	class PhysicsSystem;
 
 	class PIL_API Scene
 	{
@@ -23,8 +24,15 @@ namespace Pillar {
 		entt::registry& GetRegistry() { return m_Registry; }
 		const entt::registry& GetRegistry() const { return m_Registry; }
 
+		// Physics system management
+		void SetPhysicsSystem(PhysicsSystem* physicsSystem) { m_PhysicsSystem = physicsSystem; }
+
 	private:
 		entt::registry m_Registry;
+		PhysicsSystem* m_PhysicsSystem = nullptr;
+
+		// Cleanup callback for RigidbodyComponent
+		void OnRigidbodyDestroyed(entt::registry& registry, entt::entity entity);
 
 		friend class Entity;
 	};

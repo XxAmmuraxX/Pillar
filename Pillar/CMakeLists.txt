@@ -39,6 +39,25 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Components/Core/TransformComponent.h
     src/Pillar/ECS/Components/Core/UUIDComponent.h
     src/Pillar/ECS/Components/Core/HierarchyComponent.h
+    # ECS - Physics Components
+    src/Pillar/ECS/Components/Physics/RigidbodyComponent.h
+    src/Pillar/ECS/Components/Physics/ColliderComponent.h
+    src/Pillar/ECS/Components/Physics/VelocityComponent.h
+    # ECS - Gameplay Components
+    src/Pillar/ECS/Components/Gameplay/BulletComponent.h
+    src/Pillar/ECS/Components/Gameplay/XPGemComponent.h
+    # ECS - Physics
+    src/Pillar/ECS/Physics/Box2DWorld.cpp
+    src/Pillar/ECS/Physics/Box2DBodyFactory.cpp
+    src/Pillar/ECS/Physics/Box2DContactListener.cpp
+    src/Pillar/ECS/Physics/SpatialHashGrid.cpp
+    # ECS - Systems
+    src/Pillar/ECS/Systems/System.h
+    src/Pillar/ECS/Systems/PhysicsSystem.cpp
+    src/Pillar/ECS/Systems/PhysicsSyncSystem.cpp
+    src/Pillar/ECS/Systems/VelocityIntegrationSystem.cpp
+    src/Pillar/ECS/Systems/BulletCollisionSystem.cpp
+    src/Pillar/ECS/Systems/XPCollectionSystem.cpp
 )
 
 # Override for all configurations
@@ -71,6 +90,7 @@ target_link_libraries(Pillar
         glm::glm
         imgui
         EnTT::EnTT
+        box2d
 )
 
 # For Windows, link additional system libraries that GLFW needs
