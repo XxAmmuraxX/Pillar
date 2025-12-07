@@ -97,6 +97,20 @@ FetchContent_Declare(
   GIT_TAG master
 )
 
+# EnTT (Entity-Component-System library)
+FetchContent_Declare(
+  entt
+  GIT_REPOSITORY https://github.com/skypjack/entt.git
+  GIT_TAG v3.12.2
+)
+
+# Box2D (2D physics engine)
+FetchContent_Declare(
+  box2d
+  GIT_REPOSITORY https://github.com/erincatto/box2d.git
+  GIT_TAG v2.4.1
+)
+
 # Configure GLFW options before making it available
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -106,6 +120,11 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 # Configure GLM options
 set(GLM_TEST_ENABLE OFF CACHE BOOL "" FORCE)
 
+# Configure Box2D options
+set(BOX2D_BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+set(BOX2D_BUILD_TESTBED OFF CACHE BOOL "" FORCE)
+set(BOX2D_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+
 # Dear ImGui (docking)
 FetchContent_Declare(
   imgui
@@ -114,7 +133,7 @@ FetchContent_Declare(
 )
 
 # Make dependencies available (except glad - we'll handle it specially)
-FetchContent_MakeAvailable(spdlog glfw glm stb imgui)
+FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt box2d)
 
 # Now make GLAD available and generate the loader
 FetchContent_MakeAvailable(glad)

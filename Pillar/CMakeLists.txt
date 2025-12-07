@@ -33,6 +33,33 @@ add_library(Pillar STATIC
     src/Platform/OpenGL/OpenGLBuffer.cpp
     src/Platform/OpenGL/OpenGLVertexArray.cpp
     src/Platform/OpenGL/OpenGLTexture.cpp
+    # ECS - Entity Component System
+    src/Pillar/ECS/Scene.cpp
+    src/Pillar/ECS/ObjectPool.cpp
+    src/Pillar/ECS/SpecializedPools.cpp
+    src/Pillar/ECS/Components/Core/TagComponent.h
+    src/Pillar/ECS/Components/Core/TransformComponent.h
+    src/Pillar/ECS/Components/Core/UUIDComponent.h
+    src/Pillar/ECS/Components/Core/HierarchyComponent.h
+    # ECS - Physics Components
+    src/Pillar/ECS/Components/Physics/RigidbodyComponent.h
+    src/Pillar/ECS/Components/Physics/ColliderComponent.h
+    src/Pillar/ECS/Components/Physics/VelocityComponent.h
+    # ECS - Gameplay Components
+    src/Pillar/ECS/Components/Gameplay/BulletComponent.h
+    src/Pillar/ECS/Components/Gameplay/XPGemComponent.h
+    # ECS - Physics
+    src/Pillar/ECS/Physics/Box2DWorld.cpp
+    src/Pillar/ECS/Physics/Box2DBodyFactory.cpp
+    src/Pillar/ECS/Physics/Box2DContactListener.cpp
+    src/Pillar/ECS/Physics/SpatialHashGrid.cpp
+    # ECS - Systems
+    src/Pillar/ECS/Systems/System.h
+    src/Pillar/ECS/Systems/PhysicsSystem.cpp
+    src/Pillar/ECS/Systems/PhysicsSyncSystem.cpp
+    src/Pillar/ECS/Systems/VelocityIntegrationSystem.cpp
+    src/Pillar/ECS/Systems/BulletCollisionSystem.cpp
+    src/Pillar/ECS/Systems/XPCollectionSystem.cpp
 )
 
 # Override for all configurations
@@ -64,6 +91,8 @@ target_link_libraries(Pillar
         glad_gl_core_46
         glm::glm
         imgui
+        EnTT::EnTT
+        box2d
 )
 
 # For Windows, link additional system libraries that GLFW needs
