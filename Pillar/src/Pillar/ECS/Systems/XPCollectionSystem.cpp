@@ -62,29 +62,39 @@ namespace Pillar {
 		if (!playerFound)
 			return;
 
-		// Process each XP gem
-		auto gemView = m_Scene->GetRegistry().view<TransformComponent, VelocityComponent, XPGemComponent>();
+		// OPTIMIZED: Query only nearby gems using spatial grid
+		// Max attraction radius (adjust based on your game)
+		float maxAttractionRadius = 5.0f; // Should cover all gem attraction radii
 		
-		for (auto entity : gemView)
+		auto nearbyGemIds = m_SpatialGrid->Query(playerPos, maxAttractionRadius);
+		
+		// Only process gems in nearby cells (much faster!)
+		for (uint32_t entityId : nearbyGemIds)
 		{
-			auto& transform = gemView.get<TransformComponent>(entity);
-			auto& velocity = gemView.get<VelocityComponent>(entity);
-			auto& gem = gemView.get<XPGemComponent>(entity);
+			entt::entity entity = static_cast<entt::entity>(entityId);
+			
+			// Get components (skip if entity doesn't have required components)
+			auto* transform = m_Scene->GetRegistry().try_get<TransformComponent>(entity);
+			auto* velocity = m_Scene->GetRegistry().try_get<VelocityComponent>(entity);
+			auto* gem = m_Scene->GetRegistry().try_get<XPGemComponent>(entity);
+			
+			if (!transform || !velocity || !gem)
+				continue;
 
-			// Calculate distance to player
-			glm::vec2 toPlayer = playerPos - transform.Position;
+			// Calculate distance to player (still need precise check)
+			glm::vec2 toPlayer = playerPos - transform->Position;
 			float distance = glm::length(toPlayer);
 
 			// Check if within attraction radius
-			if (distance < gem.AttractionRadius)
+			if (distance < gem->AttractionRadius)
 			{
-				gem.IsAttracted = true;
+				gem->IsAttracted = true;
 
 				// Move toward player
 				if (distance > 0.01f) // Avoid division by zero
 				{
 					glm::vec2 direction = toPlayer / distance;
-					velocity.Velocity = direction * gem.MoveSpeed;
+					velocity->Velocity = direction * gem->MoveSpeed;
 				}
 
 				// Check if collected (very close to player)
@@ -92,7 +102,7 @@ namespace Pillar {
 				{
 					// TODO: Add XP to player (Phase 6: Health/Stats System)
 					// For now, just log and destroy
-					PIL_CORE_TRACE("XP Gem collected! Value: {}", gem.XPValue);
+					PIL_CORE_TRACE("XP Gem collected! Value: {}", gem->XPValue);
 					
 					Entity e(entity, m_Scene);
 					m_Scene->DestroyEntity(e);
@@ -100,9 +110,9 @@ namespace Pillar {
 			}
 			else
 			{
-				gem.IsAttracted = false;
+				gem->IsAttracted = false;
 				// Gems that aren't attracted can drift slowly or be stationary
-				velocity.Velocity = glm::vec2(0, 0);
+				velocity->Velocity = glm::vec2(0, 0);
 			}
 		}
 	}

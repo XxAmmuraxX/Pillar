@@ -35,6 +35,8 @@ add_library(Pillar STATIC
     src/Platform/OpenGL/OpenGLTexture.cpp
     # ECS - Entity Component System
     src/Pillar/ECS/Scene.cpp
+    src/Pillar/ECS/ObjectPool.cpp
+    src/Pillar/ECS/SpecializedPools.cpp
     src/Pillar/ECS/Components/Core/TagComponent.h
     src/Pillar/ECS/Components/Core/TransformComponent.h
     src/Pillar/ECS/Components/Core/UUIDComponent.h
