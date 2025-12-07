@@ -196,7 +196,7 @@ private:
 			if (shapeType(gen) == 0)
 			{
 				entity.AddComponent<Pillar::ColliderComponent>(
-					Pillar::ColliderComponent::Circle(size(gen))
+					Pillar::ColliderComponent::Box(glm::vec2(size(gen), size(gen)))
 				);
 			}
 			else

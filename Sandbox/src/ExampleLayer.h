@@ -82,8 +82,16 @@ public:
 	
 	void OnImGuiRender() override 
 	{
-		ImGui::Begin("Renderer2D Test");
-		ImGui::Text("Renderer2D and Texture Test");
+		ImGui::Begin("Pillar Engine - Renderer2D Demo");
+		
+		// Credits section
+		ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Developed by:");
+		ImGui::BulletText("Ayse Sila Solak");
+		ImGui::BulletText("Chika Libuku");
+		ImGui::BulletText("Omar Akkawi");
+		ImGui::Spacing();
+		ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.4f, 1.0f), "Supervisor:");
+		ImGui::BulletText("Dr hab. inz. Jerzy Balicki, prof. PW");
 		ImGui::Separator();
 		
 		// Camera debug panel
@@ -104,11 +112,13 @@ public:
 		ImGui::Text("Zoom Level: %.2fx", zoom);
 		ImGui::Separator();
 		
-		// Camera settings
-		float translationSpeed = m_CameraController.GetTranslationSpeed();
-		if (ImGui::SliderFloat("Move Speed", &translationSpeed, 1.0f, 20.0f))
+		// Camera Settings (adjustable)
+		ImGui::Text("Camera Settings:");
+		
+		float baseTranslationSpeed = m_CameraController.GetBaseTranslationSpeed();
+		if (ImGui::SliderFloat("Move Speed", &baseTranslationSpeed, 1.0f, 20.0f))
 		{
-			m_CameraController.SetTranslationSpeed(translationSpeed);
+			m_CameraController.SetBaseTranslationSpeed(baseTranslationSpeed);
 		}
 		
 		float rotationSpeed = m_CameraController.GetRotationSpeed();
@@ -128,6 +138,7 @@ public:
 			m_CameraController.GetCamera().SetPosition({ 0.0f, 0.0f, 0.0f });
 			m_CameraController.GetCamera().SetRotation(0.0f);
 			m_CameraController.SetZoomLevel(1.0f);
+			m_CameraController.SetBaseTranslationSpeed(5.0f);
 		}
 		
 		ImGui::Separator();

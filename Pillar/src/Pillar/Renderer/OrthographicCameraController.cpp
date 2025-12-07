@@ -14,6 +14,10 @@ namespace Pillar {
 
     void OrthographicCameraController::OnUpdate(float deltaTime)
     {
+        // Adjust translation speed based on zoom level (zoom out = move faster)
+        // Use base speed as the multiplier so user changes persist
+        m_CameraTranslationSpeed = m_BaseTranslationSpeed * m_ZoomLevel;
+
         // Movement input (WASD)
         if (Input::IsKeyPressed(PIL_KEY_A))
         {
@@ -49,9 +53,6 @@ namespace Pillar {
         // Update camera transform
         m_Camera.SetPosition(m_CameraPosition);
         m_Camera.SetRotation(m_CameraRotation);
-
-        // Adjust translation speed based on zoom level (zoom out = move faster)
-        m_CameraTranslationSpeed = m_ZoomLevel * 5.0f;
     }
 
     void OrthographicCameraController::OnEvent(Event& e)
