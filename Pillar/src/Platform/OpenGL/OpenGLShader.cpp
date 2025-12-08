@@ -115,6 +115,12 @@ namespace Pillar {
         glUniform1i(location, value);
     }
 
+    void OpenGLShader::SetIntArray(const std::string& name, int* values, uint32_t count)
+    {
+        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
+        glUniform1iv(location, count, values);
+    }
+
     void OpenGLShader::SetFloat4(const std::string& name, const glm::vec4& value)
     {
         GLint location = glGetUniformLocation(m_RendererID, name.c_str());

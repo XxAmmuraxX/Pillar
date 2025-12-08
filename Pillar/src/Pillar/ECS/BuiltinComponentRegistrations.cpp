@@ -7,6 +7,7 @@
 #include "Components/Physics/VelocityComponent.h"
 #include "Components/Gameplay/XPGemComponent.h"
 #include "Components/Gameplay/BulletComponent.h"
+#include "Components/Rendering/SpriteComponent.h"
 #include <box2d/box2d.h>
 
 namespace Pillar {
@@ -316,6 +317,53 @@ namespace Pillar {
 				d.Pierce = s.Pierce;
 				d.MaxHits = s.MaxHits;
 				d.HitsRemaining = s.HitsRemaining;
+			}
+		);
+
+		// ============================================================
+		// Rendering Components
+		// ============================================================
+
+		// SpriteComponent
+		registry.Register<SpriteComponent>("sprite",
+			// Serialize
+			[](Entity e) -> json {
+				if (!e.HasComponent<SpriteComponent>()) return nullptr;
+				auto& s = e.GetComponent<SpriteComponent>();
+				return json{
+					{ "color", JsonHelpers::SerializeVec4(s.Color) },
+					{ "size", JsonHelpers::SerializeVec2(s.Size) },
+					{ "texCoordMin", JsonHelpers::SerializeVec2(s.TexCoordMin) },
+					{ "texCoordMax", JsonHelpers::SerializeVec2(s.TexCoordMax) },
+					{ "zIndex", s.ZIndex }
+					// Note: Texture not serialized (requires asset management)
+				};
+			},
+			// Deserialize
+			[](Entity e, const json& j) {
+				auto& s = e.AddComponent<SpriteComponent>();
+				if (j.contains("color"))
+					s.Color = JsonHelpers::DeserializeVec4(j["color"]);
+				if (j.contains("size"))
+					s.Size = JsonHelpers::DeserializeVec2(j["size"]);
+				if (j.contains("texCoordMin"))
+					s.TexCoordMin = JsonHelpers::DeserializeVec2(j["texCoordMin"]);
+				if (j.contains("texCoordMax"))
+					s.TexCoordMax = JsonHelpers::DeserializeVec2(j["texCoordMax"]);
+				if (j.contains("zIndex"))
+					s.ZIndex = j["zIndex"].get<float>();
+			},
+			// Copy
+			[](Entity src, Entity dst) {
+				if (!src.HasComponent<SpriteComponent>()) return;
+				auto& s = src.GetComponent<SpriteComponent>();
+				auto& d = dst.AddComponent<SpriteComponent>();
+				d.Texture = s.Texture;  // Shared pointer, shallow copy is fine
+				d.Color = s.Color;
+				d.Size = s.Size;
+				d.TexCoordMin = s.TexCoordMin;
+				d.TexCoordMax = s.TexCoordMax;
+				d.ZIndex = s.ZIndex;
 			}
 		);
 	}
