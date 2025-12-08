@@ -3,6 +3,7 @@
 #include "Pillar/Core.h"
 #include "Scene.h"
 #include "Pillar/Logger.h"
+#include "Components/Core/UUIDComponent.h"
 #include <entt/entt.hpp>
 
 namespace Pillar {
@@ -33,7 +34,14 @@ namespace Pillar {
 		}
 
 		template<typename T>
-		bool HasComponent()
+		const T& GetComponent() const
+		{
+			PIL_CORE_ASSERT(HasComponent<T>(), "Entity does not have component!");
+			return m_Scene->m_Registry.get<T>(m_EntityHandle);
+		}
+
+		template<typename T>
+		bool HasComponent() const
 		{
 			return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
 		}
@@ -44,6 +52,16 @@ namespace Pillar {
 			PIL_CORE_ASSERT(HasComponent<T>(), "Entity does not have component!");
 			m_Scene->m_Registry.remove<T>(m_EntityHandle);
 		}
+
+		// Convenience methods
+		uint64_t GetUUID() const
+		{
+			if (HasComponent<UUIDComponent>())
+				return GetComponent<UUIDComponent>().UUID;
+			return 0;
+		}
+
+		Scene* GetScene() const { return m_Scene; }
 
 		// Validity check
 		operator bool() const { return m_EntityHandle != entt::null && m_Scene != nullptr; }
