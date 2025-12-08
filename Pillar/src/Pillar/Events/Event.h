@@ -15,7 +15,8 @@ namespace Pillar
 		WindowClose, WindowResize, WindowFocus, WindowLostFocus, WindowMoved,
 		AppTick, AppUpdate, AppRender,
 		KeyPressed, KeyReleased,
-		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled
+		MouseButtonPressed, MouseButtonReleased, MouseMoved, MouseScrolled,
+		AudioPlayback, AudioEngine
 	};
 
 	enum PIL_API EventCategory
@@ -31,7 +32,8 @@ namespace Pillar
 		EventCategoryInput =		1 << 1,
 		EventCategoryKeyboard =		1 << 2,
 		EventCategoryMouse =		1 << 3,
-		EventCategoryMouseButton =  1 << 4
+		EventCategoryMouseButton =  1 << 4,
+		EventCategoryAudio =		1 << 5
 	};
 
 	#define EVENT_CLASS_TYPE(type) \

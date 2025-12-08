@@ -3,6 +3,7 @@
 #include "Pillar/Logger.h"
 #include "Pillar/Renderer/Renderer.h"
 #include "Pillar/Renderer/Renderer2D.h"
+#include "Pillar/Audio/AudioEngine.h"
 #include "Pillar/Renderer/Renderer2DBackend.h"
 #include <chrono>
 #include "Pillar/Input.h"
@@ -21,6 +22,9 @@ namespace Pillar
 		m_Window = std::unique_ptr<Window>(Window::Create(WindowProps("Pillar Engine", 1280, 720)));
 		m_Window->SetEventCallback(BIND_EVENT_FN(Application::OnEvent));
 
+		// Initialize Audio Engine
+		AudioEngine::Init();
+
 		// Initialize Renderer
 		Renderer::Init();
 		Renderer2D::Init();
@@ -37,6 +41,7 @@ namespace Pillar
 		Renderer2DBackend::Shutdown();
 		Renderer2D::Shutdown();
 		Renderer::Shutdown();
+		AudioEngine::Shutdown();
 	}
 
 	Application& Application::Get()

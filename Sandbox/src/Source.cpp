@@ -4,6 +4,7 @@
 #include "LightEntityPerfDemo.h"
 #include "HeavyEntityPerfDemo.h"
 #include "ObjectPoolDemo.h"
+#include "AudioDemoLayer.h"
 #include "SceneDemoLayer.h"
 #include "DemoMenuLayer.h"
 #include "Pillar/ImGuiLayer.h"
@@ -18,7 +19,7 @@ public:
 		//PushLayer(new DemoMenuLayer());
 		
 		// Option 1: Physics Demo (Gameplay)
-		PushLayer(new PhysicsDemoLayer());
+		//PushLayer(new PhysicsDemoLayer());
 		
 		// Option 2: Light Entity Performance Demo
 		//PushLayer(new LightEntityPerfDemo());
@@ -29,9 +30,11 @@ public:
 		// Option 4: Object Pool Demo
 		//PushLayer(new ObjectPoolDemo());
 
-		// Option 5: Scene System Demo (NEW!)
+		// Option 5: Audio System Demo
+		PushLayer(new AudioDemoLayer());
+		
+		// Option 6: Scene System Demo (NEW!)
 		//PushLayer(new SceneDemoLayer());
-
 	}
 
 	~Sandbox()
