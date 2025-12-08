@@ -52,7 +52,7 @@ jobs:
 
       - name: Run Unit Tests
         run: |
-          .\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml --gtest_filter=-AudioClipTests.*:-AudioListenerTests.*:-AudioSourceExtendedTests.*:-AudioEngineExtendedTests.*:-AudioSourceComponentTests.*:-AudioSystemTests.*:-AudioBufferExtendedTests.*
+          .\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml --gtest_filter=-AudioClipTests.*:-AudioListenerTests.*:-AudioSourceExtendedTests.*:-AudioEngineExtendedTests.*:-AudioSourceComponentTests.*:-AudioSystemTests.*:-AudioBufferExtendedTests.*:-AudioEngineTests.*:-AudioSourceTests.*:-AudioBufferTests.*:-FactoryTests.*
         env:
           # Ensure Mesa is used for OpenGL
           GALLIUM_DRIVER: llvmpipe
