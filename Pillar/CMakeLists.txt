@@ -15,6 +15,17 @@ add_library(Pillar STATIC
     src/Pillar/KeyCodes.h
     # Utils
     src/Pillar/Utils/AssetManager.cpp
+    # Audio
+    src/Pillar/Audio/AudioEngine.cpp
+    src/Pillar/Audio/AudioBuffer.cpp
+    src/Pillar/Audio/AudioSource.cpp
+    src/Pillar/Audio/AudioClip.cpp
+    src/Pillar/Audio/AudioListener.cpp
+    src/Pillar/Audio/WavLoader.cpp
+    # Platform - OpenAL
+    src/Platform/OpenAL/OpenALContext.cpp
+    src/Platform/OpenAL/OpenALBuffer.cpp
+    src/Platform/OpenAL/OpenALSource.cpp
     # Renderer
     src/Pillar/Renderer/RenderAPI.cpp
     src/Pillar/Renderer/Renderer.cpp
@@ -48,6 +59,9 @@ add_library(Pillar STATIC
     # ECS - Gameplay Components
     src/Pillar/ECS/Components/Gameplay/BulletComponent.h
     src/Pillar/ECS/Components/Gameplay/XPGemComponent.h
+    # ECS - Audio Components
+    src/Pillar/ECS/Components/Audio/AudioSourceComponent.h
+    src/Pillar/ECS/Components/Audio/AudioListenerComponent.h
     # ECS - Physics
     src/Pillar/ECS/Physics/Box2DWorld.cpp
     src/Pillar/ECS/Physics/Box2DBodyFactory.cpp
@@ -60,6 +74,7 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Systems/VelocityIntegrationSystem.cpp
     src/Pillar/ECS/Systems/BulletCollisionSystem.cpp
     src/Pillar/ECS/Systems/XPCollectionSystem.cpp
+    src/Pillar/ECS/Systems/AudioSystem.cpp
 )
 
 # Override for all configurations
@@ -93,6 +108,7 @@ target_link_libraries(Pillar
         imgui
         EnTT::EnTT
         box2d
+        OpenAL::OpenAL
 )
 
 # For Windows, link additional system libraries that GLFW needs

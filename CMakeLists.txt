@@ -16,18 +16,8 @@ set(BINARY_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/bin/Debug-x64)
 set(LIBRARY_OUTPUT_DIR ${BINARY_OUTPUT_DIR}/Pillar)
 set(EXECUTABLE_OUTPUT_DIR ${BINARY_OUTPUT_DIR}/Sandbox)
 
-# Force single-config behavior for all targets
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIR})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIR})
-
-# Override per-configuration directories
-foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
-    string(TOUPPER ${CONFIG} CONFIG_UPPER)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-endforeach()
+# Note: Don't set global output directories here - it breaks FetchContent dependencies
+# Output directories are set per-target in subdirectories
 
 # Check for Python and jinja2 (required by GLAD2)
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
@@ -111,6 +101,13 @@ FetchContent_Declare(
   GIT_TAG v2.4.1
 )
 
+# OpenAL-Soft (cross-platform audio library)
+FetchContent_Declare(
+  openal
+  GIT_REPOSITORY https://github.com/kcat/openal-soft.git
+  GIT_TAG 1.24.3
+)
+
 # Configure GLFW options before making it available
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -125,6 +122,14 @@ set(BOX2D_BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
 set(BOX2D_BUILD_TESTBED OFF CACHE BOOL "" FORCE)
 set(BOX2D_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
+# Configure OpenAL-Soft options
+set(ALSOFT_UTILS OFF CACHE BOOL "" FORCE)
+set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL_CONFIG OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL_HRTF_DATA OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL_AMBDEC_PRESETS OFF CACHE BOOL "" FORCE)
+
 # Dear ImGui (docking)
 FetchContent_Declare(
   imgui
@@ -133,7 +138,7 @@ FetchContent_Declare(
 )
 
 # Make dependencies available (except glad - we'll handle it specially)
-FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt box2d)
+FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt box2d openal)
 
 # Now make GLAD available and generate the loader
 FetchContent_MakeAvailable(glad)

@@ -10,11 +10,12 @@
 **Tech Stack:**
 - Language: C++17
 - Build System: CMake 3.5+ (using Ninja generator)
-- Dependencies: GLFW 3.4, spdlog 1.13.0, Dear ImGui (docking branch), GLAD2 v2.0.8 (OpenGL 4.6), GLM 1.0.1, stb_image (master)
+- Dependencies: GLFW 3.4, spdlog 1.13.0, Dear ImGui (docking branch), GLAD2 v2.0.8 (OpenGL 4.6), GLM 1.0.1, stb_image (master), OpenAL-Soft 1.24.3, EnTT 3.13.2, Box2D 2.4.1
 - Testing: Google Test 1.14.0
 - Platform: Windows (with cross-platform foundation via GLFW)
 - Graphics API: OpenGL 4.6 (via GLAD2)
-- Size: ~44 source files in Pillar (26 headers, 18 cpp) excluding vendored dependencies, plus 7 test files
+- Audio API: OpenAL-Soft 1.24.3
+- Size: ~60+ source files in Pillar excluding vendored dependencies, plus 13 test files
 
 ## Build Instructions
 
@@ -142,9 +143,17 @@ PILLAR_/
 │   │   │   │   ├── Event.h          # Base Event class, EventDispatcher
 │   │   │   │   ├── ApplicationEvent.h/cpp # Window events (Close, Resize, Focus, etc.)
 │   │   │   │   ├── KeyEvent.h       # Keyboard events
-│   │   │   │   └── MouseEvent.h     # Mouse events
+│   │   │   │   ├── MouseEvent.h     # Mouse events
+│   │   │   │   └── AudioEvent.h     # Audio events (playback state, engine init/shutdown)
 │   │   │   ├── Utils/               # Utility classes
 │   │   │   │   └── AssetManager.h/cpp # Asset path resolution system
+│   │   │   ├── Audio/               # Audio system (OpenAL backend)
+│   │   │   │   ├── AudioEngine.h/cpp    # Static audio API (Init, Shutdown, factory methods)
+│   │   │   │   ├── AudioBuffer.h/cpp    # Abstract audio buffer (decoded audio data)
+│   │   │   │   ├── AudioSource.h/cpp    # Abstract audio source (playback control)
+│   │   │   │   ├── AudioClip.h/cpp      # High-level audio clip wrapper
+│   │   │   │   ├── AudioListener.h/cpp  # 3D audio listener utility
+│   │   │   │   └── WavLoader.h/cpp      # WAV file parsing utility
 │   │   │   └── Renderer/            # Rendering abstraction
 │   │   │       ├── Renderer.h/cpp   # High-level renderer API
 │   │   │       ├── Renderer2D.h/cpp # 2D batch renderer with quad drawing
@@ -159,31 +168,55 @@ PILLAR_/
 │   │   │       └── OrthographicCameraController.h/cpp # Camera controller with input
 │   │   ├── Platform/
 │   │   │   ├── WindowsWindow.h/cpp  # GLFW-based Window implementation
-│   │   │   └── OpenGL/              # OpenGL-specific implementations
-│   │   │       ├── OpenGLContext.h/cpp      # OpenGL initialization
-│   │   │       ├── OpenGLRenderAPI.h/cpp    # OpenGL rendering commands
-│   │   │       ├── OpenGLShader.h/cpp       # OpenGL shader compilation/linking
-│   │   │       ├── OpenGLBuffer.h/cpp       # OpenGL VBO/IBO
-│   │   │       ├── OpenGLVertexArray.h/cpp  # OpenGL VAO with flexible layout
-│   │   │       └── OpenGLTexture.h/cpp      # OpenGL 2D texture loading (stb_image)
+│   │   │   ├── OpenGL/              # OpenGL-specific implementations
+│   │   │   │   ├── OpenGLContext.h/cpp      # OpenGL initialization
+│   │   │   │   ├── OpenGLRenderAPI.h/cpp    # OpenGL rendering commands
+│   │   │   │   ├── OpenGLShader.h/cpp       # OpenGL shader compilation/linking
+│   │   │   │   ├── OpenGLBuffer.h/cpp       # OpenGL VBO/IBO
+│   │   │   │   ├── OpenGLVertexArray.h/cpp  # OpenGL VAO with flexible layout
+│   │   │   │   └── OpenGLTexture.h/cpp      # OpenGL 2D texture loading (stb_image)
+│   │   │   └── OpenAL/              # OpenAL-specific implementations
+│   │   │       ├── OpenALContext.h/cpp      # OpenAL device/context initialization
+│   │   │       ├── OpenALBuffer.h/cpp       # OpenAL audio buffer (loads WAV files)
+│   │   │       └── OpenALSource.h/cpp       # OpenAL audio source (playback control)
+│   │   ├── ECS/                     # Entity Component System
+│   │   │   ├── Entity.h             # Entity wrapper (entt::entity)
+│   │   │   ├── Scene.h/cpp          # Scene management (entity creation/destruction)
+│   │   │   ├── Components/          # ECS Components
+│   │   │   │   ├── Core/            # Core components (Transform, Tag, UUID, Hierarchy)
+│   │   │   │   ├── Physics/         # Physics components (Rigidbody, Collider, Velocity)
+│   │   │   │   ├── Gameplay/        # Gameplay components (Bullet, XPGem)
+│   │   │   │   └── Audio/           # Audio components
+│   │   │   │       ├── AudioSourceComponent.h    # Audio source attached to entity
+│   │   │   │       └── AudioListenerComponent.h  # Audio listener (camera)
+│   │   │   ├── Systems/             # ECS Systems
+│   │   │   │   ├── System.h         # Base system interface
+│   │   │   │   ├── PhysicsSystem.h/cpp          # Box2D physics integration
+│   │   │   │   ├── AudioSystem.h/cpp            # Audio source/listener updates
+│   │   │   │   └── ...              # Other systems
+│   │   │   └── Physics/             # Physics subsystem (Box2D integration, spatial hash)
 │   │   └── Pillar.h                 # Single include header
 │   └── CMakeLists.txt               # Builds Pillar as STATIC library
 ├── Sandbox/                         # Example application
 │   ├── src/
 │   │   ├── Source.cpp               # Application entry point, defines CreateApplication()
-│   │   └── ExampleLayer.h           # 2D rendering demo with textures and camera
-│   ├── assets/                      # Asset directory (created by build)
-│   │   └── textures/                # Texture files go here
+│   │   ├── ExampleLayer.h           # 2D rendering demo with textures and camera
+│   │   ├── PhysicsDemoLayer.h       # Physics system demo (Box2D)
+│   │   ├── AudioDemoLayer.h         # Audio system demo with UI controls
+│   │   └── ...                      # Other demo layers
+│   ├── assets/                      # Asset directory
+│   │   ├── textures/                # Texture files
+│   │   └── audio/                   # Audio files (WAV)
 │   └── CMakeLists.txt               # Builds Sandbox as executable
 ├── Tests/                           # Unit tests
 │   ├── src/
 │   │   ├── EventTests.cpp           # Event system tests
 │   │   ├── LayerTests.cpp           # Layer system tests
 │   │   ├── CameraTests.cpp          # Camera tests
-│   │   ├── LoggerTests.cpp          # Logger tests
-│   │   ├── InputTests.cpp           # Input system tests
-│   │   ├── ApplicationTests.cpp     # Application tests
-│   │   └── WindowTests.cpp          # Window tests
+│   │   ├── AudioTests.cpp           # Audio system tests
+│   │   ├── SceneTests.cpp           # ECS scene tests
+│   │   ├── EntityTests.cpp          # ECS entity tests
+│   │   └── ...                      # Other test files
 │   ├── CMakeLists.txt               # Builds PillarTests executable
 │   └── README.md                    # Testing documentation
 ├── CMakeLists.txt                   # Root CMake (FetchContent setup)
@@ -196,8 +229,9 @@ PILLAR_/
 - Base `Event` class with `EventType` enum and category flags
 - `EventDispatcher` dispatches events to type-specific handlers using templates
 - Events flow: Platform (GLFW callbacks) → Window → Application → Layers
-- All events defined in `Pillar/Events/` (ApplicationEvent, KeyEvent, MouseEvent)
+- All events defined in `Pillar/Events/` (ApplicationEvent, KeyEvent, MouseEvent, AudioEvent)
 - Events propagate through layer stack from top to bottom until handled
+- Audio events (optional): AudioPlaybackEvent, AudioEngineEvent
 
 **2. Layer System:**
 - Layers are stacked and updated in order (bottom to top)
@@ -246,31 +280,68 @@ PILLAR_/
   - Configurable translation speed, rotation speed, zoom speed
   - Automatically handles window resize events
 
-**5. Asset Management (NEW):**
+**5. Asset Management:**
 - **AssetManager:** Centralized asset path resolution
   - `GetAssetPath()` - resolves generic asset paths
   - `GetTexturePath()` - specifically for textures (checks assets/textures/)
+  - `GetAudioPath()` - specifically for audio (checks assets/audio/)
+  - `GetSFXPath()` - for sound effects (checks assets/audio/sfx/)
+  - `GetMusicPath()` - for music (checks assets/audio/music/)
   - Searches multiple locations:
     1. `Sandbox/assets/` (for development)
     2. `assets/` next to executable (for distribution)
   - `SetAssetsDirectory()` - manual override for custom paths
-  - Used by `Texture2D::Create()` automatically
+  - Used by `Texture2D::Create()` and `AudioBuffer::Create()` automatically
 
-**6. Input System:**
+**6. Audio System (NEW):**
+- **Architecture:** Platform-agnostic audio API with OpenAL-Soft backend
+- **AudioEngine:** Static API for global audio control (similar to Renderer)
+  - `Init()`, `Shutdown()` - lifecycle management (called in Application constructor/destructor)
+  - `CreateBuffer()`, `CreateSource()` - factory methods
+  - `SetMasterVolume()`, `GetMasterVolume()` - global volume control
+  - `SetListenerPosition()`, `SetListenerOrientation()` - 3D audio listener
+  - `StopAllSounds()`, `PauseAllSounds()`, `ResumeAllSounds()` - global playback control
+- **AudioBuffer:** Holds decoded audio data (shareable between sources)
+  - Loads WAV files (8-bit/16-bit PCM, mono/stereo)
+  - `Create()` factory method, uses AssetManager for path resolution
+  - Returns duration, sample rate, channels, bits per sample
+- **AudioSource:** Controls playback of an audio buffer
+  - `Play()`, `Pause()`, `Stop()`, `Rewind()` - playback control
+  - `SetVolume()`, `SetPitch()`, `SetLooping()` - audio properties
+  - `SetPosition()`, `SetVelocity()`, `SetDirection()` - 3D positioning
+  - `SetMinDistance()`, `SetMaxDistance()`, `SetRolloffFactor()` - 3D attenuation
+  - `GetState()`, `IsPlaying()`, `IsPaused()`, `IsStopped()` - state queries
+- **AudioClip:** High-level wrapper combining buffer and source for simple one-shot playback
+  - `Play()`, `Stop()`, `Pause()`, `Resume()` - simple API
+  - `SetVolume()`, `SetPitch()`, `SetLooping()`, `SetPosition()` - properties
+- **AudioListener:** Standalone utility for 3D audio listener (optional, can use AudioEngine directly)
+  - `SetPosition()`, `SetVelocity()`, `SetOrientation()` - listener control
+  - `UpdateFromCamera()` - convenience method for camera-based listener
+- **WavLoader:** Utility for parsing WAV file format
+- **ECS Integration:**
+  - `AudioSourceComponent` - attaches audio source to entities
+  - `AudioListenerComponent` - marks entity as audio listener (typically camera)
+  - `AudioSystem` - updates source positions from transforms, handles listener
+- **Events (Optional):**
+  - `AudioPlaybackEvent` - fired on sound start/stop/pause/resume
+  - `AudioEngineEvent` - fired on audio engine init/shutdown
+- **OpenAL Implementation:** Device/context initialization, buffer/source management
+
+**7. Input System:**
 - Static polling API via `Input` class
 - Platform-agnostic key codes defined in `KeyCodes.h` (e.g., `PIL_KEY_W`, `PIL_KEY_SPACE`)
 - Supports keyboard and mouse input
 - Methods: `IsKeyPressed()`, `IsMouseButtonPressed()`, `GetMousePosition()`
 - Implementation uses GLFW state queries
 
-**7. Static Library Pattern (UPDATED):**
+**8. Static Library Pattern (UPDATED):**
 - Pillar is now a static library (.lib)
 - `PIL_API` macro: Empty for static library (no import/export needed)
 - `PIL_STATIC_LIB` define set by CMake
 - All linking is PUBLIC in Pillar, transitively available to client apps
 - No DLL copying steps needed
 
-**8. Entry Point Pattern:**
+**9. Entry Point Pattern:**
 - Sandbox defines `Pillar::CreateApplication()` returning a new `Application*`
 - `EntryPoint.h` defines `main()` which calls `CreateApplication()`, then `app->Run()`
 - Only include `EntryPoint.h` in the final application, not in the engine library
@@ -280,11 +351,12 @@ PILLAR_/
 **CMakeLists.txt (root):**
 - Sets C++17 standard
 - Defines `PIL_WINDOWS` on Windows
-- Uses FetchContent for: spdlog, GLFW, GLAD2 (OpenGL 4.6 core profile), GLM, stb_image, ImGui, GoogleTest
+- Uses FetchContent for: spdlog, GLFW, GLAD2 (OpenGL 4.6 core profile), GLM, stb_image, ImGui, OpenAL-Soft, EnTT, Box2D, GoogleTest
 - Configures output directories: `bin/Debug-x64/{Pillar,Sandbox,Tests}/`
 - Custom ImGui library target (static) with GLFW and OpenGL3 backends
 - GLAD2 configured using `glad_add_library()` with reproducible build
 - GLM configured with tests disabled
+- OpenAL-Soft configured with utils, examples, install disabled
 - GoogleTest configured with `gtest_force_shared_crt` for Windows compatibility
 - Python check at configure time (required for GLAD2 code generation)
 
@@ -293,11 +365,13 @@ PILLAR_/
 - Defines `PIL_STATIC_LIB` publicly
 - Source files include:
   - Core: Application, Logger, Layer, LayerStack, ImGuiLayer, Input, KeyCodes.h
-  - Events: ApplicationEvent (cpp), Event.h, KeyEvent.h, MouseEvent.h
+  - Events: ApplicationEvent (cpp), AudioEvent.h, Event.h, KeyEvent.h, MouseEvent.h
   - Utils: AssetManager
+  - Audio: AudioEngine, AudioBuffer, AudioSource, AudioClip, AudioListener, WavLoader
   - Renderer: RenderAPI, Renderer, Renderer2D, RenderCommand, Shader, Buffer, VertexArray, Texture, OrthographicCamera, OrthographicCameraController
-  - Platform: WindowsWindow, OpenGLContext, OpenGLRenderAPI, OpenGLShader, OpenGLBuffer, OpenGLVertexArray, OpenGLTexture
-- Links PUBLIC: spdlog, glfw, glad_gl_core_46, glm, imgui
+  - Platform: WindowsWindow, OpenGLContext, OpenGLRenderAPI, OpenGLShader, OpenGLBuffer, OpenGLVertexArray, OpenGLTexture, OpenALContext, OpenALBuffer, OpenALSource
+  - ECS: Scene, ObjectPool, Components (Core, Physics, Gameplay, Audio), Systems (Physics, Audio, etc.)
+- Links PUBLIC: spdlog, glfw, glad_gl_core_46, glm, imgui, EnTT, box2d, OpenAL::OpenAL
 - Includes PUBLIC: Pillar/src, ImGui headers, stb headers
 - Opengl32 linked on Windows
 - Per-configuration output directory overrides for Debug/Release/RelWithDebInfo/MinSizeRel
@@ -312,7 +386,7 @@ PILLAR_/
 **Tests/CMakeLists.txt:**
 - Builds `PillarTests` as executable
 - Uses FetchContent to fetch GoogleTest 1.14.0
-- Source files: EventTests, LayerTests, CameraTests, LoggerTests, InputTests, ApplicationTests, WindowTests
+- Source files: EventTests, LayerTests, CameraTests, AudioTests, SceneTests, EntityTests, and more
 - Links PRIVATE: Pillar, GTest::gtest_main, GTest::gmock
 - Uses `gtest_discover_tests()` for CTest integration
 - Per-configuration output directory overrides
@@ -419,6 +493,79 @@ PILLAR_/
 2. Use `Texture2D::Create("filename.png")` - automatically searches correct paths
 3. Supports PNG, JPG, BMP, TGA (via stb_image)
 4. For distribution, include `assets/textures/` folder next to executable
+
+### Loading Audio Files
+1. Place audio files in `Sandbox/assets/audio/` during development
+2. Use `AudioBuffer::Create("filename.wav")` - automatically searches correct paths
+3. Currently supports WAV files (8-bit/16-bit PCM, mono/stereo)
+4. For distribution, include `assets/audio/` folder next to executable
+5. Organize into subdirectories: `assets/audio/sfx/`, `assets/audio/music/`
+
+### Using the Audio System
+
+**Basic Sound Playback:**
+```cpp
+// In layer OnAttach()
+void MyLayer::OnAttach()
+{
+    // Simple one-shot sound effect
+    m_ExplosionClip = Pillar::AudioClip::Create("explosion.wav");
+}
+
+void MyLayer::OnUpdate(float dt)
+{
+    if (/* explosion happened */)
+    {
+        m_ExplosionClip->Play();
+    }
+}
+```
+
+**Background Music:**
+```cpp
+void MyLayer::OnAttach()
+{
+    auto musicBuffer = Pillar::AudioBuffer::Create("background_music.wav");
+    m_MusicSource = Pillar::AudioSource::Create();
+    m_MusicSource->SetBuffer(musicBuffer);
+    m_MusicSource->SetLooping(true);
+    m_MusicSource->SetVolume(0.5f);
+    m_MusicSource->Play();
+}
+```
+
+**3D Positional Audio:**
+```cpp
+void MyLayer::OnUpdate(float dt)
+{
+    // Update listener to match camera
+    glm::vec3 camPos = m_CameraController.GetCamera().GetPosition();
+    Pillar::AudioEngine::SetListenerPosition(camPos);
+    
+    // Update sound source position
+    m_EnemySource->SetPosition(enemyPosition);
+    m_EnemySource->SetMinDistance(5.0f);
+    m_EnemySource->SetMaxDistance(50.0f);
+}
+```
+
+**ECS-Based Audio:**
+```cpp
+// Creating an entity with audio
+auto entity = m_Scene.CreateEntity("AudioEmitter");
+auto& audioComp = entity.AddComponent<Pillar::AudioSourceComponent>("enemy_growl.wav");
+audioComp.Loop = true;
+audioComp.Is3D = true;
+audioComp.PlayOnAwake = true;
+audioComp.Volume = 0.8f;
+
+// Audio listener on camera
+auto cameraEntity = m_Scene.CreateEntity("Camera");
+cameraEntity.AddComponent<Pillar::AudioListenerComponent>();
+
+// Update in game loop
+m_AudioSystem.OnUpdate(dt, m_Scene.GetRegistry());
+```
 
 ### Adding Input Handling
 1. In `OnUpdate()`, poll input state:
@@ -563,7 +710,7 @@ Enable by defining `PIL_ENABLE_ASSERTS` (currently not defined)
 ## Current Features & Status
 
 **Implemented:**
-- ✅ Event system (keyboard, mouse, window events)
+- ✅ Event system (keyboard, mouse, window events, audio events)
 - ✅ Layer system with update/event handling
 - ✅ ImGui integration (docking branch)
 - ✅ Input polling API (keyboard and mouse)
@@ -579,6 +726,25 @@ Enable by defining `PIL_ENABLE_ASSERTS` (currently not defined)
 - ✅ Camera controls (movement, rotation, zoom)
 - ✅ Window management (GLFW)
 - ✅ Logging system (spdlog)
+- ✅ Audio system (OpenAL-Soft backend)
+  - ✅ AudioEngine static API (init/shutdown, factory methods)
+  - ✅ AudioBuffer/AudioSource abstractions
+  - ✅ WAV file loading (8/16-bit PCM, mono/stereo)
+  - ✅ 2D and 3D spatial audio
+  - ✅ Volume, pitch, looping controls
+  - ✅ AudioClip wrapper for simple playback
+  - ✅ AudioListener utility
+  - ✅ ECS integration (AudioSourceComponent, AudioListenerComponent, AudioSystem)
+  - ✅ Audio events (AudioPlaybackEvent, AudioEngineEvent)
+- ✅ Entity Component System (EnTT)
+  - ✅ Scene management
+  - ✅ Entity creation/destruction
+  - ✅ Component system (Transform, Tag, UUID, Hierarchy, Physics, Audio)
+  - ✅ System architecture (Physics, Audio, etc.)
+- ✅ Physics system (Box2D integration)
+  - ✅ Rigidbody and Collider components
+  - ✅ Spatial hash grid for broad-phase collision
+  - ✅ Contact listeners
 - ✅ Unit testing framework (Google Test)
 - ✅ CI/CD pipeline with automated tests
 - ✅ Static library architecture (no DLL complications)
