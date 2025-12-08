@@ -111,6 +111,14 @@ FetchContent_Declare(
   GIT_TAG v2.4.1
 )
 
+# nlohmann/json (for scene serialization)
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.3
+  GIT_SHALLOW TRUE
+)
+
 # Configure GLFW options before making it available
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
@@ -125,6 +133,9 @@ set(BOX2D_BUILD_UNIT_TESTS OFF CACHE BOOL "" FORCE)
 set(BOX2D_BUILD_TESTBED OFF CACHE BOOL "" FORCE)
 set(BOX2D_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 
+# Configure nlohmann_json options
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
+
 # Dear ImGui (docking)
 FetchContent_Declare(
   imgui
@@ -133,7 +144,7 @@ FetchContent_Declare(
 )
 
 # Make dependencies available (except glad - we'll handle it specially)
-FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt box2d)
+FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt box2d nlohmann_json)
 
 # Now make GLAD available and generate the loader
 FetchContent_MakeAvailable(glad)

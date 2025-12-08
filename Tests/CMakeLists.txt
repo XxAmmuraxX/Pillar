@@ -32,7 +32,7 @@ add_executable(PillarTests
     src/BulletCollisionTests.cpp
     src/SpatialHashGridTests.cpp
     src/XPCollectionTests.cpp
-
+    src/SceneSerializerTests.cpp
 )
 
 # Set output directory

@@ -1,0 +1,53 @@
+{
+  "entities": [
+    {
+      "tag": "QuitButton",
+      "transform": {
+        "position": [
+          0.0,
+          -1.5
+        ],
+        "rotation": 0.0,
+        "scale": [
+          2.0,
+          0.5
+        ]
+      },
+      "uuid": 5799324810023923655
+    },
+    {
+      "tag": "PlayButton",
+      "transform": {
+        "position": [
+          0.0,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          2.0,
+          0.5
+        ]
+      },
+      "uuid": 12431273592461864438
+    },
+    {
+      "tag": "Title",
+      "transform": {
+        "position": [
+          0.0,
+          2.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          4.0,
+          1.0
+        ]
+      },
+      "uuid": 12858425984125669916
+    }
+  ],
+  "scene": {
+    "name": "MainMenu",
+    "version": "1.0"
+  }
+}

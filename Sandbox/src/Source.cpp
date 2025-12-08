@@ -4,6 +4,7 @@
 #include "LightEntityPerfDemo.h"
 #include "HeavyEntityPerfDemo.h"
 #include "ObjectPoolDemo.h"
+#include "SceneDemoLayer.h"
 #include "Pillar/ImGuiLayer.h"
 
 class Sandbox : public Pillar::Application
@@ -23,7 +24,10 @@ public:
 		//PushLayer(new HeavyEntityPerfDemo());
 
 		// Option 4: Object Pool Demo
-		PushLayer(new ObjectPoolDemo());
+		//PushLayer(new ObjectPoolDemo());
+
+		// Option 5: Scene System Demo (NEW!)
+		PushLayer(new SceneDemoLayer());
 	}
 
 	~Sandbox()
