@@ -33,7 +33,7 @@ public:
 		// Option 5: Audio System Demo
 		PushLayer(new AudioDemoLayer());
 		
-    // Option 6: Scene System Demo (NEW!)
+		// Option 6: Scene System Demo (NEW!)
 		//PushLayer(new SceneDemoLayer());
 	}
 
