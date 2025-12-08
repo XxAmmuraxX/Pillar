@@ -32,6 +32,8 @@ add_executable(PillarTests
     src/BulletCollisionTests.cpp
     src/SpatialHashGridTests.cpp
     src/XPCollectionTests.cpp
+    src/AudioTests.cpp
+    src/AudioExtendedTests.cpp
     src/SceneSerializerTests.cpp
 )
 

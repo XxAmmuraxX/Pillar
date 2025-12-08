@@ -5,6 +5,7 @@
 #include "HeavyEntityPerfDemo.h"
 #include "ParticleSystemDemo.h"
 #include "ObjectPoolDemo.h"
+#include "AudioDemoLayer.h"
 #include "SceneDemoLayer.h"
 #include "ParticleEmitterDemo.h"
 #include "DemoMenuLayer.h"
@@ -38,9 +39,11 @@ public:
 		// Option 4: Object Pool Demo
 		//PushLayer(new ObjectPoolDemo());
 
-		// Option 5: Scene System Demo (NEW!)
+		// Option 5: Audio System Demo
+		PushLayer(new AudioDemoLayer());
+		
+		// Option 6: Scene System Demo (NEW!)
 		//PushLayer(new SceneDemoLayer());
-
 	}
 
 	~Sandbox()
