@@ -21,7 +21,8 @@ class SceneSerializerTests : public ::testing::Test
 protected:
     void SetUp() override
     {
-        m_TestFilePath = "test_scene_output.json";
+        // Use absolute path in temp directory to avoid AssetManager resolution
+        m_TestFilePath = std::filesystem::temp_directory_path() / "pillar_test_scene.json";
     }
 
     void TearDown() override
@@ -33,7 +34,7 @@ protected:
         }
     }
 
-    std::string m_TestFilePath;
+    std::filesystem::path m_TestFilePath;
 };
 
 TEST_F(SceneSerializerTests, Serialize_CreatesFile)
@@ -43,7 +44,7 @@ TEST_F(SceneSerializerTests, Serialize_CreatesFile)
     scene.CreateEntity("Entity2");
 
     SceneSerializer serializer(&scene);
-    bool result = serializer.Serialize(m_TestFilePath);
+    bool result = serializer.Serialize(m_TestFilePath.string());
 
     EXPECT_TRUE(result);
     EXPECT_TRUE(std::filesystem::exists(m_TestFilePath));
@@ -61,13 +62,13 @@ TEST_F(SceneSerializerTests, Deserialize_RestoresEntities)
         transform.Scale = glm::vec2(2.0f, 3.0f);
 
         SceneSerializer serializer(&scene);
-        serializer.Serialize(m_TestFilePath);
+        serializer.Serialize(m_TestFilePath.string());
     }
 
     // Load scene
     Scene loadedScene;
     SceneSerializer serializer(&loadedScene);
-    bool result = serializer.Deserialize(m_TestFilePath);
+    bool result = serializer.Deserialize(m_TestFilePath.string());
 
     EXPECT_TRUE(result);
     EXPECT_EQ(loadedScene.GetEntityCount(), 1);
@@ -93,12 +94,12 @@ TEST_F(SceneSerializerTests, Deserialize_PreservesUUID)
         originalUUID = entity.GetComponent<UUIDComponent>().UUID;
 
         SceneSerializer serializer(&scene);
-        serializer.Serialize(m_TestFilePath);
+        serializer.Serialize(m_TestFilePath.string());
     }
 
     Scene loadedScene;
     SceneSerializer serializer(&loadedScene);
-    serializer.Deserialize(m_TestFilePath);
+    serializer.Deserialize(m_TestFilePath.string());
 
     auto entity = loadedScene.FindEntityByUUID(originalUUID);
     EXPECT_TRUE(entity);
@@ -149,12 +150,12 @@ TEST_F(SceneSerializerTests, Serialize_VelocityComponent)
         vel.MaxSpeed = 15.0f;
 
         SceneSerializer serializer(&scene);
-        serializer.Serialize(m_TestFilePath);
+        serializer.Serialize(m_TestFilePath.string());
     }
 
     Scene loadedScene;
     SceneSerializer serializer(&loadedScene);
-    serializer.Deserialize(m_TestFilePath);
+    serializer.Deserialize(m_TestFilePath.string());
 
     auto entity = loadedScene.FindEntityByName("MovingEntity");
     EXPECT_TRUE(entity);
@@ -177,12 +178,12 @@ TEST_F(SceneSerializerTests, Serialize_XPGemComponent)
         gem.MoveSpeed = 12.0f;
 
         SceneSerializer serializer(&scene);
-        serializer.Serialize(m_TestFilePath);
+        serializer.Serialize(m_TestFilePath.string());
     }
 
     Scene loadedScene;
     SceneSerializer serializer(&loadedScene);
-    serializer.Deserialize(m_TestFilePath);
+    serializer.Deserialize(m_TestFilePath.string());
 
     auto entity = loadedScene.FindEntityByName("Gem");
     EXPECT_TRUE(entity);
