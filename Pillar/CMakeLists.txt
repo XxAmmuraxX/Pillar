@@ -46,6 +46,10 @@ add_library(Pillar STATIC
     src/Platform/OpenGL/OpenGLTexture.cpp
     # ECS - Entity Component System
     src/Pillar/ECS/Scene.cpp
+    src/Pillar/ECS/SceneManager.cpp
+    src/Pillar/ECS/SceneSerializer.cpp
+    src/Pillar/ECS/ComponentRegistry.cpp
+    src/Pillar/ECS/BuiltinComponentRegistrations.cpp
     src/Pillar/ECS/ObjectPool.cpp
     src/Pillar/ECS/SpecializedPools.cpp
     src/Pillar/ECS/Components/Core/TagComponent.h
@@ -109,6 +113,7 @@ target_link_libraries(Pillar
         EnTT::EnTT
         box2d
         OpenAL::OpenAL
+        nlohmann_json::nlohmann_json
 )
 
 # For Windows, link additional system libraries that GLFW needs

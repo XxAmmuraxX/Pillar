@@ -34,6 +34,7 @@ add_executable(PillarTests
     src/XPCollectionTests.cpp
     src/AudioTests.cpp
     src/AudioExtendedTests.cpp
+    src/SceneSerializerTests.cpp
 )
 
 # Set output directory

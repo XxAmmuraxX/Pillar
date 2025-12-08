@@ -107,6 +107,13 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/kcat/openal-soft.git
   GIT_TAG 1.24.3
 )
+# nlohmann/json (for scene serialization)
+FetchContent_Declare(
+  nlohmann_json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.3
+  GIT_SHALLOW TRUE
+)
 
 # Configure GLFW options before making it available
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
@@ -129,6 +136,8 @@ set(ALSOFT_INSTALL OFF CACHE BOOL "" FORCE)
 set(ALSOFT_INSTALL_CONFIG OFF CACHE BOOL "" FORCE)
 set(ALSOFT_INSTALL_HRTF_DATA OFF CACHE BOOL "" FORCE)
 set(ALSOFT_INSTALL_AMBDEC_PRESETS OFF CACHE BOOL "" FORCE)
+# Configure nlohmann_json options
+set(JSON_BuildTests OFF CACHE BOOL "" FORCE)
 
 # Dear ImGui (docking)
 FetchContent_Declare(
@@ -138,7 +147,7 @@ FetchContent_Declare(
 )
 
 # Make dependencies available (except glad - we'll handle it specially)
-FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt box2d openal)
+FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt box2d nlohmann_json openal)
 
 # Now make GLAD available and generate the loader
 FetchContent_MakeAvailable(glad)

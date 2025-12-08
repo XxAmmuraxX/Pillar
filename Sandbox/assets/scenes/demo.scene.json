@@ -1,0 +1,186 @@
+{
+  "scene": {
+    "name": "Demo Scene",
+    "version": "1.0"
+  },
+  "entities": [
+    {
+      "uuid": 1234567890123456789,
+      "tag": "Player",
+      "transform": {
+        "position": [0.0, 0.0],
+        "rotation": 0.0,
+        "scale": [1.0, 1.0]
+      },
+      "rigidbody": {
+        "bodyType": "dynamic",
+        "fixedRotation": true,
+        "gravityScale": 0.0
+      },
+      "collider": {
+        "type": "circle",
+        "radius": 0.5,
+        "offset": [0.0, 0.0],
+        "friction": 0.3,
+        "restitution": 0.0,
+        "density": 1.0,
+        "isSensor": false
+      }
+    },
+    {
+      "uuid": 2345678901234567890,
+      "tag": "BottomWall",
+      "transform": {
+        "position": [0.0, -8.0],
+        "rotation": 0.0,
+        "scale": [1.0, 1.0]
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "collider": {
+        "type": "box",
+        "halfExtents": [15.0, 0.5],
+        "offset": [0.0, 0.0],
+        "friction": 0.3,
+        "restitution": 0.0,
+        "density": 1.0,
+        "isSensor": false
+      }
+    },
+    {
+      "uuid": 3456789012345678901,
+      "tag": "TopWall",
+      "transform": {
+        "position": [0.0, 8.0],
+        "rotation": 0.0,
+        "scale": [1.0, 1.0]
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "collider": {
+        "type": "box",
+        "halfExtents": [15.0, 0.5],
+        "offset": [0.0, 0.0],
+        "friction": 0.3,
+        "restitution": 0.0,
+        "density": 1.0,
+        "isSensor": false
+      }
+    },
+    {
+      "uuid": 4567890123456789012,
+      "tag": "LeftWall",
+      "transform": {
+        "position": [-15.0, 0.0],
+        "rotation": 0.0,
+        "scale": [1.0, 1.0]
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "collider": {
+        "type": "box",
+        "halfExtents": [0.5, 8.0],
+        "offset": [0.0, 0.0],
+        "friction": 0.3,
+        "restitution": 0.0,
+        "density": 1.0,
+        "isSensor": false
+      }
+    },
+    {
+      "uuid": 5678901234567890123,
+      "tag": "RightWall",
+      "transform": {
+        "position": [15.0, 0.0],
+        "rotation": 0.0,
+        "scale": [1.0, 1.0]
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "collider": {
+        "type": "box",
+        "halfExtents": [0.5, 8.0],
+        "offset": [0.0, 0.0],
+        "friction": 0.3,
+        "restitution": 0.0,
+        "density": 1.0,
+        "isSensor": false
+      }
+    },
+    {
+      "uuid": 6789012345678901234,
+      "tag": "XPGem",
+      "transform": {
+        "position": [5.0, 3.0],
+        "rotation": 0.0,
+        "scale": [1.0, 1.0]
+      },
+      "velocity": {
+        "velocity": [0.0, 0.0],
+        "acceleration": [0.0, 0.0],
+        "drag": 0.0,
+        "maxSpeed": 10.0
+      },
+      "xpGem": {
+        "xpValue": 5,
+        "attractionRadius": 3.0,
+        "moveSpeed": 8.0
+      }
+    },
+    {
+      "uuid": 7890123456789012345,
+      "tag": "XPGem",
+      "transform": {
+        "position": [-3.0, 2.0],
+        "rotation": 0.0,
+        "scale": [1.0, 1.0]
+      },
+      "velocity": {
+        "velocity": [0.0, 0.0],
+        "acceleration": [0.0, 0.0],
+        "drag": 0.0,
+        "maxSpeed": 10.0
+      },
+      "xpGem": {
+        "xpValue": 10,
+        "attractionRadius": 4.0,
+        "moveSpeed": 10.0
+      }
+    },
+    {
+      "uuid": 8901234567890123456,
+      "tag": "Enemy",
+      "transform": {
+        "position": [8.0, 4.0],
+        "rotation": 0.0,
+        "scale": [1.0, 1.0]
+      },
+      "rigidbody": {
+        "bodyType": "dynamic",
+        "fixedRotation": true,
+        "gravityScale": 0.0
+      },
+      "collider": {
+        "type": "circle",
+        "radius": 0.4,
+        "offset": [0.0, 0.0],
+        "friction": 0.3,
+        "restitution": 0.0,
+        "density": 1.0,
+        "isSensor": false
+      }
+    }
+  ]
+}
