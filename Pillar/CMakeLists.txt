@@ -55,6 +55,9 @@ add_library(Pillar STATIC
     # ECS - Gameplay Components
     src/Pillar/ECS/Components/Gameplay/BulletComponent.h
     src/Pillar/ECS/Components/Gameplay/XPGemComponent.h
+    src/Pillar/ECS/Components/Gameplay/ParticleComponent.h
+    src/Pillar/ECS/Components/Gameplay/ParticleAnimationCurves.h
+    src/Pillar/ECS/Components/Gameplay/ParticleEmitterComponent.h
     # ECS - Physics
     src/Pillar/ECS/Physics/Box2DWorld.cpp
     src/Pillar/ECS/Physics/Box2DBodyFactory.cpp
@@ -69,6 +72,10 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Systems/XPCollectionSystem.cpp
     src/Pillar/ECS/Systems/SpriteRenderSystem.cpp
     src/Pillar/ECS/Systems/SpriteRenderSystem.h
+    src/Pillar/ECS/Systems/ParticleSystem.cpp
+    src/Pillar/ECS/Systems/ParticleSystem.h
+    src/Pillar/ECS/Systems/ParticleEmitterSystem.cpp
+    src/Pillar/ECS/Systems/ParticleEmitterSystem.h
     # ECS - Components (Rendering)
     src/Pillar/ECS/Components/Rendering/SpriteComponent.h
 )
