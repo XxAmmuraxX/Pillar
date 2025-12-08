@@ -2,6 +2,7 @@
 
 #include "Pillar.h"
 #include "Pillar/Renderer/Renderer2D.h"
+#include "Pillar/Renderer/Renderer2DBackend.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
@@ -71,13 +72,14 @@ public:
 		m_SystemTime = std::chrono::duration<float, std::milli>(sysEnd - sysStart).count();
 
 		// Render
-		Pillar::Renderer::SetClearColor({ 0.05f, 0.08f, 0.05f, 1.0f });
+		Pillar::Renderer::SetClearColor({ 0.05f, 0.05f, 0.08f, 1.0f });
 		Pillar::Renderer::Clear();
 
 		auto renderStart = std::chrono::high_resolution_clock::now();
-		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2DBackend::ResetStats();
+		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
 		DrawEntities();
-		Pillar::Renderer2D::EndScene();
+		Pillar::Renderer2DBackend::EndScene();
 		auto renderEnd = std::chrono::high_resolution_clock::now();
 		m_RenderTime = std::chrono::duration<float, std::milli>(renderEnd - renderStart).count();
 
@@ -102,6 +104,12 @@ public:
 		ImGui::Text("Frame Time: %.2f ms (%.0f FPS)", m_FrameTime, 1000.0f / m_FrameTime);
 		ImGui::Text("Physics Time: %.2f ms", m_SystemTime);
 		ImGui::Text("Render Time: %.2f ms", m_RenderTime);
+		
+		// Renderer stats
+		ImGui::Separator();
+		ImGui::Text("Renderer Statistics:");
+		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2DBackend::GetDrawCallCount());
+		ImGui::Text("  Quads Rendered: %u", Pillar::Renderer2DBackend::GetQuadCount());
 		
 		// Color-coded performance
 		if (m_FrameTime < 16.67f)
@@ -238,7 +246,10 @@ private:
 			else
 				size = collider.HalfExtents * 2.0f;
 
-			Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
+			if (transform.Rotation != 0.0f)
+				Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
+			else
+				Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
 		}
 	}
 

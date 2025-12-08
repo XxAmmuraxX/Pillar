@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
+#include "Pillar/Renderer/Renderer2DBackend.h"
 #include "Pillar/ECS/SceneManager.h"
 #include "Pillar/ECS/SceneSerializer.h"
 #include "Pillar/ECS/Entity.h"
@@ -349,7 +350,10 @@ private:
                 color = { 0.3f, 0.3f, 0.3f, 1.0f };
             }
 
-            Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
+            if (transform.Rotation != 0.0f)
+                Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
+            else
+                Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
         }
     }
 
