@@ -2,6 +2,7 @@
 
 #include "Pillar.h"
 #include "Pillar/Renderer/Renderer2D.h"
+#include "Pillar/Renderer/Renderer2DBackend.h"
 #include <imgui.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
@@ -44,25 +45,25 @@ public:
 		Pillar::Renderer::Clear();
 
 		// Begin Renderer2D scene with camera from controller
-		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
 
 		// Test 1: Draw colored quads
-		Pillar::Renderer2D::DrawQuad({ -0.75f, 0.5f }, { 0.5f, 0.5f }, { 1.0f, 0.0f, 0.0f, 1.0f });
-		Pillar::Renderer2D::DrawQuad({ 0.75f, 0.5f }, { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f });
-		Pillar::Renderer2D::DrawQuad({ -0.75f, -0.5f }, { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f });
+		Pillar::Renderer2DBackend::DrawQuad({ -0.75f, 0.5f }, { 0.5f, 0.5f }, { 1.0f, 0.0f, 0.0f, 1.0f });
+		Pillar::Renderer2DBackend::DrawQuad({ 0.75f, 0.5f }, { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f });
+		Pillar::Renderer2DBackend::DrawQuad({ -0.75f, -0.5f }, { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f });
 		
 		// Test 2: Draw textured quad
-		Pillar::Renderer2D::DrawQuad({ 0.75f, -0.5f }, { 0.5f, 0.5f }, m_Texture);
+		Pillar::Renderer2DBackend::DrawQuad({ 0.75f, -0.5f }, { 0.5f, 0.5f }, m_Texture);
 		
 		// Test 3: Draw animated textured quad in center
 		float scale = 0.8f + sin(m_Time * 2.0f) * 0.2f;
-		Pillar::Renderer2D::DrawQuad({ 0.0f, 0.0f, 0.1f }, { scale, scale }, m_Texture);
+		Pillar::Renderer2DBackend::DrawQuad({ 0.0f, 0.0f, 0.1f }, { scale, scale }, m_Texture);
 		
 		// Test 4: Draw textured quad with tint color
 		glm::vec4 tint = { 1.0f, 0.5f + sin(m_Time) * 0.5f, 0.5f, 1.0f };
-		Pillar::Renderer2D::DrawQuad({ 0.0f, -1.2f }, { 0.6f, 0.3f }, m_Texture, tint);
+		Pillar::Renderer2DBackend::DrawQuad({ 0.0f, -1.2f }, { 0.6f, 0.3f }, m_Texture, tint);
 
-		Pillar::Renderer2D::EndScene();
+		Pillar::Renderer2DBackend::EndScene();
     }
     
     void OnEvent(Pillar::Event& event) override

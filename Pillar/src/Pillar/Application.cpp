@@ -4,6 +4,7 @@
 #include "Pillar/Renderer/Renderer.h"
 #include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Audio/AudioEngine.h"
+#include "Pillar/Renderer/Renderer2DBackend.h"
 #include <chrono>
 #include "Pillar/Input.h"
 
@@ -27,6 +28,7 @@ namespace Pillar
 		// Initialize Renderer
 		Renderer::Init();
 		Renderer2D::Init();
+		Renderer2DBackend::Init(Renderer2DBackend::API::Batch);  // Start with batch renderer
 
 		// Create and push ImGui layer as an overlay
 		m_ImGuiLayer = new ImGuiLayer();
@@ -36,6 +38,7 @@ namespace Pillar
 	Application::~Application()
 	{
 		// Ensure layers are detached and destroyed via LayerStack destructor
+		Renderer2DBackend::Shutdown();
 		Renderer2D::Shutdown();
 		Renderer::Shutdown();
 		AudioEngine::Shutdown();

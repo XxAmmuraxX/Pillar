@@ -30,6 +30,7 @@ add_library(Pillar STATIC
     src/Pillar/Renderer/RenderAPI.cpp
     src/Pillar/Renderer/Renderer.cpp
     src/Pillar/Renderer/Renderer2D.cpp
+    src/Pillar/Renderer/Renderer2DBackend.cpp
     src/Pillar/Renderer/RenderCommand.cpp
     src/Pillar/Renderer/Shader.cpp
     src/Pillar/Renderer/Buffer.cpp
@@ -37,6 +38,7 @@ add_library(Pillar STATIC
     src/Pillar/Renderer/Texture.cpp
     src/Pillar/Renderer/OrthographicCamera.cpp
     src/Pillar/Renderer/OrthographicCameraController.cpp
+    src/Pillar/Renderer/BatchRenderer2D.cpp
     # Platform - OpenGL
     src/Platform/OpenGL/OpenGLRenderAPI.cpp
     src/Platform/OpenGL/OpenGLContext.cpp
@@ -44,6 +46,7 @@ add_library(Pillar STATIC
     src/Platform/OpenGL/OpenGLBuffer.cpp
     src/Platform/OpenGL/OpenGLVertexArray.cpp
     src/Platform/OpenGL/OpenGLTexture.cpp
+    src/Platform/OpenGL/OpenGLBatchRenderer2D.cpp
     # ECS - Entity Component System
     src/Pillar/ECS/Scene.cpp
     src/Pillar/ECS/SceneManager.cpp
@@ -79,6 +82,10 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Systems/BulletCollisionSystem.cpp
     src/Pillar/ECS/Systems/XPCollectionSystem.cpp
     src/Pillar/ECS/Systems/AudioSystem.cpp
+    src/Pillar/ECS/Systems/SpriteRenderSystem.cpp
+    src/Pillar/ECS/Systems/SpriteRenderSystem.h
+    # ECS - Components (Rendering)
+    src/Pillar/ECS/Components/Rendering/SpriteComponent.h
 )
 
 # Override for all configurations

@@ -6,6 +6,7 @@
 #include "ObjectPoolDemo.h"
 #include "AudioDemoLayer.h"
 #include "SceneDemoLayer.h"
+#include "DemoMenuLayer.h"
 #include "Pillar/ImGuiLayer.h"
 
 class Sandbox : public Pillar::Application
@@ -14,12 +15,14 @@ public:
 	Sandbox()
 	{
 		// CHOOSE YOUR DEMO: Uncomment one of the following lines
+		// Option 6: Demo Menu
+		//PushLayer(new DemoMenuLayer());
 		
 		// Option 1: Physics Demo (Gameplay)
 		//PushLayer(new PhysicsDemoLayer());
 		
 		// Option 2: Light Entity Performance Demo
-		// PushLayer(new LightEntityPerfDemo());
+		//PushLayer(new LightEntityPerfDemo());
 		
 		// Option 3: Heavy Entity Performance Demo
 		//PushLayer(new HeavyEntityPerfDemo());

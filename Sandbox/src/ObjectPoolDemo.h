@@ -3,6 +3,7 @@
 #include "Pillar.h"
 #include "Pillar/ECS/SpecializedPools.h"
 #include "Pillar/Renderer/Renderer2D.h"
+#include "Pillar/Renderer/Renderer2DBackend.h"
 #include <memory>
 
 /**
@@ -211,7 +212,7 @@ public:
 		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 
 		// Draw crosshair at center
-		Pillar::Renderer2D::DrawQuad({ 0.0f, 0.0f }, { 0.1f, 0.1f }, { 1.0f, 0.0f, 0.0f, 1.0f });
+		Pillar::Renderer2DBackend::DrawQuad({ 0.0f, 0.0f }, { 0.1f, 0.1f }, { 1.0f, 0.0f, 0.0f, 1.0f });
 
 		// TODO: Render bullets and particles from scene
 		// (Will be implemented when rendering system integration is complete)
