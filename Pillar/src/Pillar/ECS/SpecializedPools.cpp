@@ -1,6 +1,8 @@
 #include "SpecializedPools.h"
 #include "Scene.h"
 #include "Pillar/Logger.h"
+#include "Pillar/ECS/Components/Gameplay/ParticleComponent.h"
+#include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
 
 namespace Pillar {
 
@@ -97,7 +99,8 @@ void ParticlePool::Init(Scene* scene, uint32_t initialCapacity)
 	m_Pool.SetInitCallback([this](Entity entity) {
 		entity.AddComponent<TransformComponent>();
 		entity.AddComponent<VelocityComponent>();
-		// Note: Sprite component will be added when rendering system is implemented
+		entity.AddComponent<SpriteComponent>();
+		entity.AddComponent<ParticleComponent>();
 	});
 
 	// Set up reset callback
@@ -111,6 +114,13 @@ void ParticlePool::Init(Scene* scene, uint32_t initialCapacity)
 		auto& velocity = entity.GetComponent<VelocityComponent>();
 		velocity.Velocity = glm::vec2(0.0f);
 		velocity.Acceleration = glm::vec2(0.0f);
+
+		auto& particle = entity.GetComponent<ParticleComponent>();
+		particle.Age = 0.0f;
+		particle.Dead = false;
+
+		auto& sprite = entity.GetComponent<SpriteComponent>();
+		sprite.Color = glm::vec4(1.0f);
 	});
 
 	// Initialize the underlying pool
@@ -138,7 +148,25 @@ Entity ParticlePool::SpawnParticle(
 	// Set velocity
 	auto& vel = particle.GetComponent<VelocityComponent>();
 	vel.Velocity = velocity;
-	vel.Acceleration = glm::vec2(0.0f, -9.81f); // Gravity
+	vel.Acceleration = glm::vec2(0.0f, -2.0f); // Light gravity
+
+	// Set sprite
+	auto& sprite = particle.GetComponent<SpriteComponent>();
+	sprite.Color = color;
+	sprite.Size = glm::vec2(size);
+
+	// Set particle properties
+	auto& particleComp = particle.GetComponent<ParticleComponent>();
+	particleComp.Lifetime = lifetime;
+	particleComp.Age = 0.0f;
+	particleComp.Dead = false;
+	particleComp.StartColor = color;
+	particleComp.EndColor = glm::vec4(color.r, color.g, color.b, 0.0f); // Fade out
+	particleComp.FadeOut = true;
+	particleComp.StartSize = glm::vec2(size);
+	particleComp.EndSize = glm::vec2(size * 0.5f); // Shrink
+	particleComp.ScaleOverTime = false;
+	particleComp.RotateOverTime = false;
 
 	PIL_CORE_TRACE("ParticlePool: Spawned particle at ({0}, {1})", position.x, position.y);
 

@@ -3,9 +3,11 @@
 #include "PhysicsDemoLayer.h"
 #include "LightEntityPerfDemo.h"
 #include "HeavyEntityPerfDemo.h"
+#include "ParticleSystemDemo.h"
 #include "ObjectPoolDemo.h"
 #include "AudioDemoLayer.h"
 #include "SceneDemoLayer.h"
+#include "ParticleEmitterDemo.h"
 #include "DemoMenuLayer.h"
 #include "Pillar/ImGuiLayer.h"
 
@@ -16,14 +18,21 @@ public:
 	{
 		// CHOOSE YOUR DEMO: Uncomment one of the following lines
 		// Option 6: Demo Menu
-		//PushLayer(new DemoMenuLayer());
+		PushLayer(new DemoMenuLayer());
 		
 		// Option 1: Physics Demo (Gameplay)
 		//PushLayer(new PhysicsDemoLayer());
 		
 		// Option 2: Light Entity Performance Demo
 		//PushLayer(new LightEntityPerfDemo());
+
+		// Option 2b: Particle System Demo
+		//PushLayer(new ParticleSystemDemo());
+
+		// Option NEW: Particle Emitter Demo
+		PushLayer(new ParticleEmitterDemo());
 		
+
 		// Option 3: Heavy Entity Performance Demo
 		//PushLayer(new HeavyEntityPerfDemo());
 

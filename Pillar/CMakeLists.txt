@@ -66,6 +66,9 @@ add_library(Pillar STATIC
     # ECS - Gameplay Components
     src/Pillar/ECS/Components/Gameplay/BulletComponent.h
     src/Pillar/ECS/Components/Gameplay/XPGemComponent.h
+    src/Pillar/ECS/Components/Gameplay/ParticleComponent.h
+    src/Pillar/ECS/Components/Gameplay/ParticleAnimationCurves.h
+    src/Pillar/ECS/Components/Gameplay/ParticleEmitterComponent.h
     # ECS - Audio Components
     src/Pillar/ECS/Components/Audio/AudioSourceComponent.h
     src/Pillar/ECS/Components/Audio/AudioListenerComponent.h
@@ -84,6 +87,10 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Systems/AudioSystem.cpp
     src/Pillar/ECS/Systems/SpriteRenderSystem.cpp
     src/Pillar/ECS/Systems/SpriteRenderSystem.h
+    src/Pillar/ECS/Systems/ParticleSystem.cpp
+    src/Pillar/ECS/Systems/ParticleSystem.h
+    src/Pillar/ECS/Systems/ParticleEmitterSystem.cpp
+    src/Pillar/ECS/Systems/ParticleEmitterSystem.h
     # ECS - Components (Rendering)
     src/Pillar/ECS/Components/Rendering/SpriteComponent.h
 )
