@@ -24,6 +24,7 @@ add_library(Pillar STATIC
     src/Pillar/Renderer/Buffer.cpp
     src/Pillar/Renderer/VertexArray.cpp
     src/Pillar/Renderer/Texture.cpp
+    src/Pillar/Renderer/Framebuffer.cpp
     src/Pillar/Renderer/OrthographicCamera.cpp
     src/Pillar/Renderer/OrthographicCameraController.cpp
     # Platform - OpenGL
@@ -33,6 +34,7 @@ add_library(Pillar STATIC
     src/Platform/OpenGL/OpenGLBuffer.cpp
     src/Platform/OpenGL/OpenGLVertexArray.cpp
     src/Platform/OpenGL/OpenGLTexture.cpp
+    src/Platform/OpenGL/OpenGLFramebuffer.cpp
     # ECS - Entity Component System
     src/Pillar/ECS/Scene.cpp
     src/Pillar/ECS/SceneManager.cpp

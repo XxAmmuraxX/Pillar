@@ -176,4 +176,5 @@ target_link_libraries(imgui PUBLIC glfw glad_gl_core_46)
 # Add subdirectories
 add_subdirectory(Pillar)
 add_subdirectory(Sandbox)
+add_subdirectory(PillarEditor)
 add_subdirectory(Tests)
