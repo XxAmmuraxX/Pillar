@@ -301,19 +301,34 @@ namespace Pillar {
         uint32_t textureSlot = GetOrAddTextureSlot(texture);
         uint32_t textureID = texture ? texture->GetRendererID() : 0;
 
-        // Get or create batch for this texture
-        QuadBatch& batch = m_Batches[textureID];
-        batch.Texture = texture;
+        // Find batch or create new one
+        auto it = m_Batches.find(textureID);
+        if (it == m_Batches.end())
+        {
+            // Create new batch with preallocated capacity
+            QuadBatch newBatch;
+            newBatch.Texture = texture;
+            newBatch.Vertices.reserve(MaxVertices);  // Preallocate to prevent reallocation
+            auto result = m_Batches.emplace(textureID, std::move(newBatch));
+            it = result.first;
+        }
+
+        QuadBatch& batch = it->second;
 
         // Check if batch is full
         if (batch.QuadCount >= MaxQuadsPerBatch)
         {
             FlushAndReset();
-            // After reset, re-get texture slot and batch
+            // After reset, re-get texture slot and create new batch
             textureSlot = GetOrAddTextureSlot(texture);
-            batch = m_Batches[textureID];
-            batch.Texture = texture;
+            QuadBatch newBatch;
+            newBatch.Texture = texture;
+            newBatch.Vertices.reserve(MaxVertices);
+            auto result = m_Batches.emplace(textureID, std::move(newBatch));
+            it = result.first;
         }
+
+        QuadBatch& currentBatch = it->second;
 
         // Calculate quad vertices
         glm::vec3 vertices[4];
@@ -356,10 +371,10 @@ namespace Pillar {
             vertex.Color = color;
             vertex.TexCoord = texCoords[i];
             vertex.TexIndex = static_cast<float>(textureSlot);
-            batch.Vertices.push_back(vertex);
+            currentBatch.Vertices.push_back(vertex);
         }
 
-        batch.QuadCount++;
+        currentBatch.QuadCount++;
     }
 
 } // namespace Pillar

@@ -30,7 +30,7 @@ public:
 		//PushLayer(new ParticleSystemDemo());
 
 		// Option NEW: Particle Emitter Demo
-		PushLayer(new ParticleEmitterDemo());
+		//PushLayer(new ParticleEmitterDemo());
 		
 
 		// Option 3: Heavy Entity Performance Demo
@@ -40,10 +40,10 @@ public:
 		//PushLayer(new ObjectPoolDemo());
 
 		// Option 5: Audio System Demo
-		PushLayer(new AudioDemoLayer());
+		//PushLayer(new AudioDemoLayer());
 		
 		// Option 6: Scene System Demo (NEW!)
-		//PushLayer(new SceneDemoLayer());
+		PushLayer(new SceneDemoLayer());
 	}
 
 	~Sandbox()
