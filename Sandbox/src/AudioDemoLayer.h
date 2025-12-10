@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2D.h"
 #include <imgui.h>
 #include <memory>
 #include <vector>
@@ -129,16 +128,16 @@ public:
         Pillar::Renderer::Clear();
 
         // Render visualization
-        Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
+        Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
 
         // Draw listener position (center)
-        Pillar::Renderer2D::DrawQuad({ 0.0f, 0.0f }, { 0.3f, 0.3f }, { 0.2f, 0.8f, 0.2f, 1.0f });
+        Pillar::Renderer2DBackend::DrawQuad({ 0.0f, 0.0f }, { 0.3f, 0.3f }, { 0.2f, 0.8f, 0.2f, 1.0f });
 
         // Draw sound source positions
         if (m_MovingSoundEnabled)
         {
             // Moving sound indicator
-            Pillar::Renderer2D::DrawQuad(
+            Pillar::Renderer2DBackend::DrawQuad(
                 { m_MovingSoundPosition.x, m_MovingSoundPosition.z },
                 { 0.2f, 0.2f },
                 { 1.0f, 0.5f, 0.0f, 1.0f }
@@ -153,7 +152,7 @@ public:
                 glm::vec2 p1(cos(angle1) * m_MovingSoundRadius, sin(angle1) * m_MovingSoundRadius);
                 glm::vec2 p2(cos(angle2) * m_MovingSoundRadius, sin(angle2) * m_MovingSoundRadius);
                 glm::vec2 mid = (p1 + p2) * 0.5f;
-                Pillar::Renderer2D::DrawQuad(mid, { 0.05f, 0.05f }, { 0.3f, 0.3f, 0.3f, 0.5f });
+                Pillar::Renderer2DBackend::DrawQuad(mid, { 0.05f, 0.05f }, { 0.3f, 0.3f, 0.3f, 0.5f });
             }
         }
 
@@ -161,14 +160,14 @@ public:
         for (size_t i = 1; i < m_SoundEffects.size() && i < m_SoundPositions.size(); ++i)
         {
             glm::vec4 color = { 0.8f, 0.2f, 0.2f + i * 0.2f, 1.0f };
-            Pillar::Renderer2D::DrawQuad(
+            Pillar::Renderer2DBackend::DrawQuad(
                 { m_SoundPositions[i].x, m_SoundPositions[i].z },
                 { 0.15f, 0.15f },
                 color
             );
         }
 
-        Pillar::Renderer2D::EndScene();
+        Pillar::Renderer2DBackend::EndScene();
     }
 
     void OnEvent(Pillar::Event& event) override

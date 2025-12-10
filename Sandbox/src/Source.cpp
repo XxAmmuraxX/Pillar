@@ -8,6 +8,7 @@
 #include "AudioDemoLayer.h"
 #include "SceneDemoLayer.h"
 #include "ParticleEmitterDemo.h"
+#include "AnimationDemoLayer.h"
 #include "DemoMenuLayer.h"
 #include "Pillar/ImGuiLayer.h"
 
@@ -17,7 +18,7 @@ public:
 	Sandbox()
 	{
 		// CHOOSE YOUR DEMO: Uncomment one of the following lines
-		// Option 6: Demo Menu
+		// Option 0: Demo Menu
 		PushLayer(new DemoMenuLayer());
 		
 		// Option 1: Physics Demo (Gameplay)
@@ -29,7 +30,7 @@ public:
 		// Option 2b: Particle System Demo
 		//PushLayer(new ParticleSystemDemo());
 
-		// Option NEW: Particle Emitter Demo
+		// Option 2c: Particle Emitter Demo
 		//PushLayer(new ParticleEmitterDemo());
 		
 
@@ -42,8 +43,11 @@ public:
 		// Option 5: Audio System Demo
 		//PushLayer(new AudioDemoLayer());
 		
-		// Option 6: Scene System Demo (NEW!)
-		PushLayer(new SceneDemoLayer());
+		// Option 6: Scene System Demo
+		//PushLayer(new SceneDemoLayer());
+		
+		// Option 7: Animation System Demo (NEW!)
+		//PushLayer(new AnimationDemoLayer());
 	}
 
 	~Sandbox()

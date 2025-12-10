@@ -20,15 +20,15 @@ namespace Pillar {
 	{
 		std::shared_ptr<Texture2D> Texture;
 		glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
-		glm::vec2 Size = { 1.0f, 1.0f };
-		glm::vec2 TexCoordMin = { 0.0f, 0.0f };
-		glm::vec2 TexCoordMax = { 1.0f, 1.0f };
-		float ZIndex = 0.0f;
+	glm::vec2 Size = { 1.0f, 1.0f };
+	glm::vec2 TexCoordMin = { 0.0f, 0.0f };
+	glm::vec2 TexCoordMax = { 1.0f, 1.0f };
+	float ZIndex = 0.0f;
+	bool FlipX = false;  // Flip sprite horizontally
+	bool FlipY = false;  // Flip sprite vertically
 
-		SpriteComponent() = default;
-		SpriteComponent(const SpriteComponent&) = default;
-
-		// Constructor with just color (no texture)
+	SpriteComponent() = default;
+	SpriteComponent(const SpriteComponent&) = default;		// Constructor with just color (no texture)
 		SpriteComponent(const glm::vec4& color)
 			: Color(color) {}
 

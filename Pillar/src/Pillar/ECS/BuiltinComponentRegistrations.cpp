@@ -10,6 +10,7 @@
 #include "Components/Gameplay/ParticleComponent.h"
 #include "Components/Gameplay/ParticleEmitterComponent.h"
 #include "Components/Rendering/SpriteComponent.h"
+#include "Components/Rendering/AnimationComponent.h"
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Components/Audio/AudioListenerComponent.h"
 #include <box2d/box2d.h>
@@ -342,16 +343,18 @@ namespace Pillar {
 		registry.Register<SpriteComponent>("sprite",
 			// Serialize
 			[](Entity e) -> json {
-				if (!e.HasComponent<SpriteComponent>()) return nullptr;
-				auto& s = e.GetComponent<SpriteComponent>();
-				return json{
-					{ "color", JsonHelpers::SerializeVec4(s.Color) },
-					{ "size", JsonHelpers::SerializeVec2(s.Size) },
-					{ "texCoordMin", JsonHelpers::SerializeVec2(s.TexCoordMin) },
-					{ "texCoordMax", JsonHelpers::SerializeVec2(s.TexCoordMax) },
-					{ "zIndex", s.ZIndex }
-					// Note: Texture not serialized (requires asset management)
-				};
+			if (!e.HasComponent<SpriteComponent>()) return nullptr;
+			auto& s = e.GetComponent<SpriteComponent>();
+			return json{
+				{ "color", JsonHelpers::SerializeVec4(s.Color) },
+				{ "size", JsonHelpers::SerializeVec2(s.Size) },
+				{ "texCoordMin", JsonHelpers::SerializeVec2(s.TexCoordMin) },
+				{ "texCoordMax", JsonHelpers::SerializeVec2(s.TexCoordMax) },
+				{ "zIndex", s.ZIndex },
+				{ "flipX", s.FlipX },
+				{ "flipY", s.FlipY }
+				// Note: Texture not serialized (requires asset management)
+			};
 			},
 			// Deserialize
 			[](Entity e, const json& j) {
@@ -366,6 +369,10 @@ namespace Pillar {
 					s.TexCoordMax = JsonHelpers::DeserializeVec2(j["texCoordMax"]);
 				if (j.contains("zIndex"))
 					s.ZIndex = j["zIndex"].get<float>();
+				if (j.contains("flipX"))
+					s.FlipX = j["flipX"].get<bool>();
+				if (j.contains("flipY"))
+					s.FlipY = j["flipY"].get<bool>();
 			},
 			// Copy
 			[](Entity src, Entity dst) {
@@ -377,6 +384,9 @@ namespace Pillar {
 				d.Size = s.Size;
 				d.TexCoordMin = s.TexCoordMin;
 				d.TexCoordMax = s.TexCoordMax;
+				d.ZIndex = s.ZIndex;
+				d.FlipX = s.FlipX;
+				d.FlipY = s.FlipY;
 				d.ZIndex = s.ZIndex;
 			}
 		);
@@ -698,6 +708,54 @@ namespace Pillar {
 				d.IsActive = s.IsActive;
 				d.Forward = s.Forward;
 				d.Up = s.Up;
+			}
+		);
+
+		// ============================================================
+		// Rendering Components
+		// ============================================================
+
+		// AnimationComponent
+		registry.Register<AnimationComponent>("animation",
+			// Serialize
+			[](Entity e) -> json {
+				if (!e.HasComponent<AnimationComponent>()) return nullptr;
+				auto& a = e.GetComponent<AnimationComponent>();
+				return json{
+					{ "currentClipName", a.CurrentClipName },
+					{ "frameIndex", a.FrameIndex },
+					{ "playbackTime", a.PlaybackTime },
+					{ "playbackSpeed", a.PlaybackSpeed },
+					{ "playing", a.Playing }
+					// Note: OnAnimationEvent callback is not serialized (runtime only)
+				};
+			},
+			// Deserialize
+			[](Entity e, const json& j) {
+				auto& a = e.AddComponent<AnimationComponent>();
+				if (j.contains("currentClipName"))
+					a.CurrentClipName = j["currentClipName"].get<std::string>();
+				if (j.contains("frameIndex"))
+					a.FrameIndex = j["frameIndex"].get<int>();
+				if (j.contains("playbackTime"))
+					a.PlaybackTime = j["playbackTime"].get<float>();
+				if (j.contains("playbackSpeed"))
+					a.PlaybackSpeed = j["playbackSpeed"].get<float>();
+				if (j.contains("playing"))
+					a.Playing = j["playing"].get<bool>();
+				// Note: OnAnimationEvent callback must be set up by gameplay code
+			},
+			// Copy
+			[](Entity src, Entity dst) {
+				if (!src.HasComponent<AnimationComponent>()) return;
+				auto& s = src.GetComponent<AnimationComponent>();
+				auto& d = dst.AddComponent<AnimationComponent>();
+				d.CurrentClipName = s.CurrentClipName;
+				d.FrameIndex = s.FrameIndex;
+				d.PlaybackTime = s.PlaybackTime;
+				d.PlaybackSpeed = s.PlaybackSpeed;
+				d.Playing = s.Playing;
+				// Note: OnAnimationEvent callback is not copied (must be set per entity)
 			}
 		);
 	}

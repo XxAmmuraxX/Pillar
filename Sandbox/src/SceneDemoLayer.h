@@ -14,7 +14,6 @@
 #include "Pillar/ECS/Components/Audio/AudioSourceComponent.h"
 #include "Pillar/ECS/Components/Audio/AudioListenerComponent.h"
 #include "Pillar/ECS/Systems/AudioSystem.h"
-#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Audio/AudioEngine.h"
 #include <imgui.h>
 #include <memory>
@@ -99,14 +98,14 @@ public:
         Pillar::Renderer::SetClearColor({ 0.1f, 0.1f, 0.15f, 1.0f });
         Pillar::Renderer::Clear();
 
-        Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
+        Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
         
         if (activeScene)
         {
             DrawScene(activeScene);
         }
 
-        Pillar::Renderer2D::EndScene();
+        Pillar::Renderer2DBackend::EndScene();
     }
 
     void OnEvent(Pillar::Event& event) override

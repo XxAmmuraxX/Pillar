@@ -19,7 +19,6 @@
 
 // Renderer
 #include "Pillar/Renderer/Renderer.h"
-#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/RenderCommand.h"
 #include "Pillar/Renderer/RenderAPI.h"
 #include "Pillar/Renderer/Shader.h"

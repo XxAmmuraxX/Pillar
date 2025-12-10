@@ -32,11 +32,10 @@ namespace Pillar {
         virtual void DrawQuad(const glm::vec2& position, const glm::vec2& size, 
                             const glm::vec4& color, Texture2D* texture) = 0;
         
-        virtual void DrawQuad(const glm::vec3& position, const glm::vec2& size, 
-                            const glm::vec4& color, Texture2D* texture,
-                            const glm::vec2& texCoordMin, const glm::vec2& texCoordMax) = 0;
-
-        virtual void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
+    virtual void DrawQuad(const glm::vec3& position, const glm::vec2& size, 
+                        const glm::vec4& color, Texture2D* texture,
+                        const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
+                        bool flipX = false, bool flipY = false) = 0;        virtual void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
                                     float rotation, const glm::vec4& color) = 0;
         
         virtual void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
@@ -80,11 +79,10 @@ namespace Pillar {
         void DrawQuad(const glm::vec2& position, const glm::vec2& size, 
                      const glm::vec4& color, Texture2D* texture) override;
         
-        void DrawQuad(const glm::vec3& position, const glm::vec2& size, 
-                     const glm::vec4& color, Texture2D* texture,
-                     const glm::vec2& texCoordMin, const glm::vec2& texCoordMax) override;
-
-        void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
+    void DrawQuad(const glm::vec3& position, const glm::vec2& size, 
+                 const glm::vec4& color, Texture2D* texture,
+                 const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
+                 bool flipX = false, bool flipY = false) override;        void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
                             float rotation, const glm::vec4& color) override;
         
         void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,

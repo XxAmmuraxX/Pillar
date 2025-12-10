@@ -160,35 +160,34 @@ namespace Pillar {
                                         const glm::vec4& color)
     {
         DrawQuad(glm::vec3(position, 0.0f), size, color, m_WhiteTexture.get(), 
-                glm::vec2(0.0f), glm::vec2(1.0f));
+                glm::vec2(0.0f), glm::vec2(1.0f), false, false);
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, 
                                         const glm::vec4& color, Texture2D* texture)
     {
         DrawQuad(glm::vec3(position, 0.0f), size, color, texture, 
-                glm::vec2(0.0f), glm::vec2(1.0f));
+                glm::vec2(0.0f), glm::vec2(1.0f), false, false);
     }
 
-    void OpenGLBatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size, 
-                                        const glm::vec4& color, Texture2D* texture,
-                                        const glm::vec2& texCoordMin, const glm::vec2& texCoordMax)
-    {
-        AddQuadToBatch(position, size, color, texture, texCoordMin, texCoordMax, 0.0f);
-    }
-
-    void OpenGLBatchRenderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
+	void OpenGLBatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size, 
+										   const glm::vec4& color, Texture2D* texture,
+										   const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
+										   bool flipX, bool flipY)
+	{
+		AddQuadToBatch(position, size, color, texture, texCoordMin, texCoordMax, 0.0f, flipX, flipY);
+	}    void OpenGLBatchRenderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
                                                float rotation, const glm::vec4& color)
     {
         AddQuadToBatch(glm::vec3(position, 0.0f), size, color, m_WhiteTexture.get(),
-                      glm::vec2(0.0f), glm::vec2(1.0f), rotation);
+                      glm::vec2(0.0f), glm::vec2(1.0f), rotation, false, false);
     }
 
     void OpenGLBatchRenderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
                                                float rotation, const glm::vec4& color, Texture2D* texture)
     {
         AddQuadToBatch(glm::vec3(position, 0.0f), size, color, texture,
-                      glm::vec2(0.0f), glm::vec2(1.0f), rotation);
+                      glm::vec2(0.0f), glm::vec2(1.0f), rotation, false, false);
     }
 
     void OpenGLBatchRenderer2D::StartBatch()
@@ -295,7 +294,7 @@ namespace Pillar {
     void OpenGLBatchRenderer2D::AddQuadToBatch(const glm::vec3& position, const glm::vec2& size,
                                               const glm::vec4& color, Texture2D* texture,
                                               const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
-                                              float rotation)
+                                              float rotation, bool flipX, bool flipY)
     {
         // Get or assign texture slot
         uint32_t textureSlot = GetOrAddTextureSlot(texture);
@@ -355,15 +354,18 @@ namespace Pillar {
             vertices[3] = position + glm::vec3(-halfSize.x,  halfSize.y, 0.0f);
         }
 
-        // Texture coordinates
-        glm::vec2 texCoords[4] = {
-            { texCoordMin.x, texCoordMin.y },  // Bottom-left
-            { texCoordMax.x, texCoordMin.y },  // Bottom-right
-            { texCoordMax.x, texCoordMax.y },  // Top-right
-            { texCoordMin.x, texCoordMax.y }   // Top-left
-        };
-
-        // Add 4 vertices to batch
+	// Texture coordinates (with optional flipping)
+	float uvMinX = flipX ? texCoordMax.x : texCoordMin.x;
+	float uvMaxX = flipX ? texCoordMin.x : texCoordMax.x;
+	float uvMinY = flipY ? texCoordMax.y : texCoordMin.y;
+	float uvMaxY = flipY ? texCoordMin.y : texCoordMax.y;
+	
+	glm::vec2 texCoords[4] = {
+		{ uvMinX, uvMinY },  // Bottom-left
+		{ uvMaxX, uvMinY },  // Bottom-right
+		{ uvMaxX, uvMaxY },  // Top-right
+		{ uvMinX, uvMaxY }   // Top-left
+	};        // Add 4 vertices to batch
         for (int i = 0; i < 4; ++i)
         {
             QuadVertex vertex;

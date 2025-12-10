@@ -29,7 +29,6 @@ add_library(Pillar STATIC
     # Renderer
     src/Pillar/Renderer/RenderAPI.cpp
     src/Pillar/Renderer/Renderer.cpp
-    src/Pillar/Renderer/Renderer2D.cpp
     src/Pillar/Renderer/Renderer2DBackend.cpp
     src/Pillar/Renderer/RenderCommand.cpp
     src/Pillar/Renderer/Shader.cpp
@@ -93,6 +92,14 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Systems/ParticleEmitterSystem.h
     # ECS - Components (Rendering)
     src/Pillar/ECS/Components/Rendering/SpriteComponent.h
+    src/Pillar/ECS/Components/Rendering/AnimationFrame.h
+    src/Pillar/ECS/Components/Rendering/AnimationClip.h
+    src/Pillar/ECS/Components/Rendering/AnimationComponent.h
+    # Animation System
+    src/Pillar/ECS/Systems/AnimationSystem.cpp
+    src/Pillar/ECS/Systems/AnimationSystem.h
+    src/Pillar/Utils/AnimationLoader.cpp
+    src/Pillar/Utils/AnimationLoader.h
 )
 
 # Override for all configurations
