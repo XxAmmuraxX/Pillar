@@ -25,7 +25,6 @@
 #include "Pillar/Renderer/Buffer.h"
 #include "Pillar/Renderer/VertexArray.h"
 #include "Pillar/Renderer/Texture.h"
-#include "Pillar/Renderer/Framebuffer.h"
 #include "Pillar/Renderer/OrthographicCamera.h"
 #include "Pillar/Renderer/OrthographicCameraController.h"
 

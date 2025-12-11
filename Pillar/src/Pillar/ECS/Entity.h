@@ -43,8 +43,6 @@ namespace Pillar {
 		template<typename T>
 		bool HasComponent() const
 		{
-			if (!IsValid())
-				return false;
 			return m_Scene->m_Registry.all_of<T>(m_EntityHandle);
 		}
 
@@ -65,16 +63,8 @@ namespace Pillar {
 
 		Scene* GetScene() const { return m_Scene; }
 
-		// Validity check - checks both handle and scene, plus whether entity exists in registry
-		bool IsValid() const
-		{
-			return m_EntityHandle != entt::null && 
-			       m_Scene != nullptr && 
-			       m_Scene->m_Registry.valid(m_EntityHandle);
-		}
-
-		// Validity check (operator version)
-		operator bool() const { return IsValid(); }
+		// Validity check
+		operator bool() const { return m_EntityHandle != entt::null && m_Scene != nullptr; }
 		operator entt::entity() const { return m_EntityHandle; }
 		operator uint32_t() const { return static_cast<uint32_t>(m_EntityHandle); }
 
