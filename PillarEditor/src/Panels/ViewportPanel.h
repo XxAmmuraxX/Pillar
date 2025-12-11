@@ -10,6 +10,14 @@
 
 namespace PillarEditor {
 
+    enum class GizmoMode
+    {
+        None = -1,
+        Translate = 0,
+        Rotate = 1,
+        Scale = 2
+    };
+
     class ViewportPanel : public EditorPanel
     {
     public:
@@ -31,10 +39,21 @@ namespace PillarEditor {
         glm::vec2 GetViewportSize() const { return m_ViewportSize; }
         const glm::vec2* GetViewportBounds() const { return m_ViewportBounds; }
 
+        // Gizmo controls
+        void SetGizmoMode(GizmoMode mode) { m_GizmoMode = mode; }
+        GizmoMode GetGizmoMode() const { return m_GizmoMode; }
+
     private:
         void DrawGrid();
+        void DrawGizmos();
+        void DrawGizmoToolbar();
         glm::vec4 GetEntityColor(const std::string& tag);
         glm::vec2 GetEntitySize(const std::string& tag, const glm::vec2& scale);
+        
+        // Entity picking
+        bool OnMouseButtonPressed(Pillar::MouseButtonPressedEvent& e);
+        glm::vec2 ScreenToWorld(const glm::vec2& screenPos);
+        Pillar::Entity GetEntityAtWorldPosition(const glm::vec2& worldPos);
 
     private:
         std::shared_ptr<Pillar::Framebuffer> m_Framebuffer;
@@ -45,6 +64,9 @@ namespace PillarEditor {
 
         bool m_ViewportFocused = false;
         bool m_ViewportHovered = false;
+        
+        // Gizmo state
+        GizmoMode m_GizmoMode = GizmoMode::Translate;
     };
 
 }

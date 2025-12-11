@@ -11,6 +11,7 @@ add_executable(PillarEditor
     src/Panels/ViewportPanel.cpp
     src/Panels/ContentBrowserPanel.cpp
     src/Panels/ConsolePanel.cpp
+    src/Utils/FileDialog.cpp
 )
 
 # Override output directory for all configurations
@@ -27,7 +28,7 @@ set_target_properties(PillarEditor PROPERTIES
 )
 
 # Link to Pillar engine (gets all dependencies transitively)
-target_link_libraries(PillarEditor PRIVATE Pillar)
+target_link_libraries(PillarEditor PRIVATE Pillar imguizmo)
 
 # Include directories
 target_include_directories(PillarEditor PRIVATE

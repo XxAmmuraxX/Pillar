@@ -22,6 +22,9 @@ namespace PillarEditor {
         void DrawVelocityComponent(Pillar::Entity entity);
         void DrawRigidbodyComponent(Pillar::Entity entity);
         void DrawColliderComponent(Pillar::Entity entity);
+        void DrawBulletComponent(Pillar::Entity entity);
+        void DrawXPGemComponent(Pillar::Entity entity);
+        void DrawHierarchyComponent(Pillar::Entity entity);
 
         // Helper for drawing component headers with removal option
         template<typename T>

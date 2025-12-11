@@ -3,9 +3,12 @@
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Core/UUIDComponent.h"
+#include "Pillar/ECS/Components/Core/HierarchyComponent.h"
 #include "Pillar/ECS/Components/Physics/VelocityComponent.h"
 #include "Pillar/ECS/Components/Physics/RigidbodyComponent.h"
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
+#include "Pillar/ECS/Components/Gameplay/BulletComponent.h"
+#include "Pillar/ECS/Components/Gameplay/XPGemComponent.h"
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <cstring>
@@ -142,6 +145,24 @@ namespace PillarEditor {
         if (entity.HasComponent<Pillar::ColliderComponent>())
         {
             DrawColliderComponent(entity);
+        }
+
+        // Bullet Component
+        if (entity.HasComponent<Pillar::BulletComponent>())
+        {
+            DrawBulletComponent(entity);
+        }
+
+        // XP Gem Component
+        if (entity.HasComponent<Pillar::XPGemComponent>())
+        {
+            DrawXPGemComponent(entity);
+        }
+
+        // Hierarchy Component
+        if (entity.HasComponent<Pillar::HierarchyComponent>())
+        {
+            DrawHierarchyComponent(entity);
         }
 
         ImGui::Spacing();
@@ -484,6 +505,15 @@ namespace PillarEditor {
                 }
             }
 
+            if (!entity.HasComponent<Pillar::RigidbodyComponent>())
+            {
+                if (ImGui::Selectable("Rigidbody"))
+                {
+                    entity.AddComponent<Pillar::RigidbodyComponent>();
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
             if (!entity.HasComponent<Pillar::ColliderComponent>())
             {
                 if (ImGui::Selectable("Collider (Box)"))
@@ -498,9 +528,249 @@ namespace PillarEditor {
                 }
             }
 
-            // Note: RigidbodyComponent has special requirements and should be added through physics system
+            if (!entity.HasComponent<Pillar::BulletComponent>())
+            {
+                if (ImGui::Selectable("Bullet"))
+                {
+                    entity.AddComponent<Pillar::BulletComponent>();
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            if (!entity.HasComponent<Pillar::XPGemComponent>())
+            {
+                if (ImGui::Selectable("XP Gem"))
+                {
+                    entity.AddComponent<Pillar::XPGemComponent>();
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            if (!entity.HasComponent<Pillar::HierarchyComponent>())
+            {
+                if (ImGui::Selectable("Hierarchy"))
+                {
+                    entity.AddComponent<Pillar::HierarchyComponent>();
+                    ImGui::CloseCurrentPopup();
+                }
+            }
 
             ImGui::EndPopup();
+        }
+    }
+
+    void InspectorPanel::DrawBulletComponent(Pillar::Entity entity)
+    {
+        if (!entity.HasComponent<Pillar::BulletComponent>())
+            return;
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+                                   ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap |
+                                   ImGuiTreeNodeFlags_FramePadding;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+        
+        ImVec2 contentRegionAvailable = ImGui::GetContentRegionAvail();
+        float lineHeight = ImGui::GetFrameHeight();
+        
+        bool open = ImGui::TreeNodeEx("Bullet", flags);
+        
+        // Remove button
+        ImGui::SameLine(contentRegionAvailable.x - lineHeight * 0.5f);
+        if (ImGui::Button("X##RemoveBullet", ImVec2(lineHeight, lineHeight)))
+        {
+            entity.RemoveComponent<Pillar::BulletComponent>();
+            ImGui::PopStyleVar();
+            if (open)
+                ImGui::TreePop();
+            return;
+        }
+        
+        ImGui::PopStyleVar();
+
+        if (open)
+        {
+            auto& bullet = entity.GetComponent<Pillar::BulletComponent>();
+
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 120.0f);
+
+            ImGui::Text("Damage");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##Damage", &bullet.Damage, 0.5f, 0.0f, 1000.0f, "%.1f");
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Text("Lifetime");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##Lifetime", &bullet.Lifetime, 0.1f, 0.1f, 60.0f, "%.1f s");
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Text("Time Alive");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::TextDisabled("%.2f s", bullet.TimeAlive);
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Separator();
+            ImGui::NextColumn();
+            ImGui::NextColumn();
+
+            ImGui::Text("Pierce");
+            ImGui::NextColumn();
+            ImGui::Checkbox("##Pierce", &bullet.Pierce);
+            ImGui::NextColumn();
+
+            ImGui::Text("Max Hits");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            int maxHits = static_cast<int>(bullet.MaxHits);
+            if (ImGui::DragInt("##MaxHits", &maxHits, 1.0f, 1, 100))
+                bullet.MaxHits = static_cast<uint32_t>(maxHits);
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Text("Hits Remaining");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::TextDisabled("%u", bullet.HitsRemaining);
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Columns(1);
+
+            ImGui::TreePop();
+        }
+    }
+
+    void InspectorPanel::DrawXPGemComponent(Pillar::Entity entity)
+    {
+        if (!entity.HasComponent<Pillar::XPGemComponent>())
+            return;
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+                                   ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap |
+                                   ImGuiTreeNodeFlags_FramePadding;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+        
+        ImVec2 contentRegionAvailable = ImGui::GetContentRegionAvail();
+        float lineHeight = ImGui::GetFrameHeight();
+        
+        bool open = ImGui::TreeNodeEx("XP Gem", flags);
+        
+        // Remove button
+        ImGui::SameLine(contentRegionAvailable.x - lineHeight * 0.5f);
+        if (ImGui::Button("X##RemoveXPGem", ImVec2(lineHeight, lineHeight)))
+        {
+            entity.RemoveComponent<Pillar::XPGemComponent>();
+            ImGui::PopStyleVar();
+            if (open)
+                ImGui::TreePop();
+            return;
+        }
+        
+        ImGui::PopStyleVar();
+
+        if (open)
+        {
+            auto& xpGem = entity.GetComponent<Pillar::XPGemComponent>();
+
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 140.0f);
+
+            ImGui::Text("XP Value");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::DragInt("##XPValue", &xpGem.XPValue, 1.0f, 1, 10000);
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Text("Attraction Radius");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##AttractionRadius", &xpGem.AttractionRadius, 0.1f, 0.1f, 50.0f, "%.1f");
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Text("Move Speed");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##MoveSpeed", &xpGem.MoveSpeed, 0.5f, 0.1f, 100.0f, "%.1f");
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Separator();
+            ImGui::NextColumn();
+            ImGui::NextColumn();
+
+            ImGui::Text("Is Attracted");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::Checkbox("##IsAttracted", &xpGem.IsAttracted);
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Columns(1);
+
+            ImGui::TreePop();
+        }
+    }
+
+    void InspectorPanel::DrawHierarchyComponent(Pillar::Entity entity)
+    {
+        if (!entity.HasComponent<Pillar::HierarchyComponent>())
+            return;
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+                                   ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap |
+                                   ImGuiTreeNodeFlags_FramePadding;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+        
+        ImVec2 contentRegionAvailable = ImGui::GetContentRegionAvail();
+        float lineHeight = ImGui::GetFrameHeight();
+        
+        bool open = ImGui::TreeNodeEx("Hierarchy", flags);
+        
+        // Remove button
+        ImGui::SameLine(contentRegionAvailable.x - lineHeight * 0.5f);
+        if (ImGui::Button("X##RemoveHierarchy", ImVec2(lineHeight, lineHeight)))
+        {
+            entity.RemoveComponent<Pillar::HierarchyComponent>();
+            ImGui::PopStyleVar();
+            if (open)
+                ImGui::TreePop();
+            return;
+        }
+        
+        ImGui::PopStyleVar();
+
+        if (open)
+        {
+            auto& hierarchy = entity.GetComponent<Pillar::HierarchyComponent>();
+
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 120.0f);
+
+            ImGui::Text("Parent UUID");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::Text("%llu", hierarchy.ParentUUID);
+            ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            ImGui::Columns(1);
+
+            ImGui::Spacing();
+            ImGui::TextDisabled("Note: Parent-child relationships are managed by the scene hierarchy.");
+            ImGui::TextDisabled("Use the Scene Hierarchy panel to set parent/child relationships.");
+
+            ImGui::TreePop();
         }
     }
 

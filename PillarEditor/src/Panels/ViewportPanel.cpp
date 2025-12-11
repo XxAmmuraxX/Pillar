@@ -1,12 +1,21 @@
 #include "ViewportPanel.h"
 #include "../SelectionContext.h"
+#include "ConsolePanel.h"
 #include "Pillar/Renderer/Renderer.h"
 #include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/RenderCommand.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
+#include "Pillar/Events/MouseEvent.h"
+#include "Pillar/Input.h"
+#include "Pillar/KeyCodes.h"
 #include <imgui.h>
+#include <ImGuizmo.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include <algorithm>
 #include <cmath>
 
@@ -43,6 +52,12 @@ namespace PillarEditor {
         if (m_ViewportHovered)
         {
             m_EditorCamera.OnEvent(e);
+            
+            // Handle mouse clicks for entity picking
+            Pillar::EventDispatcher dispatcher(e);
+            dispatcher.Dispatch<Pillar::MouseButtonPressedEvent>(
+                [this](Pillar::MouseButtonPressedEvent& event) { return OnMouseButtonPressed(event); }
+            );
         }
     }
 
@@ -85,20 +100,44 @@ namespace PillarEditor {
                     isSelected = m_SelectionContext->IsSelected(e);
                 }
 
-                // Draw selection highlight (behind entity)
+                // Draw entity first
+                Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
+
+                // Draw selection highlight (on top of entity with thicker outline)
                 if (isSelected)
                 {
-                    glm::vec4 outlineColor = { 1.0f, 0.6f, 0.0f, 0.8f };  // Orange
-                    glm::vec2 outlineSize = size + glm::vec2(0.15f);
+                    // Draw a thick border by drawing 4 rectangles around the entity
+                    glm::vec4 outlineColor = { 1.0f, 0.7f, 0.0f, 1.0f };  // Bright orange
+                    float borderThickness = 0.08f;
+                    
+                    // Top border
                     Pillar::Renderer2D::DrawQuad(
-                        glm::vec3(transform.Position, -0.01f),
-                        outlineSize,
+                        glm::vec3(transform.Position.x, transform.Position.y + size.y / 2.0f + borderThickness / 2.0f, 0.01f),
+                        glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                        outlineColor
+                    );
+                    
+                    // Bottom border
+                    Pillar::Renderer2D::DrawQuad(
+                        glm::vec3(transform.Position.x, transform.Position.y - size.y / 2.0f - borderThickness / 2.0f, 0.01f),
+                        glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                        outlineColor
+                    );
+                    
+                    // Left border
+                    Pillar::Renderer2D::DrawQuad(
+                        glm::vec3(transform.Position.x - size.x / 2.0f - borderThickness / 2.0f, transform.Position.y, 0.01f),
+                        glm::vec2(borderThickness, size.y),
+                        outlineColor
+                    );
+                    
+                    // Right border
+                    Pillar::Renderer2D::DrawQuad(
+                        glm::vec3(transform.Position.x + size.x / 2.0f + borderThickness / 2.0f, transform.Position.y, 0.01f),
+                        glm::vec2(borderThickness, size.y),
                         outlineColor
                     );
                 }
-
-                // Draw entity
-                Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
             }
 
             Pillar::Renderer2D::EndScene();
@@ -238,12 +277,19 @@ namespace PillarEditor {
         // Flip Y coordinates for OpenGL texture (UV: 0,1 to 1,0)
         ImGui::Image((void*)(intptr_t)textureID, viewportPanelSize, ImVec2(0, 1), ImVec2(1, 0));
 
+        // Draw gizmos overlay
+        DrawGizmos();
+
+        // Draw gizmo toolbar
+        ImGui::SetCursorPos(ImVec2(10, 10));
+        DrawGizmoToolbar();
+
         // Show viewport info overlay using SetCursorPos (simpler, doesn't create child window)
-        ImGui::SetCursorPos(ImVec2(10, 30));
+        ImGui::SetCursorPos(ImVec2(10, 60));
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 0.8f));
         ImGui::Text("Zoom: %.1fx", 1.0f / m_EditorCamera.GetZoomLevel());
         glm::vec3 pos = m_EditorCamera.GetPosition();
-        ImGui::SetCursorPos(ImVec2(10, 48));
+        ImGui::SetCursorPos(ImVec2(10, 78));
         ImGui::Text("Pos: %.1f, %.1f", pos.x, pos.y);
         ImGui::PopStyleColor();
 
@@ -255,6 +301,311 @@ namespace PillarEditor {
     {
         m_EditorCamera.SetPosition({ 0.0f, 0.0f, 0.0f });
         m_EditorCamera.SetZoomLevel(5.0f);
+    }
+
+    bool ViewportPanel::OnMouseButtonPressed(Pillar::MouseButtonPressedEvent& e)
+    {
+        // Only handle left mouse button
+        if (e.GetMouseButton() != 0) // 0 = left button
+            return false;
+
+        // Don't pick if ImGuizmo is being used or wants mouse input
+        if (ImGuizmo::IsOver() || ImGuizmo::IsUsing())
+            return false;
+
+        // Don't pick if we're panning (middle mouse) or if viewport isn't focused
+        if (Pillar::Input::IsMouseButtonPressed(2) || !m_ViewportFocused)
+            return false;
+
+        // Get mouse position using ImGui (which gives us the correct position relative to the window)
+        ImVec2 mousePos = ImGui::GetMousePos();
+        glm::vec2 screenPos = { mousePos.x, mousePos.y };
+
+        // Check if mouse is within viewport bounds
+        if (screenPos.x < m_ViewportBounds[0].x || screenPos.x > m_ViewportBounds[1].x ||
+            screenPos.y < m_ViewportBounds[0].y || screenPos.y > m_ViewportBounds[1].y)
+        {
+            return false;
+        }
+
+        // Convert to viewport-relative coordinates (0 to viewport size)
+        glm::vec2 viewportRelativePos = screenPos - m_ViewportBounds[0];
+        
+        // Convert to world space
+        glm::vec2 worldPos = ScreenToWorld(viewportRelativePos);
+
+        // Find entity at this position
+        Pillar::Entity clickedEntity = GetEntityAtWorldPosition(worldPos);
+
+        // Check if Ctrl is held for multi-select
+        bool ctrlHeld = Pillar::Input::IsKeyPressed(341) || Pillar::Input::IsKeyPressed(345); // Left/Right Ctrl
+
+        if (clickedEntity && m_SelectionContext)
+        {
+            if (ctrlHeld)
+            {
+                // Toggle selection
+                if (m_SelectionContext->IsSelected(clickedEntity))
+                    m_SelectionContext->RemoveFromSelection(clickedEntity);
+                else
+                    m_SelectionContext->AddToSelection(clickedEntity);
+            }
+            else
+            {
+                // Replace selection
+                m_SelectionContext->Select(clickedEntity);
+            }
+            
+            return true;
+        }
+        else if (!ctrlHeld && m_SelectionContext)
+        {
+            // Clicked on empty space - clear selection
+            m_SelectionContext->ClearSelection();
+        }
+
+        return false;
+    }
+
+    glm::vec2 ViewportPanel::ScreenToWorld(const glm::vec2& screenPos)
+    {
+        // Normalize to 0-1 range
+        glm::vec2 normalized = screenPos / m_ViewportSize;
+        
+        // Convert to -1 to 1 range (NDC)
+        normalized = normalized * 2.0f - 1.0f;
+        
+        // Flip Y axis (screen space has Y down, world space has Y up)
+        normalized.y = -normalized.y;
+        
+        // Get camera properties
+        float zoom = m_EditorCamera.GetZoomLevel();
+        float aspectRatio = m_ViewportSize.x / m_ViewportSize.y;
+        glm::vec3 cameraPos = m_EditorCamera.GetPosition();
+        
+        // Convert to world space
+        glm::vec2 worldPos;
+        worldPos.x = normalized.x * zoom * aspectRatio + cameraPos.x;
+        worldPos.y = normalized.y * zoom + cameraPos.y;
+        
+        return worldPos;
+    }
+
+    Pillar::Entity ViewportPanel::GetEntityAtWorldPosition(const glm::vec2& worldPos)
+    {
+        if (!m_Scene)
+            return {};
+
+        // Iterate through all entities with transform and check for intersection
+        auto view = m_Scene->GetRegistry().view<Pillar::TagComponent, Pillar::TransformComponent>();
+        
+        // Store entities that intersect, we'll pick the one rendered on top (last in the list)
+        Pillar::Entity selectedEntity;
+        
+        for (auto entity : view)
+        {
+            auto& tag = view.get<Pillar::TagComponent>(entity);
+            auto& transform = view.get<Pillar::TransformComponent>(entity);
+            
+            // Get entity size
+            glm::vec2 size = GetEntitySize(tag.Tag, transform.Scale);
+            
+            // Calculate AABB bounds
+            glm::vec2 minBounds = transform.Position - (size * 0.5f);
+            glm::vec2 maxBounds = transform.Position + (size * 0.5f);
+            
+            // Check if world position is inside the AABB
+            if (worldPos.x >= minBounds.x && worldPos.x <= maxBounds.x &&
+                worldPos.y >= minBounds.y && worldPos.y <= maxBounds.y)
+            {
+                // Entity intersects - keep checking others (last one wins = on top)
+                selectedEntity = Pillar::Entity(entity, m_Scene.get());
+            }
+        }
+        
+        return selectedEntity;
+    }
+
+    void ViewportPanel::DrawGizmos()
+    {
+        // Only draw gizmos if we have a selection
+        if (!m_SelectionContext || !m_SelectionContext->HasSelection())
+            return;
+
+        auto selectedEntity = m_SelectionContext->GetPrimarySelection();
+        if (!selectedEntity || !selectedEntity.HasComponent<Pillar::TransformComponent>())
+            return;
+
+        // Don't draw gizmo if in "None" mode
+        if (m_GizmoMode == GizmoMode::None)
+            return;
+
+        // Get transform component
+        auto& tc = selectedEntity.GetComponent<Pillar::TransformComponent>();
+
+        // Setup ImGuizmo for this window
+        ImGuizmo::SetOrthographic(true);
+        ImGuizmo::SetDrawlist(ImGui::GetWindowDrawList());
+        ImGuizmo::SetRect(m_ViewportBounds[0].x, m_ViewportBounds[0].y, 
+                         m_ViewportSize.x, m_ViewportSize.y);
+
+        // Get camera matrices
+        const auto& camera = m_EditorCamera.GetCamera();
+        glm::mat4 viewMatrix = camera.GetViewMatrix();
+        glm::mat4 projectionMatrix = camera.GetProjectionMatrix();
+
+        // Create transform matrix from 2D transform
+        glm::mat4 transform = glm::mat4(1.0f);
+        transform = glm::translate(transform, glm::vec3(tc.Position.x, tc.Position.y, 0.0f));
+        transform = glm::rotate(transform, glm::radians(tc.Rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+        transform = glm::scale(transform, glm::vec3(tc.Scale.x, tc.Scale.y, 1.0f));
+
+        // Determine gizmo operation
+        ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+        if (m_GizmoMode == GizmoMode::Translate)
+            operation = ImGuizmo::TRANSLATE;
+        else if (m_GizmoMode == GizmoMode::Rotate)
+            operation = ImGuizmo::ROTATE;
+        else if (m_GizmoMode == GizmoMode::Scale)
+            operation = ImGuizmo::SCALE;
+
+        // For 2D, we only want to manipulate X and Y axes (hide Z axis)
+        ImGuizmo::MODE mode = ImGuizmo::LOCAL;
+        
+        // Manipulate the gizmo
+        bool snapping = Pillar::Input::IsKeyPressed(PIL_KEY_LEFT_CONTROL) || 
+                       Pillar::Input::IsKeyPressed(PIL_KEY_RIGHT_CONTROL);
+        float snapValue = 0.5f; // 0.5 units for translate, 15 degrees for rotate, 0.5 for scale
+        
+        if (operation == ImGuizmo::ROTATE)
+            snapValue = 15.0f;
+        
+        float snapValues[3] = { snapValue, snapValue, snapValue };
+
+        // For 2D mode: The gizmo is viewed from looking down the Z axis
+        // In orthographic projection, only X and Y axes will be prominently visible
+        // The Z axis (blue) will appear as a dot/circle which we can ignore
+        
+        ImGuizmo::Manipulate(glm::value_ptr(viewMatrix), glm::value_ptr(projectionMatrix),
+            operation, mode, glm::value_ptr(transform),
+            nullptr, snapping ? snapValues : nullptr);
+
+        // If gizmo was used, decompose the matrix back to transform
+        if (ImGuizmo::IsUsing())
+        {
+            glm::vec3 translation, rotation, scale;
+            glm::quat rotationQuat;
+            glm::vec3 skew;
+            glm::vec4 perspective;
+            glm::decompose(transform, scale, rotationQuat, translation, skew, perspective);
+
+            // Extract rotation in degrees
+            glm::vec3 eulerRotation = glm::eulerAngles(rotationQuat);
+            
+            // Update transform component - force Z to 0 for 2D
+            tc.Position = glm::vec2(translation.x, translation.y);
+            tc.Rotation = glm::degrees(eulerRotation.z);
+            tc.Scale = glm::vec2(scale.x, scale.y);
+        }
+    }
+
+    void ViewportPanel::DrawGizmoToolbar()
+    {
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 4.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
+        
+        // Background for toolbar
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 0.8f));
+        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.3f, 0.3f, 0.8f));
+
+        ImGui::Begin("##gizmotoolbar", nullptr, 
+            ImGuiWindowFlags_NoDecoration | 
+            ImGuiWindowFlags_NoScrollbar | 
+            ImGuiWindowFlags_NoScrollWithMouse |
+            ImGuiWindowFlags_AlwaysAutoResize);
+
+        float buttonSize = 32.0f;
+        
+        // None/Select button (Q)
+        {
+            bool selected = m_GizmoMode == GizmoMode::None;
+            if (selected)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
+            else
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+            
+            if (ImGui::Button("Q##SelectMode", ImVec2(buttonSize, buttonSize)))
+                m_GizmoMode = GizmoMode::None;
+            
+            ImGui::PopStyleColor();
+                
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Select Mode (Q)\nNo gizmo, selection only");
+        }
+        
+        ImGui::SameLine();
+        
+        // Translate button (W)
+        {
+            bool selected = m_GizmoMode == GizmoMode::Translate;
+            if (selected)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
+            else
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+            
+            if (ImGui::Button("W##TranslateMode", ImVec2(buttonSize, buttonSize)))
+                m_GizmoMode = GizmoMode::Translate;
+            
+            ImGui::PopStyleColor();
+                
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Translate Mode (W)\nMove entity position");
+        }
+        
+        ImGui::SameLine();
+        
+        // Rotate button (E)
+        {
+            bool selected = m_GizmoMode == GizmoMode::Rotate;
+            if (selected)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
+            else
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+            
+            if (ImGui::Button("E##RotateMode", ImVec2(buttonSize, buttonSize)))
+                m_GizmoMode = GizmoMode::Rotate;
+            
+            ImGui::PopStyleColor();
+                
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Rotate Mode (E)\nRotate entity");
+        }
+        
+        ImGui::SameLine();
+        
+        // Scale button (R)
+        {
+            bool selected = m_GizmoMode == GizmoMode::Scale;
+            if (selected)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
+            else
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+            
+            if (ImGui::Button("R##ScaleMode", ImVec2(buttonSize, buttonSize)))
+                m_GizmoMode = GizmoMode::Scale;
+            
+            ImGui::PopStyleColor();
+                
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Scale Mode (R)\nResize entity");
+        }
+
+        ImGui::End();
+        
+        ImGui::PopStyleColor(2);
+        ImGui::PopStyleVar(4);
     }
 
 }

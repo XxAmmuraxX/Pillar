@@ -1,5 +1,6 @@
 #include "EditorLayer.h"
 #include "Panels/ConsolePanel.h"
+#include "Utils/FileDialog.h"
 #include "Pillar/Application.h"
 #include "Pillar/ECS/SceneSerializer.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
@@ -9,6 +10,7 @@
 #include "Pillar/KeyCodes.h"
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <ImGuizmo.h>
 #include <filesystem>
 
 namespace PillarEditor {
@@ -237,6 +239,9 @@ namespace PillarEditor {
 
     void EditorLayer::OnImGuiRender()
     {
+        // ImGuizmo needs this to be called every frame
+        ImGuizmo::BeginFrame();
+
         // Enable dockspace
         static bool dockspaceOpen = true;
         static bool opt_fullscreen = true;
@@ -343,6 +348,20 @@ namespace PillarEditor {
 
         switch (e.GetKeyCode())
         {
+            case PIL_KEY_Z:
+                if (control)
+                {
+                    ConsolePanel::Log("Undo is not yet implemented", LogLevel::Warn);
+                    return true;
+                }
+                break;
+            case PIL_KEY_Y:
+                if (control)
+                {
+                    ConsolePanel::Log("Redo is not yet implemented", LogLevel::Warn);
+                    return true;
+                }
+                break;
             case PIL_KEY_N:
                 if (control)
                 {
@@ -376,6 +395,21 @@ namespace PillarEditor {
                     }
                 }
                 break;
+            case PIL_KEY_A:
+                if (control)
+                {
+                    // Select all entities
+                    m_SelectionContext.ClearSelection();
+                    auto view = m_ActiveScene->GetRegistry().view<Pillar::TagComponent>();
+                    for (auto entity : view)
+                    {
+                        Pillar::Entity e(entity, m_ActiveScene.get());
+                        m_SelectionContext.AddToSelection(e);
+                    }
+                    size_t count = m_SelectionContext.GetSelectionCount();
+                    ConsolePanel::Log("Selected " + std::to_string(count) + " entities", LogLevel::Info);
+                }
+                break;
             case PIL_KEY_DELETE:
                 // Delete selected entity
                 if (m_SelectionContext.HasSelection())
@@ -389,6 +423,43 @@ namespace PillarEditor {
                         ConsolePanel::Log("Deleted entity: " + name, LogLevel::Info);
                     }
                 }
+                break;
+            case PIL_KEY_ESCAPE:
+                // Clear selection
+                if (m_SelectionContext.HasSelection())
+                {
+                    m_SelectionContext.ClearSelection();
+                    ConsolePanel::Log("Selection cleared", LogLevel::Trace);
+                }
+                break;
+            case PIL_KEY_W:
+                if (!control) // Only if Ctrl is not pressed (Ctrl+W might be close)
+                {
+                    // Translate gizmo mode
+                    m_ViewportPanel->SetGizmoMode(PillarEditor::GizmoMode::Translate);
+                    ConsolePanel::Log("Gizmo mode: Translate", LogLevel::Trace);
+                }
+                break;
+            case PIL_KEY_E:
+                if (!control)
+                {
+                    // Rotate gizmo mode
+                    m_ViewportPanel->SetGizmoMode(PillarEditor::GizmoMode::Rotate);
+                    ConsolePanel::Log("Gizmo mode: Rotate", LogLevel::Trace);
+                }
+                break;
+            case PIL_KEY_R:
+                if (!control)
+                {
+                    // Scale gizmo mode
+                    m_ViewportPanel->SetGizmoMode(PillarEditor::GizmoMode::Scale);
+                    ConsolePanel::Log("Gizmo mode: Scale", LogLevel::Trace);
+                }
+                break;
+            case PIL_KEY_Q:
+                // No gizmo mode
+                m_ViewportPanel->SetGizmoMode(PillarEditor::GizmoMode::None);
+                ConsolePanel::Log("Gizmo mode: None", LogLevel::Trace);
                 break;
             case PIL_KEY_F:
                 // Focus on selected entity
@@ -407,10 +478,6 @@ namespace PillarEditor {
                 // Reset camera to origin
                 m_ViewportPanel->ResetCamera();
                 ConsolePanel::Log("Camera reset to origin", LogLevel::Trace);
-                break;
-            case PIL_KEY_ESCAPE:
-                // Deselect all
-                m_SelectionContext.ClearSelection();
                 break;
         }
 
@@ -457,6 +524,18 @@ namespace PillarEditor {
                 if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) {}  // Placeholder
                 
                 ImGui::Separator();
+                
+                if (ImGui::MenuItem("Select All", "Ctrl+A"))
+                {
+                    m_SelectionContext.ClearSelection();
+                    auto view = m_ActiveScene->GetRegistry().view<Pillar::TagComponent>();
+                    for (auto entity : view)
+                    {
+                        Pillar::Entity e(entity, m_ActiveScene.get());
+                        m_SelectionContext.AddToSelection(e);
+                    }
+                    ConsolePanel::Log("Selected all entities", LogLevel::Info);
+                }
                 
                 if (ImGui::MenuItem("Duplicate", "Ctrl+D", false, m_SelectionContext.HasSelection()))
                 {
@@ -578,14 +657,31 @@ namespace PillarEditor {
                 
                 ImGui::Separator();
                 
+                ImGui::TextDisabled("File Operations:");
+                ImGui::BulletText("Ctrl+N: New Scene");
+                ImGui::BulletText("Ctrl+O: Open Scene");
+                ImGui::BulletText("Ctrl+S: Save Scene");
+                ImGui::BulletText("Ctrl+Shift+S: Save Scene As");
+                ImGui::Separator();
                 ImGui::TextDisabled("Viewport Controls:");
+                ImGui::BulletText("Left Click: Select entity");
+                ImGui::BulletText("Ctrl+Click: Add to selection");
                 ImGui::BulletText("Middle Mouse: Pan");
                 ImGui::BulletText("Scroll Wheel: Zoom");
                 ImGui::BulletText("H: Reset camera");
                 ImGui::Separator();
+                ImGui::TextDisabled("Gizmo Controls:");
+                ImGui::BulletText("Q: No gizmo");
+                ImGui::BulletText("W: Translate mode");
+                ImGui::BulletText("E: Rotate mode");
+                ImGui::BulletText("R: Scale mode");
+                ImGui::BulletText("Hold Ctrl: Snap to grid");
+                ImGui::Separator();
                 ImGui::TextDisabled("Entity Controls:");
                 ImGui::BulletText("F: Focus on selection");
+                ImGui::BulletText("Escape: Clear selection");
                 ImGui::BulletText("Delete: Delete selection");
+                ImGui::BulletText("Ctrl+A: Select all");
                 ImGui::BulletText("Ctrl+D: Duplicate");
                 
                 ImGui::EndMenu();
@@ -620,6 +716,14 @@ namespace PillarEditor {
                 OnPlay();
             else
                 OnStop();
+        }
+        
+        if (ImGui::IsItemHovered())
+        {
+            if (isPlaying)
+                ImGui::SetTooltip("Stop playing and return to edit mode");
+            else
+                ImGui::SetTooltip("Start playing the scene");
         }
         
         if (isPlaying)
@@ -701,7 +805,43 @@ namespace PillarEditor {
         
         if (m_ActiveScene)
         {
-            ImGui::Text("Name: %s", m_ActiveScene->GetName().c_str());
+            // Editable scene name
+            ImGui::Text("Name:");
+            ImGui::SameLine();
+            
+            static char sceneNameBuffer[256];
+            std::string currentName = m_ActiveScene->GetName();
+            
+            // Initialize buffer with current name if different
+            static std::string lastSceneName = currentName;
+            if (lastSceneName != currentName)
+            {
+                strncpy_s(sceneNameBuffer, currentName.c_str(), sizeof(sceneNameBuffer) - 1);
+                lastSceneName = currentName;
+            }
+            
+            // First time initialization
+            static bool initialized = false;
+            if (!initialized)
+            {
+                strncpy_s(sceneNameBuffer, currentName.c_str(), sizeof(sceneNameBuffer) - 1);
+                initialized = true;
+            }
+            
+            ImGui::PushItemWidth(-1);
+            if (ImGui::InputText("##SceneName", sceneNameBuffer, sizeof(sceneNameBuffer)))
+            {
+                if (strlen(sceneNameBuffer) > 0)
+                {
+                    m_ActiveScene->SetName(sceneNameBuffer);
+                    lastSceneName = sceneNameBuffer;
+                }
+            }
+            ImGui::PopItemWidth();
+            
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Edit scene name");
+            
             ImGui::Text("Entities: %zu", m_ActiveScene->GetEntityCount());
             ImGui::Text("State: %s", m_ActiveScene->IsPlaying() ? "Playing" : "Edit");
         }
@@ -762,23 +902,13 @@ namespace PillarEditor {
 
     void EditorLayer::OpenScene()
     {
-        // Try multiple paths for the demo scene
-        std::vector<std::string> paths = {
-            "assets/scenes/demo.scene.json",
-            "Sandbox/assets/scenes/demo.scene.json",
-            "../Sandbox/assets/scenes/demo.scene.json"
-        };
+        // Open file dialog
+        auto filepath = FileDialog::OpenFile("Pillar Scene (*.scene.json)\0*.scene.json\0All Files (*.*)\0*.*\0");
         
-        for (const auto& path : paths)
+        if (filepath.has_value())
         {
-            if (std::filesystem::exists(path))
-            {
-                OpenScene(path);
-                return;
-            }
+            OpenScene(filepath.value());
         }
-        
-        ConsolePanel::Log("No demo scene found. Create entities manually.", LogLevel::Warn);
     }
 
     void EditorLayer::OpenScene(const std::string& filepath)
@@ -837,20 +967,30 @@ namespace PillarEditor {
 
     void EditorLayer::SaveSceneAs()
     {
-        // Ensure directory exists
-        std::filesystem::create_directories("assets/scenes");
+        // Open save file dialog
+        auto filepath = FileDialog::SaveFile("Pillar Scene (*.scene.json)\0*.scene.json\0All Files (*.*)\0*.*\0");
         
-        std::string filepath = "assets/scenes/" + m_ActiveScene->GetName() + ".scene.json";
-        m_CurrentScenePath = filepath;
-        
-        Pillar::SceneSerializer serializer(m_ActiveScene.get());
-        if (serializer.Serialize(filepath))
+        if (filepath.has_value())
         {
-            ConsolePanel::Log("Saved scene as: " + filepath, LogLevel::Info);
-        }
-        else
-        {
-            ConsolePanel::Log("Failed to save scene", LogLevel::Error);
+            std::string path = filepath.value();
+            
+            // Ensure .scene.json extension
+            if (path.find(".scene.json") == std::string::npos)
+            {
+                path += ".scene.json";
+            }
+            
+            m_CurrentScenePath = path;
+            
+            Pillar::SceneSerializer serializer(m_ActiveScene.get());
+            if (serializer.Serialize(path))
+            {
+                ConsolePanel::Log("Saved scene as: " + path, LogLevel::Info);
+            }
+            else
+            {
+                ConsolePanel::Log("Failed to save scene", LogLevel::Error);
+            }
         }
     }
 
