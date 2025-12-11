@@ -36,6 +36,12 @@ add_executable(PillarTests
     src/AudioExtendedTests.cpp
     src/SceneSerializerTests.cpp
     src/AnimationTests.cpp
+    src/ObjectPoolTests.cpp
+    src/SpecializedPoolsTests.cpp
+    src/ComponentRegistryTests.cpp
+    src/AssetManagerTests.cpp
+    src/ParticleSystemTests.cpp
+    src/ComponentTests.cpp
 )
 
 # Set output directory
@@ -68,4 +74,6 @@ add_custom_command(TARGET PillarTests POST_BUILD
 
 # Discover tests for CTest integration
 include(GoogleTest)
-gtest_discover_tests(PillarTests)
+gtest_discover_tests(PillarTests
+    DISCOVERY_MODE PRE_TEST
+)

@@ -40,12 +40,81 @@ cmake --build out/build/x64-Debug --config Debug --parallel
 
 ## Test Organization
 
-- **EventTests.cpp** - Tests for the event system (Event, EventDispatcher, all event types)
-- **LayerTests.cpp** - Tests for Layer and LayerStack functionality
-- **LoggerTests.cpp** - Tests for the logging system
-- **ApplicationTests.cpp** - Tests for the Application class
-- **InputTests.cpp** - Tests for input handling (keyboard, mouse)
-- **WindowTests.cpp** - Tests for window creation and management
+### Core Engine Tests
+- **EventTests.cpp** - Tests for the event system (Event, EventDispatcher, all event types including KeyPressed, KeyReleased, MouseMoved, WindowResize, etc.)
+- **LayerTests.cpp** - Tests for Layer and LayerStack functionality (push/pop layers, overlays, iteration order)
+- **LoggerTests.cpp** - Tests for the logging system (log levels, formatting, core vs app loggers)
+- **ApplicationTests.cpp** - Tests for the Application class (lifecycle, event handling)
+- **InputTests.cpp** - Tests for input handling (keyboard state, mouse position, button states)
+- **WindowTests.cpp** - Tests for window creation and management (properties, events)
+
+### Renderer Tests
+- **CameraTests.cpp** - Tests for OrthographicCamera and OrthographicCameraController (projection/view matrices, zoom, movement, rotation, event handling)
+
+### ECS (Entity Component System) Tests
+- **SceneTests.cpp** - Tests for Scene management (entity creation/destruction, component queries)
+- **EntityTests.cpp** - Tests for Entity operations (component add/remove/get, validity checks)
+- **ComponentTests.cpp** - Tests for individual components:
+  - TransformComponent (position, rotation, scale, cached matrix)
+  - HierarchyComponent (parent-child relationships)
+  - VelocityComponent (velocity, acceleration, drag, max speed)
+  - ColliderComponent (circle/box types, material properties, collision filtering)
+  - SpriteComponent (texture, color, UV coordinates, flip, z-index)
+  - CameraComponent (orthographic projection, view matrix)
+
+### Physics System Tests
+- **VelocityIntegrationTests.cpp** - Tests for VelocityIntegrationSystem (position updates, acceleration, drag, max speed clamping)
+- **BulletCollisionTests.cpp** - Tests for BulletComponent and BulletCollisionSystem (lifetime, hit counting, destruction)
+- **SpatialHashGridTests.cpp** - Tests for spatial partitioning (insertion, removal, queries, cell calculations)
+
+### Gameplay System Tests
+- **XPCollectionTests.cpp** - Tests for XPGemComponent and XPCollectionSystem
+- **ParticleSystemTests.cpp** - Tests for particle systems:
+  - ParticleComponent (lifetime, age, visual effects, size/color interpolation)
+  - ParticleEmitterComponent (emission shapes, burst mode, rates, variance)
+  - ParticleSystem (particle aging, death marking)
+  - ParticleEmitterSystem (particle spawning, emission rates)
+
+### Object Pooling Tests
+- **ObjectPoolTests.cpp** - Tests for generic ObjectPool:
+  - Initialization and pre-allocation
+  - Acquire/release entity lifecycle
+  - Pool exhaustion and auto-expansion
+  - Init/reset callbacks
+  - Statistics tracking
+- **SpecializedPoolsTests.cpp** - Tests for specialized pools:
+  - BulletPool (spawn with position/direction/speed, component setup)
+  - ParticlePool (spawn with visual properties, high-volume handling)
+
+### Audio System Tests
+- **AudioTests.cpp** - Tests for core audio functionality:
+  - AudioEngine (init/shutdown, master volume, listener position)
+  - AudioSource state management
+  - WavLoader file parsing
+- **AudioExtendedTests.cpp** - Extended audio tests (3D positioning, attenuation, playback control)
+
+### Serialization Tests
+- **SceneSerializerTests.cpp** - Tests for scene serialization/deserialization (JSON format, entity preservation, component data)
+- **ComponentRegistryTests.cpp** - Tests for ComponentRegistry:
+  - Component registration and lookup
+  - Serialize/deserialize functions
+  - Copy functions
+  - Built-in component handling
+
+### Animation Tests
+- **AnimationTests.cpp** - Tests for animation system:
+  - AnimationFrame (texture path, duration, UV coordinates)
+  - AnimationClip (frames, looping, total duration)
+  - AnimationComponent (playback state, speed, events)
+  - AnimationSystem (frame advancement, looping behavior)
+  - AnimationLoader (file parsing, validation)
+
+### Utility Tests
+- **AssetManagerTests.cpp** - Tests for AssetManager:
+  - Path resolution for textures, audio, SFX, music
+  - Subdirectory searches
+  - Fallback behavior for missing files
+  - Absolute vs relative path handling
 
 ## Adding New Tests
 
