@@ -1,12 +1,16 @@
 #include "ViewportPanel.h"
 #include "../SelectionContext.h"
+#include "../EditorLayer.h"
+#include "../Commands/TransformCommand.h"
 #include "ConsolePanel.h"
 #include "Pillar/Renderer/Renderer.h"
-#include "Pillar/Renderer/Renderer2D.h"
+#include "Pillar/Renderer/Renderer2DBackend.h"
 #include "Pillar/Renderer/RenderCommand.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
+#include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
+#include "Pillar/ECS/Components/Rendering/CameraComponent.h"
 #include "Pillar/Events/MouseEvent.h"
 #include "Pillar/Input.h"
 #include "Pillar/KeyCodes.h"
@@ -21,8 +25,9 @@
 
 namespace PillarEditor {
 
-    ViewportPanel::ViewportPanel()
+    ViewportPanel::ViewportPanel(EditorLayer* editorLayer)
         : EditorPanel("Viewport")
+        , m_EditorLayer(editorLayer)
     {
         // Create framebuffer with initial size
         Pillar::FramebufferSpecification spec;
@@ -75,9 +80,44 @@ namespace PillarEditor {
 
         if (m_Scene)
         {
-            Pillar::Renderer2D::BeginScene(m_EditorCamera.GetCamera());
+            // Determine which camera to use based on editor state
+            bool useGameCamera = m_EditorLayer && 
+                                m_EditorLayer->GetEditorState() == PillarEditor::EditorState::Play;
+            
+            Pillar::OrthographicCamera* activeCamera = &m_EditorCamera.GetCamera();
+            
+            // Try to find primary game camera if in play mode
+            if (useGameCamera)
+            {
+                auto cameraView = m_Scene->GetRegistry().view<Pillar::CameraComponent, Pillar::TransformComponent>();
+                for (auto entity : cameraView)
+                {
+                    auto& camera = cameraView.get<Pillar::CameraComponent>(entity);
+                    if (camera.Primary)
+                    {
+                        auto& transform = cameraView.get<Pillar::TransformComponent>(entity);
+                        float aspectRatio = m_ViewportSize.x / m_ViewportSize.y;
+                        
+                        // Update game camera projection based on camera component
+                        float orthoLeft = -camera.OrthographicSize * aspectRatio * 0.5f;
+                        float orthoRight = camera.OrthographicSize * aspectRatio * 0.5f;
+                        float orthoBottom = -camera.OrthographicSize * 0.5f;
+                        float orthoTop = camera.OrthographicSize * 0.5f;
+                        m_GameCamera.SetProjection(orthoLeft, orthoRight, orthoBottom, orthoTop);
+                        
+                        // Update game camera transform
+                        m_GameCamera.SetPosition(glm::vec3(transform.Position, 0.0f));
+                        m_GameCamera.SetRotation(transform.Rotation);
+                        
+                        activeCamera = &m_GameCamera;
+                        break;
+                    }
+                }
+            }
+            
+            Pillar::Renderer2DBackend::BeginScene(*activeCamera);
 
-            // Draw grid (subtle)
+            // Draw grid first (will be behind entities)
             DrawGrid();
 
             // Render all entities with TransformComponent
@@ -88,9 +128,25 @@ namespace PillarEditor {
                 auto& tag = view.get<Pillar::TagComponent>(entity);
                 auto& transform = view.get<Pillar::TransformComponent>(entity);
 
-                // Determine color based on entity type
-                glm::vec4 color = GetEntityColor(tag.Tag);
-                glm::vec2 size = GetEntitySize(tag.Tag, transform.Scale);
+                // Check if entity has a SpriteComponent
+                auto* spriteComp = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(entity);
+                
+                // Determine color and size
+                glm::vec4 color;
+                glm::vec2 size;
+                
+                if (spriteComp)
+                {
+                    // Use sprite component data
+                    color = spriteComp->Color;
+                    size = spriteComp->Size * transform.Scale;
+                }
+                else
+                {
+                    // Fallback to colored quad based on entity type
+                    color = GetEntityColor(tag.Tag);
+                    size = GetEntitySize(tag.Tag, transform.Scale);
+                }
 
                 // Check if entity is selected
                 bool isSelected = false;
@@ -100,8 +156,37 @@ namespace PillarEditor {
                     isSelected = m_SelectionContext->IsSelected(e);
                 }
 
-                // Draw entity first
-                Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
+                // Draw entity (with rotation if needed)
+                if (spriteComp && spriteComp->Texture)
+                {
+                    // Draw textured sprite
+                    if (std::abs(transform.Rotation) > 0.001f)
+                    {
+                        Pillar::Renderer2DBackend::DrawRotatedQuad(
+                            transform.Position, size, transform.Rotation,
+                            color, spriteComp->Texture
+                        );
+                    }
+                    else
+                    {
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            transform.Position, size,
+                            color, spriteComp->Texture
+                        );
+                    }
+                }
+                else
+                {
+                    // Draw colored quad
+                    if (std::abs(transform.Rotation) > 0.001f)
+                    {
+                        Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
+                    }
+                    else
+                    {
+                        Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
+                    }
+                }
 
                 // Draw selection highlight (on top of entity with thicker outline)
                 if (isSelected)
@@ -109,45 +194,81 @@ namespace PillarEditor {
                     // Draw a thick border by drawing 4 rectangles around the entity
                     glm::vec4 outlineColor = { 1.0f, 0.7f, 0.0f, 1.0f };  // Bright orange
                     float borderThickness = 0.08f;
+                    float rotation = transform.Rotation;
                     
-                    // Top border
-                    Pillar::Renderer2D::DrawQuad(
-                        glm::vec3(transform.Position.x, transform.Position.y + size.y / 2.0f + borderThickness / 2.0f, 0.01f),
-                        glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
-                        outlineColor
-                    );
-                    
-                    // Bottom border
-                    Pillar::Renderer2D::DrawQuad(
-                        glm::vec3(transform.Position.x, transform.Position.y - size.y / 2.0f - borderThickness / 2.0f, 0.01f),
-                        glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
-                        outlineColor
-                    );
-                    
-                    // Left border
-                    Pillar::Renderer2D::DrawQuad(
-                        glm::vec3(transform.Position.x - size.x / 2.0f - borderThickness / 2.0f, transform.Position.y, 0.01f),
-                        glm::vec2(borderThickness, size.y),
-                        outlineColor
-                    );
-                    
-                    // Right border
-                    Pillar::Renderer2D::DrawQuad(
-                        glm::vec3(transform.Position.x + size.x / 2.0f + borderThickness / 2.0f, transform.Position.y, 0.01f),
-                        glm::vec2(borderThickness, size.y),
-                        outlineColor
-                    );
+                    // If entity is rotated, draw rotated borders
+                    if (std::abs(rotation) > 0.001f)
+                    {
+                        // Top border
+                        Pillar::Renderer2DBackend::DrawRotatedQuad(
+                            glm::vec2(transform.Position.x, transform.Position.y + size.y / 2.0f + borderThickness / 2.0f),
+                            glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                            rotation, outlineColor
+                        );
+                        
+                        // Bottom border
+                        Pillar::Renderer2DBackend::DrawRotatedQuad(
+                            glm::vec2(transform.Position.x, transform.Position.y - size.y / 2.0f - borderThickness / 2.0f),
+                            glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                            rotation, outlineColor
+                        );
+                        
+                        // Left border
+                        Pillar::Renderer2DBackend::DrawRotatedQuad(
+                            glm::vec2(transform.Position.x - size.x / 2.0f - borderThickness / 2.0f, transform.Position.y),
+                            glm::vec2(borderThickness, size.y),
+                            rotation, outlineColor
+                        );
+                        
+                        // Right border
+                        Pillar::Renderer2DBackend::DrawRotatedQuad(
+                            glm::vec2(transform.Position.x + size.x / 2.0f + borderThickness / 2.0f, transform.Position.y),
+                            glm::vec2(borderThickness, size.y),
+                            rotation, outlineColor
+                        );
+                    }
+                    else
+                    {
+                        // Non-rotated borders (faster)
+                        // Top border
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            glm::vec2(transform.Position.x, transform.Position.y + size.y / 2.0f + borderThickness / 2.0f),
+                            glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                            outlineColor
+                        );
+                        
+                        // Bottom border
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            glm::vec2(transform.Position.x, transform.Position.y - size.y / 2.0f - borderThickness / 2.0f),
+                            glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                            outlineColor
+                        );
+                        
+                        // Left border
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            glm::vec2(transform.Position.x - size.x / 2.0f - borderThickness / 2.0f, transform.Position.y),
+                            glm::vec2(borderThickness, size.y),
+                            outlineColor
+                        );
+                        
+                        // Right border
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            glm::vec2(transform.Position.x + size.x / 2.0f + borderThickness / 2.0f, transform.Position.y),
+                            glm::vec2(borderThickness, size.y),
+                            outlineColor
+                        );
+                    }
                 }
             }
 
-            Pillar::Renderer2D::EndScene();
+            Pillar::Renderer2DBackend::EndScene();
         }
         else
         {
             // No scene - just show empty viewport with hint
-            Pillar::Renderer2D::BeginScene(m_EditorCamera.GetCamera());
+            Pillar::Renderer2DBackend::BeginScene(m_EditorCamera.GetCamera());
             DrawGrid();
-            Pillar::Renderer2D::EndScene();
+            Pillar::Renderer2DBackend::EndScene();
         }
 
         m_Framebuffer->Unbind();
@@ -180,8 +301,8 @@ namespace PillarEditor {
             bool isYAxis = std::abs(x) < 0.001f;
             glm::vec4 color = isYAxis ? axisColorY : gridColor;
             float thickness = isYAxis ? 0.04f : 0.015f;
-            Pillar::Renderer2D::DrawQuad(
-                glm::vec3(x, camPos.y, -0.1f),
+            Pillar::Renderer2DBackend::DrawQuad(
+                glm::vec2(x, camPos.y),
                 glm::vec2(thickness, gridExtent * 2.0f),
                 color
             );
@@ -193,8 +314,8 @@ namespace PillarEditor {
             bool isXAxis = std::abs(y) < 0.001f;
             glm::vec4 color = isXAxis ? axisColorX : gridColor;
             float thickness = isXAxis ? 0.04f : 0.015f;
-            Pillar::Renderer2D::DrawQuad(
-                glm::vec3(camPos.x, y, -0.1f),
+            Pillar::Renderer2DBackend::DrawQuad(
+                glm::vec2(camPos.x, y),
                 glm::vec2(gridExtent * 2.0f, thickness),
                 color
             );
@@ -457,7 +578,7 @@ namespace PillarEditor {
         // Create transform matrix from 2D transform
         glm::mat4 transform = glm::mat4(1.0f);
         transform = glm::translate(transform, glm::vec3(tc.Position.x, tc.Position.y, 0.0f));
-        transform = glm::rotate(transform, glm::radians(tc.Rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+        transform = glm::rotate(transform, tc.Rotation, glm::vec3(0.0f, 0.0f, 1.0f));  // tc.Rotation is already in radians
         transform = glm::scale(transform, glm::vec3(tc.Scale.x, tc.Scale.y, 1.0f));
 
         // Determine gizmo operation
@@ -490,8 +611,20 @@ namespace PillarEditor {
             operation, mode, glm::value_ptr(transform),
             nullptr, snapping ? snapValues : nullptr);
 
+        // Track gizmo state for undo/redo
+        bool isCurrentlyUsing = ImGuizmo::IsUsing();
+        
+        // Capture initial state when gizmo manipulation starts
+        if (isCurrentlyUsing && !m_GizmoInUse)
+        {
+            m_GizmoInUse = true;
+            m_GizmoStartPosition = tc.Position;
+            m_GizmoStartRotation = tc.Rotation;
+            m_GizmoStartScale = tc.Scale;
+        }
+
         // If gizmo was used, decompose the matrix back to transform
-        if (ImGuizmo::IsUsing())
+        if (isCurrentlyUsing)
         {
             glm::vec3 translation, rotation, scale;
             glm::quat rotationQuat;
@@ -501,11 +634,63 @@ namespace PillarEditor {
 
             // Extract rotation in degrees
             glm::vec3 eulerRotation = glm::eulerAngles(rotationQuat);
+            float rotationRadians = eulerRotation.z;
+            
+            // Normalize rotation to -PI to PI range (radians)
+            while (rotationRadians > glm::pi<float>())
+                rotationRadians -= glm::two_pi<float>();
+            while (rotationRadians < -glm::pi<float>())
+                rotationRadians += glm::two_pi<float>();
             
             // Update transform component - force Z to 0 for 2D
             tc.Position = glm::vec2(translation.x, translation.y);
-            tc.Rotation = glm::degrees(eulerRotation.z);
+            tc.Rotation = rotationRadians;  // Store in radians
             tc.Scale = glm::vec2(scale.x, scale.y);
+        }
+        
+        // Create undo command when gizmo manipulation ends
+        if (!isCurrentlyUsing && m_GizmoInUse)
+        {
+            m_GizmoInUse = false;
+            
+            // Check if transform actually changed
+            bool changed = (tc.Position != m_GizmoStartPosition) ||
+                          (tc.Rotation != m_GizmoStartRotation) ||
+                          (tc.Scale != m_GizmoStartScale);
+            
+            if (changed && m_EditorLayer)
+            {
+                // Create command with old and new states
+                std::vector<TransformCommand::TransformState> oldStates;
+                std::vector<TransformCommand::TransformState> newStates;
+                
+                oldStates.push_back({
+                    static_cast<entt::entity>(selectedEntity),
+                    m_GizmoStartPosition,
+                    m_GizmoStartRotation,
+                    m_GizmoStartScale
+                });
+                
+                newStates.push_back({
+                    static_cast<entt::entity>(selectedEntity),
+                    tc.Position,
+                    tc.Rotation,
+                    tc.Scale
+                });
+                
+                // Determine action name based on gizmo mode
+                std::string actionName = "Transform";
+                if (m_GizmoMode == GizmoMode::Translate)
+                    actionName = "Move";
+                else if (m_GizmoMode == GizmoMode::Rotate)
+                    actionName = "Rotate";
+                else if (m_GizmoMode == GizmoMode::Scale)
+                    actionName = "Scale";
+                
+                auto command = std::make_unique<TransformCommand>(
+                    m_Scene.get(), oldStates, newStates, actionName);
+                m_EditorLayer->GetCommandHistory().ExecuteCommand(std::move(command));
+            }
         }
     }
 

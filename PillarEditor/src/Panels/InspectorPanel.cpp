@@ -1,9 +1,15 @@
 #include "InspectorPanel.h"
 #include "../SelectionContext.h"
+#include "../EditorLayer.h"
+#include "../Commands/TransformCommand.h"
+#include "ConsolePanel.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Core/UUIDComponent.h"
 #include "Pillar/ECS/Components/Core/HierarchyComponent.h"
+#include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
+#include "Pillar/ECS/Components/Rendering/CameraComponent.h"
+#include "Pillar/ECS/Components/Rendering/AnimationComponent.h"
 #include "Pillar/ECS/Components/Physics/VelocityComponent.h"
 #include "Pillar/ECS/Components/Physics/RigidbodyComponent.h"
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
@@ -74,8 +80,8 @@ namespace PillarEditor {
         return modified;
     }
 
-    InspectorPanel::InspectorPanel()
-        : EditorPanel("Inspector")
+    InspectorPanel::InspectorPanel(EditorLayer* editorLayer)
+        : EditorPanel("Inspector"), m_EditorLayer(editorLayer)
     {
     }
 
@@ -127,6 +133,24 @@ namespace PillarEditor {
         if (entity.HasComponent<Pillar::TransformComponent>())
         {
             DrawTransformComponent(entity);
+        }
+
+        // Sprite Component
+        if (entity.HasComponent<Pillar::SpriteComponent>())
+        {
+            DrawSpriteComponent(entity);
+        }
+
+        // Camera Component
+        if (entity.HasComponent<Pillar::CameraComponent>())
+        {
+            DrawCameraComponent(entity);
+        }
+
+        // Animation Component
+        if (entity.HasComponent<Pillar::AnimationComponent>())
+        {
+            DrawAnimationComponent(entity);
         }
 
         // Velocity Component
@@ -210,10 +234,57 @@ namespace PillarEditor {
 
             // Position
             glm::vec2 position = transform.Position;
+            
+            // Capture old position before any editing
+            if (!m_EditingPosition && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+            {
+                m_OldPosition = transform.Position;
+            }
+            
             if (DrawVec2Control("Position", position))
             {
+                m_EditingPosition = true;
                 transform.Position = position;
                 transform.Dirty = true;
+            }
+            
+            // Check if any position widget was just deactivated after edit
+            if (m_EditingPosition)
+            {
+                // Check if we're no longer editing (mouse released)
+                if (!ImGui::IsAnyItemActive() && !ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                {
+                    m_EditingPosition = false;
+                    
+                    // Only create command if value actually changed
+                    if (m_OldPosition != transform.Position && m_EditorLayer)
+                    {
+                        std::vector<TransformCommand::TransformState> oldStates;
+                        std::vector<TransformCommand::TransformState> newStates;
+                        
+                        oldStates.push_back({
+                            static_cast<entt::entity>(entity),
+                            m_OldPosition,
+                            transform.Rotation,
+                            transform.Scale
+                        });
+                        
+                        newStates.push_back({
+                            static_cast<entt::entity>(entity),
+                            transform.Position,
+                            transform.Rotation,
+                            transform.Scale
+                        });
+                        
+                        auto command = std::make_unique<TransformCommand>(
+                            m_EditorLayer->GetActiveScene().get(),
+                            oldStates,
+                            newStates,
+                            "Change Position"
+                        );
+                        m_EditorLayer->GetCommandHistory().ExecuteCommand(std::move(command));
+                    }
+                }
             }
 
             // Rotation (convert to degrees for display)
@@ -225,21 +296,450 @@ namespace PillarEditor {
             ImGui::NextColumn();
             
             ImGui::PushItemWidth(-1);
+            
+            // Capture old rotation before editing
+            if (ImGui::IsItemActive() && !m_EditingRotation)
+            {
+                m_EditingRotation = true;
+                m_OldRotation = transform.Rotation;
+            }
+            
             if (ImGui::DragFloat("##Rotation", &rotationDegrees, 1.0f, -180.0f, 180.0f, "%.1f deg"))
             {
+                // Clamp rotation to -360 to 360 range
+                if (rotationDegrees > 360.0f)
+                    rotationDegrees = std::fmod(rotationDegrees, 360.0f);
+                else if (rotationDegrees < -360.0f)
+                    rotationDegrees = std::fmod(rotationDegrees, -360.0f);
+                    
                 transform.Rotation = glm::radians(rotationDegrees);
                 transform.Dirty = true;
             }
+            
+            // Check if rotation editing ended
+            if (ImGui::IsItemDeactivatedAfterEdit() && m_EditingRotation)
+            {
+                m_EditingRotation = false;
+                
+                // Only create command if value actually changed
+                if (m_OldRotation != transform.Rotation && m_EditorLayer)
+                {
+                    std::vector<TransformCommand::TransformState> oldStates;
+                    std::vector<TransformCommand::TransformState> newStates;
+                    
+                    oldStates.push_back({
+                        static_cast<entt::entity>(entity),
+                        transform.Position,
+                        m_OldRotation,
+                        transform.Scale
+                    });
+                    
+                    newStates.push_back({
+                        static_cast<entt::entity>(entity),
+                        transform.Position,
+                        transform.Rotation,
+                        transform.Scale
+                    });
+                    
+                    auto command = std::make_unique<TransformCommand>(
+                        m_EditorLayer->GetActiveScene().get(),
+                        oldStates,
+                        newStates,
+                        "Change Rotation"
+                    );
+                    m_EditorLayer->GetCommandHistory().ExecuteCommand(std::move(command));
+                }
+            }
+            
             ImGui::PopItemWidth();
             ImGui::Columns(1);
 
             // Scale
             glm::vec2 scale = transform.Scale;
+            
+            // Capture old scale before any editing
+            if (!m_EditingScale && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+            {
+                m_OldScale = transform.Scale;
+            }
+            
             if (DrawVec2Control("Scale", scale, 1.0f))
             {
+                m_EditingScale = true;
                 transform.Scale = scale;
                 transform.Dirty = true;
             }
+            
+            // Check if any scale widget was just deactivated after edit
+            if (m_EditingScale)
+            {
+                // Check if we're no longer editing (mouse released)
+                if (!ImGui::IsAnyItemActive() && !ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                {
+                    m_EditingScale = false;
+                    
+                    // Only create command if value actually changed
+                    if (m_OldScale != transform.Scale && m_EditorLayer)
+                    {
+                        std::vector<TransformCommand::TransformState> oldStates;
+                        std::vector<TransformCommand::TransformState> newStates;
+                        
+                        oldStates.push_back({
+                            static_cast<entt::entity>(entity),
+                            transform.Position,
+                            transform.Rotation,
+                            m_OldScale
+                        });
+                        
+                        newStates.push_back({
+                            static_cast<entt::entity>(entity),
+                            transform.Position,
+                            transform.Rotation,
+                            transform.Scale
+                        });
+                        
+                        auto command = std::make_unique<TransformCommand>(
+                            m_EditorLayer->GetActiveScene().get(),
+                            oldStates,
+                            newStates,
+                            "Change Scale"
+                        );
+                        m_EditorLayer->GetCommandHistory().ExecuteCommand(std::move(command));
+                    }
+                }
+            }
+
+            ImGui::TreePop();
+        }
+    }
+
+    void InspectorPanel::DrawSpriteComponent(Pillar::Entity entity)
+    {
+        if (!entity.HasComponent<Pillar::SpriteComponent>())
+            return;
+
+        if (!DrawComponentHeader<Pillar::SpriteComponent>("Sprite", entity))
+            return;
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+                                   ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap |
+                                   ImGuiTreeNodeFlags_FramePadding;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+        bool open = ImGui::TreeNodeEx("Sprite", flags);
+        ImGui::PopStyleVar();
+
+        if (open)
+        {
+            auto& sprite = entity.GetComponent<Pillar::SpriteComponent>();
+
+            // Texture Path
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Texture");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-150);
+            char buffer[256];
+            std::strncpy(buffer, sprite.TexturePath.c_str(), sizeof(buffer));
+            buffer[sizeof(buffer) - 1] = '\0';
+            
+            if (ImGui::InputText("##TexturePath", buffer, sizeof(buffer)))
+            {
+                sprite.TexturePath = buffer;
+            }
+            ImGui::PopItemWidth();
+            
+            ImGui::SameLine();
+            if (ImGui::Button("Load##Texture", ImVec2(70, 0)))
+            {
+                if (!sprite.TexturePath.empty())
+                {
+                    try
+                    {
+                        sprite.Texture = Pillar::Texture2D::Create(sprite.TexturePath);
+                        ConsolePanel::Log("Loaded texture: " + sprite.TexturePath, LogLevel::Info);
+                    }
+                    catch (const std::exception& e)
+                    {
+                        ConsolePanel::Log("Failed to load texture: " + sprite.TexturePath + " - " + e.what(), 
+                                        LogLevel::Error);
+                        sprite.Texture = nullptr;
+                    }
+                }
+            }
+            
+            ImGui::SameLine();
+            if (ImGui::Button("Clear##Texture", ImVec2(70, 0)))
+            {
+                sprite.Texture = nullptr;
+                sprite.TexturePath.clear();
+            }
+            
+            ImGui::Columns(1);
+            
+            // Show texture info if loaded
+            if (sprite.Texture)
+            {
+                ImGui::Indent();
+                ImGui::TextDisabled("Size: %dx%d", sprite.Texture->GetWidth(), sprite.Texture->GetHeight());
+                ImGui::Unindent();
+            }
+
+            // Color Tint
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Color");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-1);
+            ImGui::ColorEdit4("##Color", glm::value_ptr(sprite.Color));
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Size
+            if (DrawVec2Control("Size", sprite.Size, 1.0f))
+            {
+                // Size changed
+            }
+
+            // Z-Index
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Z-Index");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##ZIndex", &sprite.ZIndex, 0.1f, -100.0f, 100.0f, "%.1f");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Flip X/Y
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Flip");
+            ImGui::NextColumn();
+            
+            ImGui::Checkbox("Flip X", &sprite.FlipX);
+            ImGui::SameLine();
+            ImGui::Checkbox("Flip Y", &sprite.FlipY);
+            ImGui::Columns(1);
+
+            ImGui::TreePop();
+        }
+    }
+
+    void InspectorPanel::DrawCameraComponent(Pillar::Entity entity)
+    {
+        if (!entity.HasComponent<Pillar::CameraComponent>())
+            return;
+
+        if (!DrawComponentHeader<Pillar::CameraComponent>("Camera", entity))
+            return;
+
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_Framed |
+                                   ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_AllowOverlap |
+                                   ImGuiTreeNodeFlags_FramePadding;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 4));
+        bool open = ImGui::TreeNodeEx("Camera", flags);
+        ImGui::PopStyleVar();
+
+        if (open)
+        {
+            auto& camera = entity.GetComponent<Pillar::CameraComponent>();
+
+            // Primary Camera
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Primary");
+            ImGui::NextColumn();
+            
+            ImGui::Checkbox("##Primary", &camera.Primary);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("This camera will be used during play mode");
+            ImGui::Columns(1);
+
+            // Orthographic Size
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Size");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##OrthoSize", &camera.OrthographicSize, 0.1f, 0.1f, 100.0f, "%.1f");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Height of the camera view in world units");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Near/Far Clip
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Near Clip");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##NearClip", &camera.NearClip, 0.1f, -10.0f, camera.FarClip - 0.1f, "%.1f");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Far Clip");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##FarClip", &camera.FarClip, 0.1f, camera.NearClip + 0.1f, 10.0f, "%.1f");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Fixed Aspect Ratio
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 100.0f);
+            ImGui::Text("Fixed Aspect");
+            ImGui::NextColumn();
+            
+            ImGui::Checkbox("##FixedAspect", &camera.FixedAspectRatio);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Maintain aspect ratio for pixel-perfect rendering");
+            ImGui::Columns(1);
+
+            ImGui::TreePop();
+        }
+    }
+
+    void InspectorPanel::DrawAnimationComponent(Pillar::Entity entity)
+    {
+        if (!DrawComponentHeader<Pillar::AnimationComponent>("Animation", entity))
+            return;
+
+        auto& anim = entity.GetComponent<Pillar::AnimationComponent>();
+
+        if (ImGui::TreeNode("Animation"))
+        {
+            // Current Clip Name
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 120.0f);
+            ImGui::Text("Current Clip");
+            ImGui::NextColumn();
+            
+            char clipNameBuffer[128];
+            strncpy(clipNameBuffer, anim.CurrentClipName.c_str(), sizeof(clipNameBuffer) - 1);
+            clipNameBuffer[sizeof(clipNameBuffer) - 1] = '\0';
+            
+            ImGui::PushItemWidth(-1);
+            if (ImGui::InputText("##ClipName", clipNameBuffer, sizeof(clipNameBuffer)))
+            {
+                anim.CurrentClipName = clipNameBuffer;
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Enter animation clip name (e.g., 'Idle', 'Walk', 'Jump')");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+            
+            ImGui::Spacing();
+            ImGui::TextDisabled("Available clips are managed via Animation Manager panel");
+            ImGui::TextDisabled("Clips must be loaded or created before use");
+            ImGui::Spacing();
+
+            // Playing State
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 120.0f);
+            ImGui::Text("Playing");
+            ImGui::NextColumn();
+            
+            ImGui::Checkbox("##Playing", &anim.Playing);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Toggle animation playback");
+            ImGui::Columns(1);
+
+            // Frame Index (Read-only)
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 120.0f);
+            ImGui::Text("Frame Index");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-1);
+            ImGui::InputInt("##FrameIndex", &anim.FrameIndex, 0, 0, ImGuiInputTextFlags_ReadOnly);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Current frame in animation sequence");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Playback Time (Read-only)
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 120.0f);
+            ImGui::Text("Playback Time");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-1);
+            ImGui::InputFloat("##PlaybackTime", &anim.PlaybackTime, 0.0f, 0.0f, "%.3f", ImGuiInputTextFlags_ReadOnly);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Time elapsed in current frame (seconds)");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Playback Speed
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, 120.0f);
+            ImGui::Text("Playback Speed");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-1);
+            if (ImGui::DragFloat("##PlaybackSpeed", &anim.PlaybackSpeed, 0.1f, 0.0f, 5.0f, "%.2f"))
+            {
+                if (anim.PlaybackSpeed < 0.0f)
+                    anim.PlaybackSpeed = 0.0f;
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Animation speed multiplier (1.0 = normal)");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Control Buttons
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Text("Playback Controls:");
+            ImGui::Spacing();
+            
+            if (ImGui::Button("Play", ImVec2(60, 0)))
+            {
+                anim.Playing = true;
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Start/resume animation playback");
+                
+            ImGui::SameLine();
+            if (ImGui::Button("Pause", ImVec2(60, 0)))
+            {
+                anim.Pause();
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Pause animation (preserves frame)");
+                
+            ImGui::SameLine();
+            if (ImGui::Button("Stop", ImVec2(60, 0)))
+            {
+                anim.Stop();
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Stop animation (resets to frame 0)");
+                
+            ImGui::SameLine();
+            if (ImGui::Button("Reset", ImVec2(60, 0)))
+            {
+                anim.FrameIndex = 0;
+                anim.PlaybackTime = 0.0f;
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Reset to first frame");
+
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::TextDisabled("Tip: Animation clips use sprite sheets");
+            ImGui::TextDisabled("Each frame has texture path + UV coords");
+            ImGui::TextDisabled("See AnimationDemoLayer for examples");
 
             ImGui::TreePop();
         }
@@ -495,6 +995,33 @@ namespace PillarEditor {
         {
             ImGui::TextDisabled("Available Components:");
             ImGui::Separator();
+
+            if (!entity.HasComponent<Pillar::SpriteComponent>())
+            {
+                if (ImGui::Selectable("Sprite"))
+                {
+                    entity.AddComponent<Pillar::SpriteComponent>();
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            if (!entity.HasComponent<Pillar::CameraComponent>())
+            {
+                if (ImGui::Selectable("Camera"))
+                {
+                    entity.AddComponent<Pillar::CameraComponent>();
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            if (!entity.HasComponent<Pillar::AnimationComponent>())
+            {
+                if (ImGui::Selectable("Animation"))
+                {
+                    entity.AddComponent<Pillar::AnimationComponent>();
+                    ImGui::CloseCurrentPopup();
+                }
+            }
 
             if (!entity.HasComponent<Pillar::VelocityComponent>())
             {

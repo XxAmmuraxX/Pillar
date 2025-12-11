@@ -156,7 +156,7 @@ FetchContent_Declare(
 )
 
 # Make dependencies available (except glad - we'll handle it specially)
-FetchContent_MakeAvailable(spdlog glfw glm stb imgui imguizmo entt box2d nlohmann_json)
+FetchContent_MakeAvailable(spdlog glfw glm stb imgui imguizmo entt box2d openal nlohmann_json)
 
 # Now make GLAD available and generate the loader
 FetchContent_MakeAvailable(glad)

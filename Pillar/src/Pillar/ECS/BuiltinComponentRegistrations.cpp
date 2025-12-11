@@ -10,6 +10,7 @@
 #include "Components/Gameplay/ParticleComponent.h"
 #include "Components/Gameplay/ParticleEmitterComponent.h"
 #include "Components/Rendering/SpriteComponent.h"
+#include "Components/Rendering/CameraComponent.h"
 #include "Components/Rendering/AnimationComponent.h"
 #include "Components/Audio/AudioSourceComponent.h"
 #include "Components/Audio/AudioListenerComponent.h"
@@ -346,6 +347,7 @@ namespace Pillar {
 			if (!e.HasComponent<SpriteComponent>()) return nullptr;
 			auto& s = e.GetComponent<SpriteComponent>();
 			return json{
+				{ "texturePath", s.TexturePath },
 				{ "color", JsonHelpers::SerializeVec4(s.Color) },
 				{ "size", JsonHelpers::SerializeVec2(s.Size) },
 				{ "texCoordMin", JsonHelpers::SerializeVec2(s.TexCoordMin) },
@@ -353,12 +355,28 @@ namespace Pillar {
 				{ "zIndex", s.ZIndex },
 				{ "flipX", s.FlipX },
 				{ "flipY", s.FlipY }
-				// Note: Texture not serialized (requires asset management)
 			};
 			},
 			// Deserialize
 			[](Entity e, const json& j) {
 				auto& s = e.AddComponent<SpriteComponent>();
+				if (j.contains("texturePath"))
+				{
+					s.TexturePath = j["texturePath"].get<std::string>();
+					// Try to load texture if path is not empty
+					if (!s.TexturePath.empty())
+					{
+						try
+						{
+							s.Texture = Texture2D::Create(s.TexturePath);
+						}
+						catch (const std::exception& e)
+						{
+							PIL_CORE_WARN("Failed to load texture '{}' for sprite: {}", s.TexturePath, e.what());
+							s.Texture = nullptr;
+						}
+					}
+				}
 				if (j.contains("color"))
 					s.Color = JsonHelpers::DeserializeVec4(j["color"]);
 				if (j.contains("size"))
@@ -380,6 +398,7 @@ namespace Pillar {
 				auto& s = src.GetComponent<SpriteComponent>();
 				auto& d = dst.AddComponent<SpriteComponent>();
 				d.Texture = s.Texture;  // Shared pointer, shallow copy is fine
+				d.TexturePath = s.TexturePath;
 				d.Color = s.Color;
 				d.Size = s.Size;
 				d.TexCoordMin = s.TexCoordMin;
@@ -387,7 +406,50 @@ namespace Pillar {
 				d.ZIndex = s.ZIndex;
 				d.FlipX = s.FlipX;
 				d.FlipY = s.FlipY;
-				d.ZIndex = s.ZIndex;
+			}
+		);
+
+		// ============================================================
+		// Camera Component
+		// ============================================================
+
+		registry.Register<CameraComponent>("camera",
+			// Serialize
+			[](Entity e) -> json {
+				if (!e.HasComponent<CameraComponent>()) return nullptr;
+				auto& c = e.GetComponent<CameraComponent>();
+				return json{
+					{ "orthographicSize", c.OrthographicSize },
+					{ "nearClip", c.NearClip },
+					{ "farClip", c.FarClip },
+					{ "primary", c.Primary },
+					{ "fixedAspectRatio", c.FixedAspectRatio }
+				};
+			},
+			// Deserialize
+			[](Entity e, const json& j) {
+				auto& c = e.AddComponent<CameraComponent>();
+				if (j.contains("orthographicSize"))
+					c.OrthographicSize = j["orthographicSize"].get<float>();
+				if (j.contains("nearClip"))
+					c.NearClip = j["nearClip"].get<float>();
+				if (j.contains("farClip"))
+					c.FarClip = j["farClip"].get<float>();
+				if (j.contains("primary"))
+					c.Primary = j["primary"].get<bool>();
+				if (j.contains("fixedAspectRatio"))
+					c.FixedAspectRatio = j["fixedAspectRatio"].get<bool>();
+			},
+			// Copy
+			[](Entity src, Entity dst) {
+				if (!src.HasComponent<CameraComponent>()) return;
+				auto& s = src.GetComponent<CameraComponent>();
+				auto& d = dst.AddComponent<CameraComponent>();
+				d.OrthographicSize = s.OrthographicSize;
+				d.NearClip = s.NearClip;
+				d.FarClip = s.FarClip;
+				d.Primary = s.Primary;
+				d.FixedAspectRatio = s.FixedAspectRatio;
 			}
 		);
 

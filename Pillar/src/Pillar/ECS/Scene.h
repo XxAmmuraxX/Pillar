@@ -11,6 +11,7 @@ namespace Pillar {
 	// Forward declarations
 	class Entity;
 	class PhysicsSystem;
+	class AnimationSystem;
 	class SceneSerializer;
 
 	enum class SceneState
@@ -61,6 +62,10 @@ namespace Pillar {
 		void SetPhysicsSystem(PhysicsSystem* physicsSystem) { m_PhysicsSystem = physicsSystem; }
 		PhysicsSystem* GetPhysicsSystem() const { return m_PhysicsSystem; }
 
+		// Animation system management
+		void SetAnimationSystem(AnimationSystem* animationSystem) { m_AnimationSystem = animationSystem; }
+		AnimationSystem* GetAnimationSystem() const { return m_AnimationSystem; }
+
 		// Scene copying for play/edit mode
 		static std::shared_ptr<Scene> Copy(const std::shared_ptr<Scene>& other);
 
@@ -80,6 +85,7 @@ namespace Pillar {
 		std::string m_FilePath;
 		SceneState m_State = SceneState::Edit;
 		PhysicsSystem* m_PhysicsSystem = nullptr;
+		AnimationSystem* m_AnimationSystem = nullptr;
 
 		friend class Entity;
 		friend class SceneSerializer;

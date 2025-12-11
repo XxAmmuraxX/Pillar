@@ -10,6 +10,8 @@
 
 namespace PillarEditor {
 
+    class EditorLayer;  // Forward declaration
+
     enum class GizmoMode
     {
         None = -1,
@@ -21,7 +23,7 @@ namespace PillarEditor {
     class ViewportPanel : public EditorPanel
     {
     public:
-        ViewportPanel();
+        ViewportPanel(EditorLayer* editorLayer = nullptr);
 
         virtual void OnImGuiRender() override;
         virtual void OnUpdate(float deltaTime) override;
@@ -58,6 +60,7 @@ namespace PillarEditor {
     private:
         std::shared_ptr<Pillar::Framebuffer> m_Framebuffer;
         EditorCamera m_EditorCamera;
+        Pillar::OrthographicCamera m_GameCamera{ -10.0f, 10.0f, -10.0f, 10.0f };  // Camera for play mode
 
         glm::vec2 m_ViewportSize = { 1280.0f, 720.0f };
         glm::vec2 m_ViewportBounds[2] = {};
@@ -67,6 +70,12 @@ namespace PillarEditor {
         
         // Gizmo state
         GizmoMode m_GizmoMode = GizmoMode::Translate;
+        bool m_GizmoInUse = false;
+        glm::vec2 m_GizmoStartPosition;
+        float m_GizmoStartRotation;
+        glm::vec2 m_GizmoStartScale;
+        
+        EditorLayer* m_EditorLayer = nullptr;
     };
 
 }

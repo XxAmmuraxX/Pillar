@@ -1,5 +1,6 @@
 #include "SceneHierarchyPanel.h"
 #include "../SelectionContext.h"
+#include "../TemplateManager.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/UUIDComponent.h"
 #include <imgui.h>
@@ -67,6 +68,9 @@ namespace PillarEditor {
         }
 
         ImGui::End();
+        
+        // Draw template save dialog (needs to be outside main window)
+        DrawSaveTemplateDialog();
     }
 
     void SceneHierarchyPanel::DrawEntityNode(Pillar::Entity entity)
@@ -169,12 +173,71 @@ namespace PillarEditor {
 
             ImGui::Separator();
 
+            if (ImGui::MenuItem("Save as Template...") && m_TemplateManager)
+            {
+                // Store entity and show dialog
+                m_EntityToSaveAsTemplate = entity;
+                m_ShowSaveTemplateDialog = true;
+            }
+
+            ImGui::Separator();
+
             if (ImGui::MenuItem("Focus", "F"))
             {
                 // This would need to communicate with the viewport
                 // For now, just select it
                 if (m_SelectionContext)
                     m_SelectionContext->Select(entity);
+            }
+
+            ImGui::EndPopup();
+        }
+    }
+
+    void SceneHierarchyPanel::DrawSaveTemplateDialog()
+    {
+        // Open modal when requested
+        if (m_ShowSaveTemplateDialog)
+        {
+            ImGui::OpenPopup("Save as Template");
+            m_ShowSaveTemplateDialog = false;
+        }
+        
+        if (ImGui::BeginPopupModal("Save as Template", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            ImGui::Text("Save entity as template");
+            ImGui::Separator();
+
+            ImGui::InputText("Template Name", m_TemplateNameBuffer, sizeof(m_TemplateNameBuffer));
+            ImGui::InputTextMultiline("Description", m_TemplateDescBuffer, sizeof(m_TemplateDescBuffer), ImVec2(300, 80));
+
+            ImGui::Separator();
+
+            if (ImGui::Button("Save", ImVec2(120, 0)))
+            {
+                if (strlen(m_TemplateNameBuffer) > 0 && m_TemplateManager && m_EntityToSaveAsTemplate.IsValid())
+                {
+                    std::string templateName = m_TemplateNameBuffer;
+                    std::string templateDesc = m_TemplateDescBuffer;
+                    
+                    if (m_TemplateManager->SaveEntityAsTemplate(m_EntityToSaveAsTemplate, templateName, templateDesc))
+                    {
+                        // Success - clear buffers and close
+                        m_TemplateNameBuffer[0] = '\0';
+                        m_TemplateDescBuffer[0] = '\0';
+                        m_EntityToSaveAsTemplate = Pillar::Entity();
+                        ImGui::CloseCurrentPopup();
+                    }
+                }
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0)))
+            {
+                m_TemplateNameBuffer[0] = '\0';
+                m_TemplateDescBuffer[0] = '\0';
+                m_EntityToSaveAsTemplate = Pillar::Entity();
+                ImGui::CloseCurrentPopup();
             }
 
             ImGui::EndPopup();

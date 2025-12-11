@@ -29,10 +29,20 @@ namespace PillarEditor {
 
         // Create panels
         m_HierarchyPanel = std::make_unique<SceneHierarchyPanel>();
-        m_InspectorPanel = std::make_unique<InspectorPanel>();
-        m_ViewportPanel = std::make_unique<ViewportPanel>();
+        m_HierarchyPanel->SetTemplateManager(&m_TemplateManager);
+        
+        m_InspectorPanel = std::make_unique<InspectorPanel>(this);
+        m_ViewportPanel = std::make_unique<ViewportPanel>(this);
         m_ContentBrowserPanel = std::make_unique<ContentBrowserPanel>();
         m_ConsolePanel = std::make_unique<ConsolePanel>();
+        m_TemplateLibraryPanel = std::make_unique<TemplateLibraryPanel>();
+        m_AnimationManagerPanel = std::make_unique<AnimationManagerPanel>();
+
+        // Initialize animation system
+        m_AnimationSystem = std::make_unique<Pillar::AnimationSystem>();
+
+        // Initialize template panel
+        m_TemplateLibraryPanel->SetTemplateManager(&m_TemplateManager);
 
         // Create a default scene with some entities for demonstration
         NewScene();
@@ -62,6 +72,10 @@ namespace PillarEditor {
         if (m_EditorState == EditorState::Play)
         {
             m_ActiveScene->OnUpdate(deltaTime);
+            
+            // Update animation system
+            if (m_AnimationSystem)
+                m_AnimationSystem->OnUpdate(deltaTime);
         }
 
         // Render scene to viewport framebuffer
@@ -314,6 +328,12 @@ namespace PillarEditor {
         if (m_ConsolePanel->IsVisible())
             m_ConsolePanel->OnImGuiRender();
 
+        if (m_TemplateLibraryPanel)
+            m_TemplateLibraryPanel->OnImGuiRender();
+
+        if (m_AnimationManagerPanel->IsVisible())
+            m_AnimationManagerPanel->OnImGuiRender();
+
         // Draw stats panel
         DrawStatsPanel();
     }
@@ -351,14 +371,34 @@ namespace PillarEditor {
             case PIL_KEY_Z:
                 if (control)
                 {
-                    ConsolePanel::Log("Undo is not yet implemented", LogLevel::Warn);
+                    // Undo
+                    if (m_CommandHistory.CanUndo())
+                    {
+                        std::string actionName = m_CommandHistory.GetUndoName();
+                        m_CommandHistory.Undo();
+                        ConsolePanel::Log("Undo: " + actionName, LogLevel::Info);
+                    }
+                    else
+                    {
+                        ConsolePanel::Log("Nothing to undo", LogLevel::Trace);
+                    }
                     return true;
                 }
                 break;
             case PIL_KEY_Y:
                 if (control)
                 {
-                    ConsolePanel::Log("Redo is not yet implemented", LogLevel::Warn);
+                    // Redo
+                    if (m_CommandHistory.CanRedo())
+                    {
+                        std::string actionName = m_CommandHistory.GetRedoName();
+                        m_CommandHistory.Redo();
+                        ConsolePanel::Log("Redo: " + actionName, LogLevel::Info);
+                    }
+                    else
+                    {
+                        ConsolePanel::Log("Nothing to redo", LogLevel::Trace);
+                    }
                     return true;
                 }
                 break;
@@ -520,8 +560,22 @@ namespace PillarEditor {
 
             if (ImGui::BeginMenu("Edit"))
             {
-                if (ImGui::MenuItem("Undo", "Ctrl+Z", false, false)) {}  // Placeholder
-                if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) {}  // Placeholder
+                // Undo/Redo with action names
+                bool canUndo = m_CommandHistory.CanUndo();
+                bool canRedo = m_CommandHistory.CanRedo();
+                
+                std::string undoLabel = canUndo ? "Undo " + m_CommandHistory.GetUndoName() : "Undo";
+                std::string redoLabel = canRedo ? "Redo " + m_CommandHistory.GetRedoName() : "Redo";
+                
+                if (ImGui::MenuItem(undoLabel.c_str(), "Ctrl+Z", false, canUndo))
+                {
+                    m_CommandHistory.Undo();
+                }
+                
+                if (ImGui::MenuItem(redoLabel.c_str(), "Ctrl+Y", false, canRedo))
+                {
+                    m_CommandHistory.Redo();
+                }
                 
                 ImGui::Separator();
                 
@@ -891,6 +945,12 @@ namespace PillarEditor {
         m_HierarchyPanel->SetContext(m_ActiveScene, &m_SelectionContext);
         m_InspectorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
         m_ViewportPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+        m_TemplateLibraryPanel->SetScene(m_ActiveScene);
+        
+        // Set animation system
+        m_AnimationSystem->OnAttach(m_ActiveScene.get());
+        m_ActiveScene->SetAnimationSystem(m_AnimationSystem.get());
+        m_AnimationManagerPanel->SetAnimationSystem(m_AnimationSystem.get());
 
         m_SelectionContext.ClearSelection();
         
@@ -930,6 +990,12 @@ namespace PillarEditor {
             m_HierarchyPanel->SetContext(m_ActiveScene, &m_SelectionContext);
             m_InspectorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
             m_ViewportPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+            m_TemplateLibraryPanel->SetScene(m_ActiveScene);
+            
+            // Set animation system
+            m_AnimationSystem->OnAttach(m_ActiveScene.get());
+            m_ActiveScene->SetAnimationSystem(m_AnimationSystem.get());
+            m_AnimationManagerPanel->SetAnimationSystem(m_AnimationSystem.get());
 
             m_SelectionContext.ClearSelection();
             

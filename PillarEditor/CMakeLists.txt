@@ -6,11 +6,14 @@ add_executable(PillarEditor
     src/EditorLayer.cpp
     src/SelectionContext.cpp
     src/EditorCamera.cpp
+    src/TemplateManager.cpp
     src/Panels/SceneHierarchyPanel.cpp
     src/Panels/InspectorPanel.cpp
     src/Panels/ViewportPanel.cpp
     src/Panels/ContentBrowserPanel.cpp
     src/Panels/ConsolePanel.cpp
+    src/Panels/TemplateLibraryPanel.cpp
+    src/Panels/AnimationManagerPanel.cpp
     src/Utils/FileDialog.cpp
 )
 
