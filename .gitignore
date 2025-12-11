@@ -364,3 +364,8 @@ MigrationBackup/
 FodyWeavers.xsd
 # ImGui
 imgui.ini
+/coverage
+
+# CMake build directories
+build/
+[Bb]uild/

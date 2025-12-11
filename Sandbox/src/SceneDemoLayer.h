@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
+#include "Pillar/Renderer/Renderer2DBackend.h"
 #include "Pillar/ECS/SceneManager.h"
 #include "Pillar/ECS/SceneSerializer.h"
 #include "Pillar/ECS/Entity.h"
@@ -10,7 +11,10 @@
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
 #include "Pillar/ECS/Components/Physics/VelocityComponent.h"
 #include "Pillar/ECS/Components/Gameplay/XPGemComponent.h"
-#include "Pillar/Renderer/Renderer2D.h"
+#include "Pillar/ECS/Components/Audio/AudioSourceComponent.h"
+#include "Pillar/ECS/Components/Audio/AudioListenerComponent.h"
+#include "Pillar/ECS/Systems/AudioSystem.h"
+#include "Pillar/Audio/AudioEngine.h"
 #include <imgui.h>
 #include <memory>
 
@@ -22,6 +26,7 @@
  * 2. SceneSerializer - Saving/loading scenes to JSON
  * 3. Scene transitions with callbacks
  * 4. Entity queries (by name, UUID)
+ * 5. Audio system integration with scene entities
  */
 class SceneDemoLayer : public Pillar::Layer
 {
@@ -44,17 +49,33 @@ public:
         CreateGameScene();
         CreatePauseMenuScene();
 
+        // Load audio demo scene from file
+        if (sceneManager.LoadScene("scenes/audio_demo.scene.json", "AudioDemo"))
+        {
+            PIL_INFO("Audio Demo scene loaded from file");
+        }
+        else
+        {
+            PIL_WARN("Could not load Audio Demo scene - file may not exist");
+        }
+
         // Set callback for scene changes
-        sceneManager.SetOnSceneChangeCallback([](const std::string& from, const std::string& to) {
+        sceneManager.SetOnSceneChangeCallback([this](const std::string& from, const std::string& to) {
             PIL_INFO("Scene changed from '{}' to '{}'", from, to);
+            OnSceneChanged();
         });
+
+        // Initialize audio system
+        m_AudioSystem = new Pillar::AudioSystem();
 
         // Start with main menu
         sceneManager.SetActiveScene("MainMenu");
+        OnSceneChanged();
     }
 
     void OnDetach() override
     {
+        delete m_AudioSystem;
         Pillar::SceneManager::Get().Clear();
         Layer::OnDetach();
     }
@@ -66,19 +87,40 @@ public:
         auto& sceneManager = Pillar::SceneManager::Get();
         sceneManager.OnUpdate(dt);
 
+        // Update audio system for current scene
+        auto activeScene = sceneManager.GetActiveScene();
+        if (activeScene && m_AudioSystem)
+        {
+            m_AudioSystem->OnUpdate(dt);
+        }
+
         // Render
         Pillar::Renderer::SetClearColor({ 0.1f, 0.1f, 0.15f, 1.0f });
         Pillar::Renderer::Clear();
 
-        Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
+        Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
         
-        auto activeScene = sceneManager.GetActiveScene();
         if (activeScene)
         {
             DrawScene(activeScene);
         }
 
-        Pillar::Renderer2D::EndScene();
+        Pillar::Renderer2DBackend::EndScene();
+    }
+
+    void OnEvent(Pillar::Event& event) override
+    {
+        m_CameraController.OnEvent(event);
+
+        // Handle keyboard shortcuts for audio control
+        if (event.GetEventType() == Pillar::EventType::KeyPressed)
+        {
+            auto& keyEvent = static_cast<Pillar::KeyPressedEvent&>(event);
+            if (keyEvent.GetRepeatCount() == 0)
+            {
+                HandleAudioKeyPress(keyEvent.GetKeyCode());
+            }
+        }
     }
 
     void OnImGuiRender() override
@@ -123,6 +165,11 @@ public:
             ImGui::SameLine();
             ImGui::Text(isActive ? "(Active)" : "");
         }
+
+        ImGui::Separator();
+
+        // Audio Controls Section
+        RenderAudioControls();
 
         ImGui::Separator();
 
@@ -215,16 +262,201 @@ public:
         ImGui::BulletText("WASD: Move camera");
         ImGui::BulletText("Q/E: Rotate camera");
         ImGui::BulletText("Mouse Wheel: Zoom");
+        ImGui::BulletText("1-4: Play audio sources (if present in scene)");
+        ImGui::BulletText("M: Mute/Unmute master volume");
 
         ImGui::End();
     }
 
-    void OnEvent(Pillar::Event& event) override
+private:
+    void OnSceneChanged()
     {
-        m_CameraController.OnEvent(event);
+        auto& sceneManager = Pillar::SceneManager::Get();
+        auto activeScene = sceneManager.GetActiveScene();
+        
+        // Stop all audio sources from previous scene before switching
+        for (auto& entity : m_AudioSourceEntities)
+        {
+            if (entity && entity.HasComponent<Pillar::AudioSourceComponent>())
+            {
+                auto& audioComp = entity.GetComponent<Pillar::AudioSourceComponent>();
+                if (audioComp.Source && audioComp.Source->IsPlaying())
+                {
+                    audioComp.Source->Stop();
+                    PIL_INFO("Stopped audio: {}", entity.GetComponent<Pillar::TagComponent>().Tag);
+                }
+            }
+        }
+        
+        if (activeScene && m_AudioSystem)
+        {
+            m_AudioSystem->OnAttach(activeScene.get());
+            
+            // Find all audio source entities in the new scene
+            m_AudioSourceEntities.clear();
+            auto view = activeScene->GetRegistry().view<Pillar::AudioSourceComponent>();
+            for (auto entity : view)
+            {
+                m_AudioSourceEntities.push_back(Pillar::Entity(entity, activeScene.get()));
+            }
+            
+            PIL_INFO("Found {} audio sources in scene '{}'", 
+                m_AudioSourceEntities.size(), 
+                sceneManager.GetActiveSceneName());
+        }
     }
 
-private:
+    void HandleAudioKeyPress(int keyCode)
+    {
+        if (!Pillar::AudioEngine::IsInitialized())
+            return;
+
+        switch (keyCode)
+        {
+        case PIL_KEY_1:
+            PlayAudioSource(0);
+            break;
+        case PIL_KEY_2:
+            PlayAudioSource(1);
+            break;
+        case PIL_KEY_3:
+            PlayAudioSource(2);
+            break;
+        case PIL_KEY_4:
+            PlayAudioSource(3);
+            break;
+        case PIL_KEY_M:
+            ToggleMute();
+            break;
+        }
+    }
+
+    void PlayAudioSource(size_t index)
+    {
+        if (index >= m_AudioSourceEntities.size())
+            return;
+
+        auto& entity = m_AudioSourceEntities[index];
+        if (!entity.HasComponent<Pillar::AudioSourceComponent>())
+            return;
+
+        auto& audioComp = entity.GetComponent<Pillar::AudioSourceComponent>();
+        if (audioComp.Source)
+        {
+            audioComp.Source->Stop();
+            audioComp.Source->Play();
+            
+            auto& tag = entity.GetComponent<Pillar::TagComponent>();
+            PIL_INFO("Playing audio: {}", tag.Tag);
+        }
+    }
+
+    void ToggleMute()
+    {
+        m_Muted = !m_Muted;
+        if (m_Muted)
+        {
+            m_PreviousMasterVolume = Pillar::AudioEngine::GetMasterVolume();
+            Pillar::AudioEngine::SetMasterVolume(0.0f);
+            PIL_INFO("Audio muted");
+        }
+        else
+        {
+            Pillar::AudioEngine::SetMasterVolume(m_PreviousMasterVolume);
+            PIL_INFO("Audio unmuted");
+        }
+    }
+
+    void RenderAudioControls()
+    {
+        if (!Pillar::AudioEngine::IsInitialized())
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Audio System: Not Initialized");
+            return;
+        }
+
+        ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "Audio Controls");
+        ImGui::Separator();
+
+        // Master volume
+        float masterVolume = Pillar::AudioEngine::GetMasterVolume();
+        if (ImGui::SliderFloat("Master Volume", &masterVolume, 0.0f, 1.0f))
+        {
+            Pillar::AudioEngine::SetMasterVolume(masterVolume);
+        }
+
+        if (ImGui::Button(m_Muted ? "Unmute (M)" : "Mute (M)"))
+        {
+            ToggleMute();
+        }
+
+        // Show audio sources in current scene
+        if (!m_AudioSourceEntities.empty())
+        {
+            ImGui::Spacing();
+            ImGui::Text("Audio Sources in Scene:");
+            
+            for (size_t i = 0; i < m_AudioSourceEntities.size(); ++i)
+            {
+                auto& entity = m_AudioSourceEntities[i];
+                if (!entity.HasComponent<Pillar::AudioSourceComponent>())
+                    continue;
+
+                ImGui::PushID(static_cast<int>(i));
+
+                auto& tag = entity.GetComponent<Pillar::TagComponent>();
+                auto& audioComp = entity.GetComponent<Pillar::AudioSourceComponent>();
+
+                ImGui::Text("%zu. %s", i + 1, tag.Tag.c_str());
+                ImGui::SameLine();
+
+                if (ImGui::Button("Play"))
+                {
+                    PlayAudioSource(i);
+                }
+
+                if (audioComp.Source)
+                {
+                    ImGui::SameLine();
+                    if (ImGui::Button("Stop"))
+                    {
+                        audioComp.Source->Stop();
+                    }
+
+                    // Volume control
+                    float volume = audioComp.Volume;
+                    if (ImGui::SliderFloat("Vol", &volume, 0.0f, 1.0f))
+                    {
+                        audioComp.Volume = volume;
+                        if (audioComp.Source)
+                        {
+                            audioComp.Source->SetVolume(volume);
+                        }
+                    }
+
+                    // Show playback status
+                    if (audioComp.Source->IsPlaying())
+                    {
+                        ImGui::SameLine();
+                        ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Playing");
+                    }
+                }
+                else
+                {
+                    ImGui::SameLine();
+                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Not Loaded");
+                }
+
+                ImGui::PopID();
+            }
+        }
+        else
+        {
+            ImGui::TextColored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f), "No audio sources in current scene");
+            ImGui::TextWrapped("Switch to 'AudioDemo' scene to hear sounds");
+        }
+    }
+
     void CreateMainMenuScene()
     {
         auto& sceneManager = Pillar::SceneManager::Get();
@@ -348,8 +580,22 @@ private:
             {
                 color = { 0.3f, 0.3f, 0.3f, 1.0f };
             }
+            else if (tag.Tag == "Listener")
+            {
+                color = { 0.2f, 0.8f, 0.2f, 1.0f };
+                size = { 0.3f, 0.3f };
+            }
+            else if (tag.Tag.find("SFX_") == 0 || tag.Tag == "BackgroundMusic")
+            {
+                // Audio source entities - orange/yellow
+                color = { 1.0f, 0.6f, 0.2f, 1.0f };
+                size = { 0.2f, 0.2f };
+            }
 
-            Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
+            if (transform.Rotation != 0.0f)
+                Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
+            else
+                Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
         }
     }
 
@@ -387,10 +633,62 @@ private:
             ImGui::Text("XP Value: %d", gem.XPValue);
             ImGui::Text("Attraction Radius: %.2f", gem.AttractionRadius);
         }
+
+        if (entity.HasComponent<Pillar::AudioSourceComponent>())
+        {
+            ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "Audio Source");
+            auto& audioSrc = entity.GetComponent<Pillar::AudioSourceComponent>();
+            ImGui::Text("Audio File: %s", audioSrc.AudioFile.c_str());
+            ImGui::Text("Volume: %.2f", audioSrc.Volume);
+            ImGui::Text("Pitch: %.2f", audioSrc.Pitch);
+            ImGui::Text("Loop: %s", audioSrc.Loop ? "Yes" : "No");
+            ImGui::Text("Play On Awake: %s", audioSrc.PlayOnAwake ? "Yes" : "No");
+            ImGui::Text("3D Audio: %s", audioSrc.Is3D ? "Yes" : "No");
+            if (audioSrc.Is3D)
+            {
+                ImGui::Text("Min Distance: %.2f", audioSrc.MinDistance);
+                ImGui::Text("Max Distance: %.2f", audioSrc.MaxDistance);
+                ImGui::Text("Rolloff Factor: %.2f", audioSrc.RolloffFactor);
+            }
+
+            // Add play/stop buttons in inspector
+            if (audioSrc.Source)
+            {
+                if (ImGui::Button("Play##inspector"))
+                {
+                    audioSrc.Source->Stop();
+                    audioSrc.Source->Play();
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("Stop##inspector"))
+                {
+                    audioSrc.Source->Stop();
+                }
+            }
+        }
+
+        if (entity.HasComponent<Pillar::AudioListenerComponent>())
+        {
+            ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.2f, 1.0f), "Audio Listener");
+            auto& listener = entity.GetComponent<Pillar::AudioListenerComponent>();
+            ImGui::Text("Active: %s", listener.IsActive ? "Yes" : "No");
+            ImGui::Text("Forward: (%.2f, %.2f, %.2f)", 
+                listener.Forward.x, listener.Forward.y, listener.Forward.z);
+            ImGui::Text("Up: (%.2f, %.2f, %.2f)", 
+                listener.Up.x, listener.Up.y, listener.Up.z);
+        }
     }
 
 private:
     Pillar::OrthographicCameraController m_CameraController;
     std::string m_StatusMessage;
     ImVec4 m_StatusColor;
+
+    // Audio system
+    Pillar::AudioSystem* m_AudioSystem = nullptr;
+    std::vector<Pillar::Entity> m_AudioSourceEntities;
+    
+    // Audio controls
+    bool m_Muted = false;
+    float m_PreviousMasterVolume = 1.0f;
 };

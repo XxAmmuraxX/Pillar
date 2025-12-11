@@ -138,6 +138,118 @@ namespace Pillar {
         return textureName;
     }
 
+    std::string AssetManager::GetAudioPath(const std::string& audioName)
+    {
+        // Initialize assets directory if not set
+        if (s_AssetsDirectory.empty())
+        {
+            std::filesystem::path exeDir = GetExecutableDirectory();
+            std::filesystem::path workspaceRoot = exeDir.parent_path().parent_path().parent_path();
+            std::filesystem::path sandboxAssets = workspaceRoot / "Sandbox" / "assets";
+
+            if (std::filesystem::exists(sandboxAssets))
+            {
+                s_AssetsDirectory = sandboxAssets;
+                PIL_CORE_INFO("AssetManager: Using workspace assets directory: {0}", s_AssetsDirectory.string());
+            }
+            else
+            {
+                s_AssetsDirectory = exeDir / "assets";
+                PIL_CORE_INFO("AssetManager: Using executable assets directory: {0}", s_AssetsDirectory.string());
+            }
+        }
+
+        std::filesystem::path directPath(audioName);
+        if (std::filesystem::exists(directPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found audio at direct path: {0}", directPath.string());
+            return directPath.string();
+        }
+
+        std::filesystem::path audioPath = s_AssetsDirectory / "audio" / audioName;
+        if (std::filesystem::exists(audioPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found audio at: {0}", audioPath.string());
+            return audioPath.string();
+        }
+
+        std::filesystem::path sfxPath = s_AssetsDirectory / "audio" / "sfx" / audioName;
+        if (std::filesystem::exists(sfxPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found audio at: {0}", sfxPath.string());
+            return sfxPath.string();
+        }
+
+        std::filesystem::path musicPath = s_AssetsDirectory / "audio" / "music" / audioName;
+        if (std::filesystem::exists(musicPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found audio at: {0}", musicPath.string());
+            return musicPath.string();
+        }
+
+        std::filesystem::path assetsPath = s_AssetsDirectory / audioName;
+        if (std::filesystem::exists(assetsPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found audio at: {0}", assetsPath.string());
+            return assetsPath.string();
+        }
+
+        PIL_CORE_WARN("AssetManager: Could not find audio '{0}'. Searched in:", audioName);
+        PIL_CORE_WARN("  - {0}", directPath.string());
+        PIL_CORE_WARN("  - {0}", audioPath.string());
+        PIL_CORE_WARN("  - {0}", sfxPath.string());
+        PIL_CORE_WARN("  - {0}", musicPath.string());
+        PIL_CORE_WARN("  - {0}", assetsPath.string());
+
+        return audioName;
+    }
+
+    std::string AssetManager::GetSFXPath(const std::string& sfxName)
+    {
+        if (s_AssetsDirectory.empty())
+        {
+            GetAssetsDirectory();
+        }
+
+        std::filesystem::path directPath(sfxName);
+        if (std::filesystem::exists(directPath))
+        {
+            return directPath.string();
+        }
+
+        std::filesystem::path sfxPath = s_AssetsDirectory / "audio" / "sfx" / sfxName;
+        if (std::filesystem::exists(sfxPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found SFX at: {0}", sfxPath.string());
+            return sfxPath.string();
+        }
+
+        return GetAudioPath(sfxName);
+    }
+
+    std::string AssetManager::GetMusicPath(const std::string& musicName)
+    {
+        if (s_AssetsDirectory.empty())
+        {
+            GetAssetsDirectory();
+        }
+
+        std::filesystem::path directPath(musicName);
+        if (std::filesystem::exists(directPath))
+        {
+            return directPath.string();
+        }
+
+        std::filesystem::path musicPath = s_AssetsDirectory / "audio" / "music" / musicName;
+        if (std::filesystem::exists(musicPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found music at: {0}", musicPath.string());
+            return musicPath.string();
+        }
+
+        return GetAudioPath(musicName);
+    }
+
     void AssetManager::SetAssetsDirectory(const std::string& path)
     {
         s_AssetsDirectory = path;
