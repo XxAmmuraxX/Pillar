@@ -25,6 +25,7 @@ namespace Pillar
 
 		inline Window& GetWindow() { return *m_Window; }
 		inline const LayerStack& GetLayerStack() const { return m_LayerStack; }
+		inline ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
 
 		static Application& Get();
 
