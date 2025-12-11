@@ -272,7 +272,7 @@ TEST_F(AudioBufferTests, CreateWithoutInit_ReturnsNull) {
 
 // ==================== Factory Pattern Tests ====================
 
-class FactoryTests : public ::testing::Test {
+class AudioFactoryTests : public ::testing::Test {
 protected:
     void SetUp() override {
         AudioEngine::Init();
@@ -283,12 +283,12 @@ protected:
     }
 };
 
-TEST_F(FactoryTests, AudioEngineCreateSource_ReturnsValidSource) {
+TEST_F(AudioFactoryTests, AudioEngineCreateSource_ReturnsValidSource) {
     auto source = AudioEngine::CreateSource();
     ASSERT_NE(source, nullptr);
 }
 
-TEST_F(FactoryTests, MultipleSourcesCreated_AreIndependent) {
+TEST_F(AudioFactoryTests, MultipleSourcesCreated_AreIndependent) {
     auto source1 = AudioEngine::CreateSource();
     auto source2 = AudioEngine::CreateSource();
     
