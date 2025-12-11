@@ -60,9 +60,9 @@ namespace Pillar {
     class PIL_API BatchRenderer2D : public IRenderer2D
     {
     public:
-        static const uint32_t MaxQuadsPerBatch = 10000;
-        static const uint32_t MaxVertices = MaxQuadsPerBatch * 4;
-        static const uint32_t MaxIndices = MaxQuadsPerBatch * 6;
+        static constexpr uint32_t MaxQuadsPerBatch = 10000;
+        static constexpr uint32_t MaxVertices = MaxQuadsPerBatch * 4;
+        static constexpr uint32_t MaxIndices = MaxQuadsPerBatch * 6;
 
         virtual ~BatchRenderer2D() = default;
 

@@ -339,30 +339,24 @@ TEST(OrthographicCameraRenderingTests, ProjectionBoundsUpdate)
 
 // -----------------------------------------------------------------------------
 // BatchRenderer2D Stats Tests (without OpenGL context)
-// Note: We copy static const values to local variables to avoid ODR-use linker errors
 // -----------------------------------------------------------------------------
 
 TEST(BatchRenderer2DTests, MaxQuadsPerBatch)
 {
-    // Copy to local variable to avoid ODR-use linker issues
-    constexpr uint32_t maxQuads = 10000;
-    EXPECT_EQ(maxQuads, BatchRenderer2D::MaxQuadsPerBatch);
+    // Verify batch size constant
+    EXPECT_EQ(BatchRenderer2D::MaxQuadsPerBatch, 10000u);
 }
 
 TEST(BatchRenderer2DTests, MaxVertices)
 {
     // 4 vertices per quad
-    constexpr uint32_t expectedVertices = 10000 * 4;  // MaxQuadsPerBatch * 4
-    uint32_t actualVertices = BatchRenderer2D::MaxVertices;
-    EXPECT_EQ(actualVertices, expectedVertices);
+    EXPECT_EQ(BatchRenderer2D::MaxVertices, 40000u);
 }
 
 TEST(BatchRenderer2DTests, MaxIndices)
 {
     // 6 indices per quad (2 triangles)
-    constexpr uint32_t expectedIndices = 10000 * 6;  // MaxQuadsPerBatch * 6
-    uint32_t actualIndices = BatchRenderer2D::MaxIndices;
-    EXPECT_EQ(actualIndices, expectedIndices);
+    EXPECT_EQ(BatchRenderer2D::MaxIndices, 60000u);
 }
 
 // -----------------------------------------------------------------------------
