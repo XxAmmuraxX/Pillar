@@ -1,4 +1,7 @@
 #include <gtest/gtest.h>
+// ComponentSerializationTests: validates JSON serialization/deserialization
+// of ECS components (Transform, Sprite, Animation, Velocity, Collider,
+// Bullet, XPGem) including edge cases like unicode and long tags.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/SceneSerializer.h"

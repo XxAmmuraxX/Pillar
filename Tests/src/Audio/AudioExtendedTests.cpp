@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// AudioExtendedTests: extended audio subsystem tests for AudioClip, AudioListener,
+// AudioSystem and ECS integration including playback and resource error handling.
 #include <gmock/gmock.h>
 #include "Pillar/Audio/AudioEngine.h"
 #include "Pillar/Audio/AudioBuffer.h"

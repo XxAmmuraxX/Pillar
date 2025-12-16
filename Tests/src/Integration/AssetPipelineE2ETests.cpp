@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// AssetPipelineE2ETests: end-to-end tests for asset import/export pipeline,
+// verifying asset loading, entity creation, scene serialization and reloading.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/SceneSerializer.h"

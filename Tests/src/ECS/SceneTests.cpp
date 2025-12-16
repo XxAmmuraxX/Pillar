@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// SceneTests: basic Scene API tests covering entity creation/destruction,
+// UUID uniqueness and default component values.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"

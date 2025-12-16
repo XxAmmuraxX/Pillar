@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// PerformanceTests: stress and benchmark-style tests to ensure performance
+// characteristics for entity creation, systems and pools remain within limits.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/ObjectPool.h"

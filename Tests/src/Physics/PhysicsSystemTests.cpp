@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// PhysicsSystemTests: verifies Box2D integration, body creation, gravity,
+// static/dynamic behavior, fixed rotation, and gravity scaling.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Systems/PhysicsSystem.h"

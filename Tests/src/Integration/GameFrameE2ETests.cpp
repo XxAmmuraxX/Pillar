@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// GameFrameE2ETests: simulates a full game frame cycle (input → systems → physics)
+// to validate per-frame updates and state transitions without a real window.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"

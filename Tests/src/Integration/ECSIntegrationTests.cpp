@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// ECSIntegrationTests: integration tests covering entity lifecycle, systems
+// (velocity, bullet), serialization round-trips, object pools, and SceneManager.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/SceneManager.h"

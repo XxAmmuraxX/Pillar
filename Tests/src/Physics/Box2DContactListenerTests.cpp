@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// Box2DContactListenerTests: exercises contact begin/end callbacks to ensure
+// the engine's contact listener is invoked during collisions/separations.
 #include "Pillar/ECS/Physics/Box2DContactListener.h"
 #include "Pillar/ECS/Physics/Box2DWorld.h"
 #include <box2d/box2d.h>

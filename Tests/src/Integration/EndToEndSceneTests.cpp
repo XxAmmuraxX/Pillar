@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// EndToEndSceneTests: full scene creation, saving/loading, hierarchy and
+// SceneManager workflows to validate end-to-end scene persistence.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/SceneSerializer.h"

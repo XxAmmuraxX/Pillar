@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// EntityTests: unit tests for `Entity` API behavior including component
+// management, equality, validity and handle casting.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"

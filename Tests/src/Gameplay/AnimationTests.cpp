@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// AnimationTests: covers AnimationFrame/Clip, AnimationComponent and
+// AnimationSystem behavior including playback, looping, events and loader.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Rendering/AnimationComponent.h"
