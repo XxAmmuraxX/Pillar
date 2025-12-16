@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// ApplicationEventTests: tests construction and properties of window and
+// application-level events (resize, close, focus, tick/update/render).
 #include "Pillar/Events/ApplicationEvent.h"
 
 using namespace Pillar;

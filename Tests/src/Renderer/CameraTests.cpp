@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// Tests for OrthographicCamera and OrthographicCameraController: verifies
+// construction, transform updates, zoom/rotation behavior, and event handling.
 #include "Pillar/Renderer/OrthographicCamera.h"
 #include "Pillar/Renderer/OrthographicCameraController.h"
 #include "Pillar/Events/MouseEvent.h"

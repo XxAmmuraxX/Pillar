@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// ApplicationTests: tests Application lifecycle, window integration, layer
+// management, event propagation and ImGuiLayer presence.
 #include "Pillar/Application.h"
 #include "Pillar/Layer.h"
 #include "Pillar/Events/ApplicationEvent.h"

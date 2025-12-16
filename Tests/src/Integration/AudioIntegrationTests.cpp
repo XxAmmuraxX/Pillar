@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// AudioIntegrationTests: verifies AudioEngine, AudioSource, AudioBuffer and
+// ECS audio components/systems integration and global audio controls.
 #include "Pillar/Audio/AudioEngine.h"
 #include "Pillar/Audio/AudioBuffer.h"
 #include "Pillar/Audio/AudioSource.h"

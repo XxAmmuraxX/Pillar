@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// LoggerTests: ensures the logging subsystem initializes, formats messages,
+// respects log levels, and that logger macros compile and behave as expected.
 #include "Pillar/Logger.h"
 #include <spdlog/sinks/ostream_sink.h>
 #include <sstream>

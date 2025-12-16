@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// EventTests: verifies construction and dispatching of input, mouse and
+// application events and the EventDispatcher behavior and categories.
 #include "Pillar/Events/Event.h"
 #include "Pillar/Events/KeyEvent.h"
 #include "Pillar/Events/MouseEvent.h"

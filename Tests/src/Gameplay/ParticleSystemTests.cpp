@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// ParticleSystemTests: unit tests for Particle and ParticleEmitter components,
+// ParticleSystem and ParticleEmitterSystem behavior, pooling and lifecycle.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Gameplay/ParticleComponent.h"

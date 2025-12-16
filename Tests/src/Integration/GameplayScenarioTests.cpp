@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// GameplayScenarioTests: acceptance-style scenarios that exercise multiple
+// systems together to validate common gameplay flows and interactions.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/SceneManager.h"

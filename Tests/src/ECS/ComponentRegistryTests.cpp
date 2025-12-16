@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// ComponentRegistryTests: ensures component registration, (de)serialization
+// callbacks, copying and registry inspection for built-in and custom types.
 #include "Pillar/ECS/ComponentRegistry.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"

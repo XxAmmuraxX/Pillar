@@ -1,4 +1,7 @@
 #include <gtest/gtest.h>
+// RenderingIntegrationTests: validates rendering-related data structures and
+// helper functions (BufferLayout, BufferElement, ShaderDataType, Camera)
+// without needing an active OpenGL context.
 #include "Pillar/Renderer/Buffer.h"
 #include "Pillar/Renderer/VertexArray.h"
 #include "Pillar/Renderer/Shader.h"

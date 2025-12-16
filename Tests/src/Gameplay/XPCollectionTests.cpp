@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// XPCollectionTests: validates XPGem component behavior and XPCollectionSystem
+// including spatial grid insertion, attraction, collection and multi-gem logic.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"

@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// AssetManagerTests: verifies asset path resolution, subdirectory lookup and
+// behavior when directories or files are missing or absolute/relative paths.
 #include "Pillar/Utils/AssetManager.h"
 #include <filesystem>
 #include <fstream>

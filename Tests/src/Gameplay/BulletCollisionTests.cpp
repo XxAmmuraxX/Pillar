@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// BulletCollisionTests: unit and system tests for BulletComponent and
+// BulletCollisionSystem — lifetime, hit counting, and multi-bullet processing.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"

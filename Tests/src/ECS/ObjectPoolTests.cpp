@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// ObjectPoolTests: verifies pooling behavior for preallocation, acquire/release,
+// reuse semantics, callbacks and statistical counters.
 #include "Pillar/ECS/ObjectPool.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"

@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// AudioTests: unit tests for AudioEngine, AudioSource, AudioBuffer, WavLoader
+// and factory functions to validate initialization, properties and error cases.
 #include <gmock/gmock.h>
 #include "Pillar/Audio/AudioEngine.h"
 #include "Pillar/Audio/AudioBuffer.h"

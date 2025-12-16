@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// WindowTests: integration tests for GLFW-based Window implementation,
+// including creation, VSync, event callbacks and native GLFW interaction.
 #include "Pillar/Window.h"
 #include "Pillar/Events/ApplicationEvent.h"
 #include "Pillar/Events/KeyEvent.h"

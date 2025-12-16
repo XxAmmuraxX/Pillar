@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// SpecializedPoolsTests: tests BulletPool and ParticlePool behavior including
+// spawning, initialization, transform/velocity setup, return-to-pool and high-volume.
 #include "Pillar/ECS/SpecializedPools.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"

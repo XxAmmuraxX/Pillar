@@ -1,4 +1,7 @@
 #include <gtest/gtest.h>
+// SceneSerializerTests: tests serialization and deserialization of scenes,
+// components and SceneManager behaviors including round-trips and UUID
+// preservation.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/SceneManager.h"

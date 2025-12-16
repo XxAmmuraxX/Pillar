@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// InputTests: checks Input polling API (keyboard/mouse) behavior and
+// stability in a headless test environment using a mock Application.
 #include "Pillar/Input.h"
 #include "Pillar/KeyCodes.h"
 #include "Pillar/Window.h"

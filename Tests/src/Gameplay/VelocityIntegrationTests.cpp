@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// VelocityIntegrationTests: verifies VelocityIntegrationSystem updates entity
+// transforms correctly, including acceleration, drag, max speed and dirty flags.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"

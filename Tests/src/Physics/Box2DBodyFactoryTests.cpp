@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// Box2DBodyFactoryTests: tests body and fixture creation helper functions
+// including circle/box shapes, sensors, offsets and collision filtering.
 #include "Pillar/ECS/Physics/Box2DBodyFactory.h"
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
 #include <box2d/box2d.h>

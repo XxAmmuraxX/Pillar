@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// ComponentTests: unit tests for core ECS components (Transform, Hierarchy,
+// Velocity, Collider, Sprite, Camera) verifying defaults and basic behavior.
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"

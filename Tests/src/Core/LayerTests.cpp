@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// LayerTests: unit tests for Layer and LayerStack behavior — attach/detach,
+// update/event/imgui callbacks, push/pop order and overlay ordering.
 #include "Pillar/Layer.h"
 #include "Pillar/LayerStack.h"
 #include "Pillar/Events/KeyEvent.h"

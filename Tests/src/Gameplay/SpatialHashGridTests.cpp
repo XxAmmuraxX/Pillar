@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+// SpatialHashGridTests: verifies insertion, querying, removal and performance
+// characteristics of the spatial hash grid used for proximity queries.
 #include "Pillar/ECS/Physics/SpatialHashGrid.h"
 #include <glm/glm.hpp>
 #include <chrono>
