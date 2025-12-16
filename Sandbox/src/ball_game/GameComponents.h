@@ -51,6 +51,7 @@ namespace BallGame {
     // ============================================
     enum class GameState
     {
+        MainMenu,       // Main menu screen
         Aiming,         // Player is aiming
         BallMoving,     // Ball is in motion
         LevelComplete,  // Ball reached goal

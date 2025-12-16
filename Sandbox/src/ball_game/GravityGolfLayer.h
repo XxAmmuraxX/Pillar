@@ -4,6 +4,8 @@
 #include "Pillar/Renderer/Renderer2DBackend.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
+#include "Pillar/ECS/SceneSerializer.h"
+#include "Pillar/ECS/ComponentRegistry.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Physics/RigidbodyComponent.h"
@@ -25,9 +27,87 @@
 #include <cstdlib>
 #include <glm/gtc/constants.hpp>
 #include <limits>
+#include <box2d/box2d.h>
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
 #include <string>
+#include <filesystem>
+#include <sstream>
+#include <iomanip>
+#include <cctype>
+#include <nlohmann/json.hpp>
 
 namespace BallGame {
+
+    // Custom contact listener to play wall-hit sounds when the ball collides with walls/platforms
+    class BallContactListener : public b2ContactListener
+    {
+    public:
+        BallContactListener(Pillar::Scene* scene, GameAudio* audio, float* timePtr)
+            : m_Scene(scene), m_Audio(audio), m_TimePtr(timePtr) {}
+
+        void BeginContact(b2Contact* contact) override { Handle(contact, nullptr); }
+
+        void PostSolve(b2Contact* contact, const b2ContactImpulse* impulse) override
+        {
+            Handle(contact, impulse);
+        }
+
+    private:
+        Pillar::Entity ToEntity(b2Fixture* fixture) const
+        {
+            if (!fixture)
+                return {};
+            b2Body* body = fixture->GetBody();
+            if (!body)
+                return {};
+
+            uint32_t id = static_cast<uint32_t>(body->GetUserData().pointer);
+            entt::entity enttId = static_cast<entt::entity>(id);
+            if (!m_Scene || !m_Scene->GetRegistry().valid(enttId))
+                return {};
+            return Pillar::Entity(enttId, m_Scene);
+        }
+
+        void Handle(b2Contact* contact, const b2ContactImpulse* impulse)
+        {
+            if (!m_Scene || !m_Audio || !contact)
+                return;
+
+            Pillar::Entity a = ToEntity(contact->GetFixtureA());
+            Pillar::Entity b = ToEntity(contact->GetFixtureB());
+            if (!a && !b)
+                return;
+
+            const bool hasBall = (a && a.HasComponent<GolfBallComponent>()) || (b && b.HasComponent<GolfBallComponent>());
+            if (!hasBall)
+                return;
+
+            const bool hitWall = (a && a.HasComponent<WallComponent>()) || (b && b.HasComponent<WallComponent>());
+            if (!hitWall)
+                return;
+
+            // Ignore very soft contacts
+            if (impulse && impulse->count > 0)
+            {
+                float normalImpulse = impulse->normalImpulses[0];
+                if (normalImpulse < 0.05f)
+                    return;
+            }
+
+            const float now = m_TimePtr ? *m_TimePtr : 0.0f;
+            if (now - m_LastPlayTime < 0.08f)
+                return; // Rate-limit to avoid chatter
+
+            m_LastPlayTime = now;
+            m_Audio->PlayBounce();
+        }
+
+        Pillar::Scene* m_Scene = nullptr;
+        GameAudio* m_Audio = nullptr;
+        float* m_TimePtr = nullptr;
+        float m_LastPlayTime = -1.0f;
+    };
 
     // Z-layer constants for proper render ordering (lower = further back)
     namespace ZLayer
@@ -62,11 +142,15 @@ namespace BallGame {
             // Initialize audio
             m_Audio.Init();
 
+            // Ensure BallGame components participate in scene serialization
+            RegisterBallGameComponents();
+
             // Load textures (must exist in Sandbox/assets/textures)
             m_TextureGrass = Pillar::Texture2D::Create("textures/grass_tile.png");
             m_TextureWall = Pillar::Texture2D::Create("textures/wall.png");
             m_TextureGoal = Pillar::Texture2D::Create("textures/hole.png");
             m_TextureBall = Pillar::Texture2D::Create("textures/golf_ball.png");
+            m_TextureBooster = Pillar::Texture2D::Create("textures/booster.png");
             m_TextureIcons = Pillar::Texture2D::Create("textures/icons.png");
 
             // Log texture loading status
@@ -75,6 +159,7 @@ namespace BallGame {
             PIL_INFO("  Wall: {}", m_TextureWall ? "OK" : "FAILED");
             PIL_INFO("  Goal: {}", m_TextureGoal ? "OK" : "FAILED");
             PIL_INFO("  Ball: {}", m_TextureBall ? "OK" : "FAILED");
+            PIL_INFO("  Booster: {}", m_TextureBooster ? "OK" : "FAILED");
             PIL_INFO("  Icons: {}", m_TextureIcons ? "OK" : "FAILED");
 
             EnsureUIStyle();
@@ -83,8 +168,15 @@ namespace BallGame {
             m_Levels = TutorialLevels::GetAllLevels();
             m_BestShots.assign(m_Levels.size(), std::numeric_limits<int>::max());
 
-            // Initialize the first level
-            LoadLevel(0);
+            // Start at the main menu
+            m_GameState = GameState::MainMenu;
+            m_ShowMainMenu = true;
+
+            // Set camera to max zoom out for main menu
+            m_CameraController.SetZoomLevel(8.5f);
+
+            // Initialize menu particles for animated background
+            InitMenuParticles();
 
             PIL_INFO("Gravity Golf initialized with {} tutorial levels!", m_Levels.size());
         }
@@ -99,7 +191,16 @@ namespace BallGame {
         void OnUpdate(float dt) override
         {
             m_Time += dt;
+            m_MenuAnimTime += dt;
             m_Audio.EnsureMusicPlaying();
+
+            // Handle main menu state separately
+            if (m_GameState == GameState::MainMenu)
+            {
+                UpdateMenuParticles(dt);
+                RenderMenuBackground();
+                return;
+            }
 
             // Handle restart key
             if (Pillar::Input::IsKeyPressed(PIL_KEY_R))
@@ -138,12 +239,18 @@ namespace BallGame {
 
         void OnEvent(Pillar::Event& event) override
         {
-            m_CameraController.OnEvent(event);
+            // Don't process camera events in main menu
+            if (m_GameState != GameState::MainMenu)
+                m_CameraController.OnEvent(event);
 
             Pillar::EventDispatcher dispatcher(event);
             dispatcher.Dispatch<Pillar::MouseButtonPressedEvent>(
                 [this](Pillar::MouseButtonPressedEvent& e) -> bool {
                     return OnMouseButtonPressed(e);
+                });
+            dispatcher.Dispatch<Pillar::KeyPressedEvent>(
+                [this](Pillar::KeyPressedEvent& e) -> bool {
+                    return OnKeyPressed(e);
                 });
         }
 
@@ -153,6 +260,29 @@ namespace BallGame {
         }
 
     private:
+        // ============================================
+        // Key handling
+        // ============================================
+        bool OnKeyPressed(Pillar::KeyPressedEvent& e)
+        {
+            if (e.GetKeyCode() == PIL_KEY_ESCAPE)
+            {
+                // Close level select if open
+                if (m_ShowLevelSelect)
+                {
+                    m_ShowLevelSelect = false;
+                    return true;
+                }
+                // Return to main menu from game
+                if (m_GameState != GameState::MainMenu)
+                {
+                    ReturnToMainMenu();
+                    return true;
+                }
+            }
+            return false;
+        }
+
         // ============================================
         // Level Management
         // ============================================
@@ -165,6 +295,8 @@ namespace BallGame {
 
             m_CurrentLevelIndex = levelIndex;
             const LevelData& level = m_Levels[levelIndex];
+            const std::string scenePath = BuildLevelScenePath(level);      // relative to assets/
+            const std::filesystem::path fullScenePath = ResolveScenePath(scenePath);
 
             // Create scene
             m_Scene = std::make_unique<Pillar::Scene>();
@@ -177,13 +309,38 @@ namespace BallGame {
             m_PhysicsSyncSystem->OnAttach(m_Scene.get());
             m_Scene->SetPhysicsSystem(m_PhysicsSystem);
 
-            // Create game objects
-            CreateBall(level.BallStart);
-            CreateGoal(level.GoalPosition, level.Par);
-            CreateWalls(level.Walls);
-            CreateGravityWells(level.GravityWells);
-            CreateBoostPads(level.BoostPads);
-            CreateMovingPlatforms(level.MovingPlatforms);
+            // Replace default listener with game-specific one (wall hit sounds)
+            m_ContactListener = std::make_unique<BallContactListener>(m_Scene.get(), &m_Audio, &m_Time);
+            if (auto* world = m_PhysicsSystem->GetWorld())
+                world->SetContactListener(m_ContactListener.get());
+
+            bool loadedFromJson = false;
+            if (std::filesystem::exists(fullScenePath))
+            {
+                Pillar::SceneSerializer serializer(m_Scene.get());
+                loadedFromJson = serializer.Deserialize(scenePath);
+                if (!loadedFromJson)
+                    PIL_WARN("Failed to deserialize scene '{}', regenerating from procedural definition.", fullScenePath.string());
+            }
+
+            if (!loadedFromJson)
+            {
+                // Create game objects procedurally, then persist to JSON for next run
+                CreateBall(level.BallStart);
+                CreateGoal(level.GoalPosition, level.Par);
+                CreateWalls(level.Walls);
+                CreateGravityWells(level.GravityWells);
+                CreateBoostPads(level.BoostPads);
+                CreateMovingPlatforms(level.MovingPlatforms);
+
+                Pillar::SceneSerializer serializer(m_Scene.get());
+                if (serializer.Serialize(scenePath))
+                    PIL_INFO("Serialized level {} to '{}'.", level.LevelNumber, fullScenePath.string());
+                else
+                    PIL_WARN("Failed to serialize level {} to '{}'.", level.LevelNumber, fullScenePath.string());
+            }
+
+            RebindRuntimeEntities();
 
             // Reset state
             m_GameState = GameState::Aiming;
@@ -197,7 +354,7 @@ namespace BallGame {
             for (auto& pad : m_BoostPads)
                 pad.Entity.GetComponent<BoostPadComponent>().Cooldown = 0.0f;
 
-            PIL_INFO("Loaded level {}: {}", level.LevelNumber, level.Name);
+            PIL_INFO("Loaded level {} ({})", level.LevelNumber, loadedFromJson ? "deserialized" : "procedural + saved");
         }
 
         void CleanupLevel()
@@ -214,6 +371,7 @@ namespace BallGame {
                 delete m_PhysicsSyncSystem;
                 m_PhysicsSyncSystem = nullptr;
             }
+            m_ContactListener.reset();
             m_Scene.reset();
             m_BallEntity = {};
             m_GoalEntity = {};
@@ -257,6 +415,270 @@ namespace BallGame {
             }
 
             m_ShowLevelSelect = false;
+        }
+
+        std::string BuildLevelScenePath(const LevelData& level) const
+        {
+            std::string name = level.Name ? level.Name : "level";
+            std::string slug;
+            slug.reserve(name.size());
+            for (char c : name)
+            {
+                unsigned char uc = static_cast<unsigned char>(c);
+                if (std::isalnum(uc))
+                {
+                    slug.push_back(static_cast<char>(std::tolower(uc)));
+                }
+                else if (c == ' ' || c == '-' || c == '_')
+                {
+                    if (!slug.empty() && slug.back() != '_')
+                        slug.push_back('_');
+                }
+            }
+            if (slug.empty())
+                slug = "level";
+
+            std::ostringstream oss;
+            oss << std::setfill('0') << std::setw(2) << level.LevelNumber << "_" << slug << ".scene.json";
+
+            std::filesystem::path rel = std::filesystem::path("scenes") / "gravity_golf" / oss.str();
+            return rel.generic_string();
+        }
+
+        std::filesystem::path ResolveScenePath(const std::string& relativePath) const
+        {
+            std::filesystem::path path(relativePath);
+            if (path.is_absolute())
+                return path;
+
+            std::filesystem::path assetsDir = Pillar::AssetManager::GetAssetsDirectory();
+            if (assetsDir.empty())
+                return path;
+
+            return assetsDir / path;
+        }
+
+        void RebindRuntimeEntities()
+        {
+            m_BallEntity = {};
+            m_GoalEntity = {};
+            m_GravityWells.clear();
+            m_BoostPads.clear();
+            m_MovingPlatforms.clear();
+
+            if (!m_Scene)
+                return;
+
+            auto& registry = m_Scene->GetRegistry();
+            auto view = registry.view<Pillar::TagComponent>();
+            for (auto entityHandle : view)
+            {
+                Pillar::Entity e(entityHandle, m_Scene.get());
+                if (e.HasComponent<GolfBallComponent>())
+                    m_BallEntity = e;
+                if (e.HasComponent<GoalComponent>())
+                    m_GoalEntity = e;
+                if (e.HasComponent<GravityWellComponent>())
+                    m_GravityWells.push_back(e);
+                if (e.HasComponent<BoostPadComponent>())
+                    m_BoostPads.push_back({e});
+                if (e.HasComponent<MovingPlatformComponent>())
+                    m_MovingPlatforms.push_back({e});
+            }
+        }
+
+        void RegisterBallGameComponents()
+        {
+            using json = nlohmann::json;
+
+            auto& registry = Pillar::ComponentRegistry::Get();
+            registry.EnsureBuiltinsRegistered();
+
+            auto vec2ToJson = [](const glm::vec2& v) { return json::array({v.x, v.y}); };
+            auto vec4ToJson = [](const glm::vec4& v) { return json::array({v.x, v.y, v.z, v.w}); };
+            auto jsonToVec2 = [](const json& j) { return glm::vec2(j[0].get<float>(), j[1].get<float>()); };
+            auto jsonToVec4 = [](const json& j) { return glm::vec4(j[0].get<float>(), j[1].get<float>(), j[2].get<float>(), j[3].get<float>()); };
+
+            if (!registry.IsRegistered<GolfBallComponent>())
+            {
+                registry.Register<GolfBallComponent>(
+                    "golfBall",
+                    [vec2ToJson](Pillar::Entity e) -> json {
+                        if (!e.HasComponent<GolfBallComponent>()) return nullptr;
+                        auto& c = e.GetComponent<GolfBallComponent>();
+                        return json{
+                            {"shotCount", c.ShotCount},
+                            {"maxPower", c.MaxPower},
+                            {"minPower", c.MinPower},
+                            {"isMoving", c.IsMoving},
+                            {"inGoal", c.InGoal},
+                            {"lastShotPos", vec2ToJson(c.LastShotPosition)}
+                        };
+                    },
+                    [jsonToVec2](Pillar::Entity e, const json& j) {
+                        auto& c = e.HasComponent<GolfBallComponent>() ? e.GetComponent<GolfBallComponent>() : e.AddComponent<GolfBallComponent>();
+                        c.ShotCount = j.value("shotCount", 0);
+                        c.MaxPower = j.value("maxPower", 12.0f);
+                        c.MinPower = j.value("minPower", 2.0f);
+                        c.IsMoving = j.value("isMoving", false);
+                        c.InGoal = j.value("inGoal", false);
+                        if (j.contains("lastShotPos") && j["lastShotPos"].is_array())
+                            c.LastShotPosition = jsonToVec2(j["lastShotPos"]);
+                    },
+                    [](Pillar::Entity src, Pillar::Entity dst) {
+                        if (!src.HasComponent<GolfBallComponent>()) return;
+                        auto& s = src.GetComponent<GolfBallComponent>();
+                        auto& d = dst.AddComponent<GolfBallComponent>();
+                        d = s;
+                    });
+            }
+
+            if (!registry.IsRegistered<GoalComponent>())
+            {
+                registry.Register<GoalComponent>(
+                    "goal",
+                    [](Pillar::Entity e) -> json {
+                        if (!e.HasComponent<GoalComponent>()) return nullptr;
+                        auto& c = e.GetComponent<GoalComponent>();
+                        return json{
+                            {"captureRadius", c.CaptureRadius},
+                            {"captureSpeed", c.CaptureSpeed},
+                            {"par", c.ParScore},
+                            {"captured", c.Captured}
+                        };
+                    },
+                    [](Pillar::Entity e, const json& j) {
+                        auto& c = e.HasComponent<GoalComponent>() ? e.GetComponent<GoalComponent>() : e.AddComponent<GoalComponent>();
+                        c.CaptureRadius = j.value("captureRadius", 0.6f);
+                        c.CaptureSpeed = j.value("captureSpeed", 2.5f);
+                        c.ParScore = j.value("par", 3);
+                        c.Captured = j.value("captured", false);
+                    },
+                    [](Pillar::Entity src, Pillar::Entity dst) {
+                        if (!src.HasComponent<GoalComponent>()) return;
+                        auto& s = src.GetComponent<GoalComponent>();
+                        auto& d = dst.AddComponent<GoalComponent>();
+                        d = s;
+                    });
+            }
+
+            if (!registry.IsRegistered<WallComponent>())
+            {
+                registry.Register<WallComponent>(
+                    "wall",
+                    [vec4ToJson](Pillar::Entity e) -> json {
+                        if (!e.HasComponent<WallComponent>()) return nullptr;
+                        auto& c = e.GetComponent<WallComponent>();
+                        return json{
+                            {"visible", c.IsVisible},
+                            {"color", vec4ToJson(c.Color)}
+                        };
+                    },
+                    [jsonToVec4](Pillar::Entity e, const json& j) {
+                        auto& c = e.HasComponent<WallComponent>() ? e.GetComponent<WallComponent>() : e.AddComponent<WallComponent>();
+                        c.IsVisible = j.value("visible", true);
+                        if (j.contains("color") && j["color"].is_array())
+                            c.Color = jsonToVec4(j["color"]);
+                    },
+                    [](Pillar::Entity src, Pillar::Entity dst) {
+                        if (!src.HasComponent<WallComponent>()) return;
+                        auto& s = src.GetComponent<WallComponent>();
+                        auto& d = dst.AddComponent<WallComponent>();
+                        d = s;
+                    });
+            }
+
+            if (!registry.IsRegistered<GravityWellComponent>())
+            {
+                registry.Register<GravityWellComponent>(
+                    "gravityWell",
+                    [](Pillar::Entity e) -> json {
+                        if (!e.HasComponent<GravityWellComponent>()) return nullptr;
+                        auto& c = e.GetComponent<GravityWellComponent>();
+                        return json{{"radius", c.Radius}, {"strength", c.Strength}, {"repulsor", c.IsRepulsor}};
+                    },
+                    [](Pillar::Entity e, const json& j) {
+                        auto& c = e.HasComponent<GravityWellComponent>() ? e.GetComponent<GravityWellComponent>() : e.AddComponent<GravityWellComponent>();
+                        c.Radius = j.value("radius", 4.0f);
+                        c.Strength = j.value("strength", 22.0f);
+                        c.IsRepulsor = j.value("repulsor", false);
+                    },
+                    [](Pillar::Entity src, Pillar::Entity dst) {
+                        if (!src.HasComponent<GravityWellComponent>()) return;
+                        auto& s = src.GetComponent<GravityWellComponent>();
+                        auto& d = dst.AddComponent<GravityWellComponent>();
+                        d = s;
+                    });
+            }
+
+            if (!registry.IsRegistered<BoostPadComponent>())
+            {
+                registry.Register<BoostPadComponent>(
+                    "boostPad",
+                    [vec2ToJson](Pillar::Entity e) -> json {
+                        if (!e.HasComponent<BoostPadComponent>()) return nullptr;
+                        auto& c = e.GetComponent<BoostPadComponent>();
+                        return json{
+                            {"size", vec2ToJson(c.Size)},
+                            {"direction", vec2ToJson(c.Direction)},
+                            {"strength", c.Strength}
+                        };
+                    },
+                    [jsonToVec2](Pillar::Entity e, const json& j) {
+                        auto& c = e.HasComponent<BoostPadComponent>() ? e.GetComponent<BoostPadComponent>() : e.AddComponent<BoostPadComponent>();
+                        if (j.contains("size") && j["size"].is_array())
+                            c.Size = jsonToVec2(j["size"]);
+                        if (j.contains("direction") && j["direction"].is_array())
+                            c.Direction = jsonToVec2(j["direction"]);
+                        c.Strength = j.value("strength", 11.0f);
+                        c.Cooldown = 0.0f;
+                    },
+                    [](Pillar::Entity src, Pillar::Entity dst) {
+                        if (!src.HasComponent<BoostPadComponent>()) return;
+                        auto& s = src.GetComponent<BoostPadComponent>();
+                        auto& d = dst.AddComponent<BoostPadComponent>();
+                        d = s;
+                        d.Cooldown = 0.0f;
+                    });
+            }
+
+            if (!registry.IsRegistered<MovingPlatformComponent>())
+            {
+                registry.Register<MovingPlatformComponent>(
+                    "movingPlatform",
+                    [vec2ToJson](Pillar::Entity e) -> json {
+                        if (!e.HasComponent<MovingPlatformComponent>()) return nullptr;
+                        auto& c = e.GetComponent<MovingPlatformComponent>();
+                        return json{
+                            {"start", vec2ToJson(c.Start)},
+                            {"end", vec2ToJson(c.End)},
+                            {"halfExtents", vec2ToJson(c.HalfExtents)},
+                            {"speed", c.Speed},
+                            {"pauseTime", c.PauseTime}
+                        };
+                    },
+                    [jsonToVec2](Pillar::Entity e, const json& j) {
+                        auto& c = e.HasComponent<MovingPlatformComponent>() ? e.GetComponent<MovingPlatformComponent>() : e.AddComponent<MovingPlatformComponent>();
+                        if (j.contains("start") && j["start"].is_array())
+                            c.Start = jsonToVec2(j["start"]);
+                        if (j.contains("end") && j["end"].is_array())
+                            c.End = jsonToVec2(j["end"]);
+                        if (j.contains("halfExtents") && j["halfExtents"].is_array())
+                            c.HalfExtents = jsonToVec2(j["halfExtents"]);
+                        c.Speed = j.value("speed", 2.0f);
+                        c.PauseTime = j.value("pauseTime", 0.4f);
+                        c.PauseTimer = 0.0f;
+                        c.Forward = true;
+                    },
+                    [](Pillar::Entity src, Pillar::Entity dst) {
+                        if (!src.HasComponent<MovingPlatformComponent>()) return;
+                        auto& s = src.GetComponent<MovingPlatformComponent>();
+                        auto& d = dst.AddComponent<MovingPlatformComponent>();
+                        d = s;
+                        d.PauseTimer = 0.0f;
+                        d.Forward = true;
+                    });
+            }
         }
 
         // ============================================
@@ -487,7 +909,7 @@ namespace BallGame {
                 rb.Body->ApplyLinearImpulseToCenter(impulse, true);
 
                 pad.Cooldown = 0.4f;
-                m_Audio.PlayBounce();
+                m_Audio.PlayBoost();
             }
         }
 
@@ -640,6 +1062,10 @@ namespace BallGame {
             if (e.GetMouseButton() != PIL_MOUSE_BUTTON_LEFT)
                 return false;
 
+            // Ignore clicks in main menu (handled by ImGui)
+            if (m_GameState == GameState::MainMenu)
+                return false;
+
             // Handle level complete screen
             if (m_ShowLevelComplete && m_LevelCompleteTimer > 0.5f)
             {
@@ -729,6 +1155,13 @@ namespace BallGame {
         // ============================================
         void Render()
         {
+            // Disable depth for this 2D pass so alpha textures (boosters) don't occlude later draws
+            const GLboolean wasDepthEnabled = glIsEnabled(GL_DEPTH_TEST);
+            GLboolean wasDepthMask = GL_TRUE;
+            glGetBooleanv(GL_DEPTH_WRITEMASK, &wasDepthMask);
+            glDisable(GL_DEPTH_TEST);
+            glDepthMask(GL_FALSE);
+
             // Clear screen with a nice dark green (golf course feel)
             Pillar::Renderer::SetClearColor({0.05f, 0.12f, 0.08f, 1.0f});
             Pillar::Renderer::Clear();
@@ -753,40 +1186,67 @@ namespace BallGame {
             }
 
             Pillar::Renderer2DBackend::EndScene();
+
+            // Restore depth state
+            glDepthMask(wasDepthMask);
+            if (wasDepthEnabled)
+                glEnable(GL_DEPTH_TEST);
+            else
+                glDisable(GL_DEPTH_TEST);
         }
 
         void DrawBackground()
         {
-            // Cover a generous area around the level; tile UVs based on world size
+            // Cover a generous area around the level with a built-in checker tint (no extra texture).
             const float width = 40.0f;
             const float height = 24.0f;
             const glm::vec3 pos = {0.0f, 0.0f, ZLayer::Background};
-            const glm::vec2 size = {width, height};
 
-            // Tiling factors (assuming 1 unit per tile visually)
-            const glm::vec2 uvMax = {width * 0.5f, height * 0.5f};
+            const float tileSize = 2.0f; // matches current UV scale (uvMax = size * 0.5)
+            const float startX = -width * 0.5f;
+            const float startY = -height * 0.5f;
+            const float uvTile = tileSize * 0.5f; // keeps existing texel density
 
             if (m_TextureGrass)
             {
-                Pillar::Renderer2DBackend::DrawQuad(
-                    pos,
-                    size,
-                    glm::vec4(1.0f),
-                    m_TextureGrass,
-                    {0.0f, 0.0f},
-                    uvMax,
-                    false,
-                    false
-                );
+                for (float y = startY, j = 0.0f; y < startY + height; y += tileSize, j += 1.0f)
+                {
+                    for (float x = startX, i = 0.0f; x < startX + width; x += tileSize, i += 1.0f)
+                    {
+                        const bool dark = (static_cast<int>(i) + static_cast<int>(j)) % 2 != 0;
+                        const float tint = dark ? 0.9f : 1.0f;
+
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            glm::vec3{x + tileSize * 0.5f, y + tileSize * 0.5f, pos.z},
+                            glm::vec2{tileSize, tileSize},
+                            glm::vec4(tint, tint, tint, 1.0f),
+                            m_TextureGrass,
+                            glm::vec2{0.0f, 0.0f},
+                            glm::vec2{uvTile, uvTile},
+                            false,
+                            false
+                        );
+                    }
+                }
             }
             else
             {
-                // Fallback: solid green color
-                Pillar::Renderer2DBackend::DrawQuad(
-                    {pos.x, pos.y},
-                    size,
-                    {0.2f, 0.5f, 0.2f, 1.0f}
-                );
+                for (float y = startY, j = 0.0f; y < startY + height; y += tileSize, j += 1.0f)
+                {
+                    for (float x = startX, i = 0.0f; x < startX + width; x += tileSize, i += 1.0f)
+                    {
+                        const bool dark = (static_cast<int>(i) + static_cast<int>(j)) % 2 != 0;
+                        const glm::vec4 color = dark
+                            ? glm::vec4(0.16f, 0.40f, 0.18f, 1.0f)
+                            : glm::vec4(0.20f, 0.50f, 0.22f, 1.0f);
+
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            glm::vec3{x + tileSize * 0.5f, y + tileSize * 0.5f, pos.z},
+                            glm::vec2{tileSize, tileSize},
+                            color
+                        );
+                    }
+                }
             }
         }
 
@@ -817,20 +1277,6 @@ namespace BallGame {
 
                 glm::vec2 outerSize = {radius * 2.0f, radius * 2.0f};
                 glm::vec2 innerSize = outerSize * 0.6f;
-
-                // // Outer glow
-                // Pillar::Renderer2DBackend::DrawQuad(
-                //     {pos.x, pos.y},
-                //     outerSize,
-                //     ringColor
-                // );
-
-                // // Inner core
-                // Pillar::Renderer2DBackend::DrawQuad(
-                //     {pos.x, pos.y},
-                //     innerSize,
-                //     coreColor
-                // );
             }
         }
 
@@ -848,22 +1294,47 @@ namespace BallGame {
                 glm::vec2 size = pad.Size;
                 float rotation = std::atan2(pad.Direction.y, pad.Direction.x);
 
-                glm::vec4 baseColor(0.22f, 0.82f, 0.95f, 0.7f);
-                glm::vec4 arrowColor(0.95f, 0.95f, 0.35f, 0.9f);
+                // Preserve the new texture's 16:9 aspect while fitting the intended pad footprint
+                const float targetAspect = 16.0f / 9.0f;
+                const float currentAspect = size.x / glm::max(size.y, 0.001f);
+                if (currentAspect > targetAspect)
+                    size.y = size.x / targetAspect;
+                else
+                    size.x = size.y * targetAspect;
 
-                Pillar::Renderer2DBackend::DrawRotatedQuad(
-                    {pos.x, pos.y},
-                    size,
-                    rotation,
-                    baseColor
-                );
+                const glm::vec4 baseTint(1.0f, 1.0f, 1.0f, 0.95f);
+                const glm::vec4 arrowTint(0.95f, 0.95f, 0.35f, 0.7f);
 
-                Pillar::Renderer2DBackend::DrawRotatedQuad(
-                    {pos.x + pad.Direction.x * 0.1f, pos.y + pad.Direction.y * 0.1f},
-                    size * 0.5f,
-                    rotation,
-                    arrowColor
-                );
+                if (m_TextureBooster)
+                {
+                    Pillar::Renderer2DBackend::DrawRotatedQuad(
+                        {pos.x, pos.y},
+                        size,
+                        rotation,
+                        baseTint,
+                        m_TextureBooster
+                    );
+
+                }
+                else
+                {
+                    glm::vec4 baseColor(0.22f, 0.82f, 0.95f, 0.7f);
+                    glm::vec4 arrowColor(0.95f, 0.95f, 0.35f, 0.9f);
+
+                    Pillar::Renderer2DBackend::DrawRotatedQuad(
+                        {pos.x, pos.y},
+                        size,
+                        rotation,
+                        baseColor
+                    );
+
+                    Pillar::Renderer2DBackend::DrawRotatedQuad(
+                        {pos.x + pad.Direction.x * 0.1f, pos.y + pad.Direction.y * 0.1f},
+                        size * 0.5f,
+                        rotation,
+                        arrowColor
+                    );
+                }
             }
         }
 
@@ -1250,6 +1721,13 @@ namespace BallGame {
         // ============================================
         void RenderUI()
         {
+            // Render main menu if in that state
+            if (m_GameState == GameState::MainMenu)
+            {
+                RenderMainMenu();
+                return;
+            }
+
             EnsureUIStyle();
 
             const LevelData& level = m_Levels[m_CurrentLevelIndex];
@@ -1330,8 +1808,15 @@ namespace BallGame {
                 ImGui::PushStyleColor(ImGuiCol_Button, accentSoft);
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(accent.x, accent.y, accent.z, 0.35f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(accent.x, accent.y, accent.z, 0.50f));
-                if (ImGui::Button("Levels", ImVec2(90.0f, 0.0f)))
+                if (ImGui::Button("Levels", ImVec2(70.0f, 0.0f)))
                     m_ShowLevelSelect = true;
+                ImGui::SameLine();
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.15f, 0.15f, 0.8f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.20f, 0.20f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.45f, 0.25f, 0.25f, 1.0f));
+                if (ImGui::Button("Menu", ImVec2(60.0f, 0.0f)))
+                    ReturnToMainMenu();
+                ImGui::PopStyleColor(3);
                 ImGui::PopStyleColor(3);
 
                 ImGui::Spacing();
@@ -1700,6 +2185,485 @@ namespace BallGame {
             return 0;                          // Way over
         }
 
+        // ============================================
+        // Main Menu Helpers
+        // ============================================
+        void InitMenuParticles()
+        {
+            m_MenuParticles.clear();
+            for (size_t i = 0; i < m_MaxMenuParticles; ++i)
+            {
+                MenuParticle p;
+                p.Position = {RandomRange(-12.0f, 12.0f), RandomRange(-8.0f, 8.0f)};
+                p.Velocity = {RandomRange(-0.3f, 0.3f), RandomRange(-0.3f, 0.3f)};
+                p.Size = RandomRange(0.1f, 0.4f);
+                p.Alpha = RandomRange(0.1f, 0.35f);
+                p.Rotation = RandomRange(0.0f, glm::two_pi<float>());
+                p.RotationSpeed = RandomRange(-0.5f, 0.5f);
+                
+                // Some particles are gravity wells, some are balls
+                p.IsGravityWell = (i % 5 == 0);
+                if (p.IsGravityWell)
+                {
+                    p.Size = RandomRange(0.6f, 1.2f);
+                    p.Alpha = RandomRange(0.15f, 0.25f);
+                    // Cyan or magenta tint for wells
+                    if (i % 2 == 0)
+                        p.Color = {0.3f, 0.8f, 1.0f, 1.0f};
+                    else
+                        p.Color = {1.0f, 0.4f, 0.8f, 1.0f};
+                }
+                else
+                {
+                    p.Color = {1.0f, 1.0f, 1.0f, 1.0f};
+                }
+                
+                m_MenuParticles.push_back(p);
+            }
+        }
+
+        void UpdateMenuParticles(float dt)
+        {
+            for (auto& p : m_MenuParticles)
+            {
+                p.Position += p.Velocity * dt;
+                p.Rotation += p.RotationSpeed * dt;
+                
+                // Wrap around screen bounds
+                if (p.Position.x < -14.0f) p.Position.x = 14.0f;
+                if (p.Position.x > 14.0f) p.Position.x = -14.0f;
+                if (p.Position.y < -10.0f) p.Position.y = 10.0f;
+                if (p.Position.y > 10.0f) p.Position.y = -10.0f;
+                
+                // Gentle pulsing alpha
+                float pulse = 0.5f + 0.5f * std::sin(m_MenuAnimTime * 2.0f + p.Rotation);
+                p.Alpha = glm::mix(0.1f, 0.35f, pulse);
+            }
+        }
+
+        void RenderMenuBackground()
+        {
+            // Clear with dark background
+            Pillar::Renderer::SetClearColor({0.02f, 0.04f, 0.06f, 1.0f});
+            Pillar::Renderer::Clear();
+
+            Pillar::Renderer2DBackend::ResetStats();
+            Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+
+            // Draw gradient background using quads
+            const float bgWidth = 30.0f;
+            const float bgHeight = 20.0f;
+            
+            // Dark gradient from top to bottom
+            Pillar::Renderer2DBackend::DrawQuad(
+                {0.0f, 0.0f, -0.9f},
+                {bgWidth, bgHeight},
+                {0.03f, 0.06f, 0.10f, 1.0f},
+                nullptr
+            );
+
+            // Draw floating particles
+            for (const auto& p : m_MenuParticles)
+            {
+                if (p.IsGravityWell)
+                {
+                    // Draw pulsing gravity well rings
+                    float pulse = 0.5f + 0.5f * std::sin(m_MenuAnimTime * 3.0f + p.Rotation);
+                    float outerSize = p.Size * (1.0f + pulse * 0.3f);
+                    
+                    // Outer glow
+                    glm::vec4 glowColor = p.Color;
+                    glowColor.a = p.Alpha * 0.3f;
+                    Pillar::Renderer2DBackend::DrawQuad(
+                        {p.Position.x, p.Position.y, -0.8f},
+                        {outerSize * 2.0f, outerSize * 2.0f},
+                        glowColor,
+                        nullptr
+                    );
+                    
+                    // Core
+                    glm::vec4 coreColor = p.Color;
+                    coreColor.a = p.Alpha * 0.6f;
+                    Pillar::Renderer2DBackend::DrawQuad(
+                        {p.Position.x, p.Position.y, -0.7f},
+                        {outerSize, outerSize},
+                        coreColor,
+                        nullptr
+                    );
+                }
+                else
+                {
+                    // Draw small floating golf balls/dots
+                    glm::vec4 ballColor = {0.9f, 0.95f, 1.0f, p.Alpha};
+                    if (m_TextureBall)
+                    {
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            {p.Position.x, p.Position.y, -0.6f},
+                            {p.Size, p.Size},
+                            ballColor,
+                            m_TextureBall
+                        );
+                    }
+                    else
+                    {
+                        Pillar::Renderer2DBackend::DrawQuad(
+                            {p.Position.x, p.Position.y, -0.6f},
+                            {p.Size, p.Size},
+                            ballColor,
+                            nullptr
+                        );
+                    }
+                }
+            }
+
+            // Draw decorative lines/grid
+            const float gridAlpha = 0.04f + 0.02f * std::sin(m_MenuAnimTime * 0.5f);
+            for (float x = -15.0f; x <= 15.0f; x += 2.0f)
+            {
+                Pillar::Renderer2DBackend::DrawQuad(
+                    {x, 0.0f, -0.85f},
+                    {0.02f, 20.0f},
+                    {0.3f, 0.6f, 0.9f, gridAlpha},
+                    nullptr
+                );
+            }
+            for (float y = -10.0f; y <= 10.0f; y += 2.0f)
+            {
+                Pillar::Renderer2DBackend::DrawQuad(
+                    {0.0f, y, -0.85f},
+                    {30.0f, 0.02f},
+                    {0.3f, 0.6f, 0.9f, gridAlpha},
+                    nullptr
+                );
+            }
+
+            Pillar::Renderer2DBackend::EndScene();
+        }
+
+        void StartGame(int levelIndex = 0)
+        {
+            m_ShowMainMenu = false;
+            m_GameState = GameState::Aiming;
+            // Set camera to half zoom for gameplay
+            m_CameraController.SetZoomLevel(5.0f);
+            LoadLevel(levelIndex);
+        }
+
+        void ReturnToMainMenu()
+        {
+            CleanupLevel();
+            m_ShowMainMenu = true;
+            m_GameState = GameState::MainMenu;
+            m_MenuAnimTime = 0.0f;
+            // Set camera back to max zoom out for main menu
+            m_CameraController.SetZoomLevel(8.5f);
+            InitMenuParticles();
+        }
+
+        void RenderMainMenu()
+        {
+            EnsureUIStyle();
+
+            ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImVec2 origin = viewport->WorkPos;
+            ImVec2 area = viewport->WorkSize;
+            ImVec2 center(origin.x + area.x * 0.5f, origin.y + area.y * 0.5f);
+
+            // Color palette
+            const ImVec4 accentCyan(0.30f, 0.75f, 1.0f, 1.0f);
+            const ImVec4 accentMagenta(0.95f, 0.45f, 0.75f, 1.0f);
+            const ImVec4 textWhite(0.95f, 0.97f, 1.0f, 1.0f);
+            const ImVec4 textMuted(0.55f, 0.62f, 0.72f, 1.0f);
+            const ImVec4 panelBg(0.06f, 0.08f, 0.12f, 0.95f);
+            const ImVec4 buttonBg(0.12f, 0.15f, 0.22f, 1.0f);
+            const ImVec4 buttonHover(0.18f, 0.25f, 0.38f, 1.0f);
+            const ImVec4 buttonActive(0.25f, 0.35f, 0.50f, 1.0f);
+
+            // Load title font if needed (larger size)
+            if (!m_TitleFont)
+            {
+                ImGuiIO& io = ImGui::GetIO();
+                ImFontConfig cfg;
+                cfg.OversampleH = 2;
+                cfg.OversampleV = 2;
+                
+                const std::vector<std::string> fontCandidates = {
+                    Pillar::AssetManager::GetAssetPath("fonts/Inter-Bold.ttf"),
+                    Pillar::AssetManager::GetAssetPath("fonts/Inter-SemiBold.ttf"),
+                    Pillar::AssetManager::GetAssetPath("fonts/Manrope-Bold.ttf"),
+                    "C:/Windows/Fonts/segoeuib.ttf",
+                    "C:/Windows/Fonts/verdanab.ttf"
+                };
+                
+                for (const auto& path : fontCandidates)
+                {
+                    if (!path.empty())
+                    {
+                        m_TitleFont = io.Fonts->AddFontFromFileTTF(path.c_str(), 48.0f, &cfg);
+                        if (m_TitleFont)
+                            break;
+                    }
+                }
+                if (!m_TitleFont)
+                    m_TitleFont = io.Fonts->AddFontDefault();
+            }
+
+            // Main menu window - centered
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowBgAlpha(0.0f);
+
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0, 0, 0, 0));
+
+            if (ImGui::Begin("##MainMenu", nullptr,
+                ImGuiWindowFlags_NoTitleBar |
+                ImGuiWindowFlags_NoResize |
+                ImGuiWindowFlags_AlwaysAutoResize |
+                ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoSavedSettings |
+                ImGuiWindowFlags_NoBackground))
+            {
+                // Title with glow effect
+                ImGui::PushFont(m_TitleFont ? m_TitleFont : ImGui::GetFont());
+                
+                // Animated title color
+                float hue = std::fmod(m_MenuAnimTime * 0.1f, 1.0f);
+                float pulse = 0.5f + 0.5f * std::sin(m_MenuAnimTime * 2.0f);
+                ImVec4 titleColor = ImVec4(
+                    glm::mix(0.30f, 0.40f, pulse),
+                    glm::mix(0.75f, 0.90f, pulse),
+                    1.0f,
+                    1.0f
+                );
+
+                // Center the title
+                const char* title = "GRAVITY GOLF";
+                ImVec2 titleSize = ImGui::CalcTextSize(title);
+                float windowWidth = 400.0f;
+                ImGui::SetCursorPosX((windowWidth - titleSize.x) * 0.5f);
+                
+                ImGui::TextColored(titleColor, "%s", title);
+                ImGui::PopFont();
+
+                // Subtitle
+                ImGui::PushFont(m_UiFont ? m_UiFont : ImGui::GetFont());
+                const char* subtitle = "A physics puzzle game";
+                ImVec2 subtitleSize = ImGui::CalcTextSize(subtitle);
+                ImGui::SetCursorPosX((windowWidth - subtitleSize.x) * 0.5f);
+                ImGui::TextColored(textMuted, "%s", subtitle);
+                
+                ImGui::Spacing();
+                ImGui::Spacing();
+                ImGui::Spacing();
+
+                // Menu panel
+                ImGui::PushStyleColor(ImGuiCol_ChildBg, panelBg);
+                ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 16.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(40.0f, 30.0f));
+                
+                if (ImGui::BeginChild("##MenuPanel", ImVec2(windowWidth, 350.0f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+                {
+                    // Button styling
+                    ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 12.0f);
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(20.0f, 16.0f));
+                    ImGui::PushStyleColor(ImGuiCol_Button, buttonBg);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, buttonHover);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, buttonActive);
+
+                    float buttonWidth = windowWidth - 80.0f;
+                    float buttonHeight = 50.0f;
+
+                    // Play button
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.45f, 0.35f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.55f, 0.42f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.25f, 0.65f, 0.50f, 1.0f));
+                    if (ImGui::Button("PLAY", ImVec2(buttonWidth, buttonHeight)))
+                    {
+                        StartGame(0);
+                    }
+                    ImGui::PopStyleColor(3);
+
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+
+                    // Level Select button
+                    if (ImGui::Button("SELECT LEVEL", ImVec2(buttonWidth, buttonHeight)))
+                    {
+                        m_ShowLevelSelect = true;
+                    }
+
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+
+                    // Settings / Sound toggle
+                    const bool isMuted = m_IsMuted || m_Audio.GetMasterVolume() <= 0.001f;
+                    const char* soundLabel = isMuted ? "SOUND: OFF" : "SOUND: ON";
+                    
+                    ImVec4 soundBtnColor = isMuted 
+                        ? ImVec4(0.35f, 0.18f, 0.18f, 1.0f)
+                        : ImVec4(0.12f, 0.15f, 0.22f, 1.0f);
+                    ImVec4 soundBtnHover = isMuted
+                        ? ImVec4(0.45f, 0.22f, 0.22f, 1.0f)
+                        : ImVec4(0.18f, 0.25f, 0.38f, 1.0f);
+                    
+                    ImGui::PushStyleColor(ImGuiCol_Button, soundBtnColor);
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, soundBtnHover);
+                    if (ImGui::Button(soundLabel, ImVec2(buttonWidth, buttonHeight)))
+                    {
+                        ToggleMute();
+                    }
+                    ImGui::PopStyleColor(2);
+
+                    ImGui::Spacing();
+                    ImGui::Spacing();
+
+                    // Quit button
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.30f, 0.12f, 0.12f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.45f, 0.18f, 0.18f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.55f, 0.22f, 0.22f, 1.0f));
+                    if (ImGui::Button("QUIT", ImVec2(buttonWidth, buttonHeight)))
+                    {
+                        auto* window = static_cast<GLFWwindow*>(Pillar::Application::Get().GetWindow().GetNativeWindow());
+                        glfwSetWindowShouldClose(window, GLFW_TRUE);
+                    }
+                    ImGui::PopStyleColor(3);
+
+                    ImGui::PopStyleColor(3); // Button colors
+                    ImGui::PopStyleVar(2);   // Frame rounding/padding
+                }
+                ImGui::EndChild();
+                ImGui::PopStyleVar(2);   // Child rounding/padding
+                ImGui::PopStyleColor();  // ChildBg
+
+                // Version/credits at bottom
+                ImGui::Spacing();
+                const char* version = "v1.0 - Made with Pillar Engine";
+                ImVec2 versionSize = ImGui::CalcTextSize(version);
+                ImGui::SetCursorPosX((windowWidth - versionSize.x) * 0.5f);
+                ImGui::TextColored(ImVec4(0.4f, 0.45f, 0.5f, 0.7f), "%s", version);
+
+                ImGui::PopFont();
+            }
+            ImGui::End();
+
+            ImGui::PopStyleColor();
+            ImGui::PopStyleVar(2);
+
+            // Render level select popup if open (reuse existing function but handle menu context)
+            if (m_ShowLevelSelect)
+            {
+                RenderMenuLevelSelect();
+            }
+        }
+
+        void RenderMenuLevelSelect()
+        {
+            ImGuiViewport* viewport = ImGui::GetMainViewport();
+            ImVec2 origin = viewport->WorkPos;
+            ImVec2 area = viewport->WorkSize;
+            ImVec2 center(origin.x + area.x * 0.5f, origin.y + area.y * 0.5f);
+
+            const ImVec4 panelBg(0.06f, 0.08f, 0.12f, 0.98f);
+            const ImVec4 accentCyan(0.30f, 0.75f, 1.0f, 1.0f);
+            const ImVec4 textMuted(0.55f, 0.62f, 0.72f, 1.0f);
+
+            ImGui::SetNextWindowViewport(viewport->ID);
+            ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+            ImGui::SetNextWindowBgAlpha(0.98f);
+
+            ImGui::PushFont(m_UiFont ? m_UiFont : ImGui::GetFont());
+            ImGui::PushStyleColor(ImGuiCol_WindowBg, panelBg);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 16.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(30.0f, 25.0f));
+
+            if (ImGui::Begin("##MenuLevelSelect", &m_ShowLevelSelect,
+                ImGuiWindowFlags_AlwaysAutoResize |
+                ImGuiWindowFlags_NoCollapse |
+                ImGuiWindowFlags_NoTitleBar |
+                ImGuiWindowFlags_NoSavedSettings))
+            {
+                ImGui::TextColored(accentCyan, "SELECT LEVEL");
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 8.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(15.0f, 10.0f));
+
+                for (size_t i = 0; i < m_Levels.size(); ++i)
+                {
+                    const auto& level = m_Levels[i];
+                    int best = (i < m_BestShots.size()) ? m_BestShots[i] : std::numeric_limits<int>::max();
+                    int stars = best == std::numeric_limits<int>::max() ? 0 : CalculateStars(best, level.Par);
+
+                    ImGui::PushID(static_cast<int>(i));
+
+                    // Level card
+                    ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.10f, 0.12f, 0.18f, 1.0f));
+                    ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 10.0f);
+                    
+                    if (ImGui::BeginChild("##LevelCard", ImVec2(350.0f, 70.0f), true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+                    {
+                        ImGui::BeginGroup();
+                        
+                        const char* levelName = level.Name ? level.Name : "Level";
+                        ImGui::TextColored(ImVec4(0.95f, 0.97f, 1.0f, 1.0f), "%d. %s", level.LevelNumber, levelName);
+                        
+                        // Stars display
+                        ImVec4 starColor(0.95f, 0.85f, 0.30f, 1.0f);
+                        ImVec4 emptyStarColor(0.30f, 0.32f, 0.38f, 1.0f);
+                        ImGui::Text("Par %d  ", level.Par);
+                        ImGui::SameLine();
+                        for (int s = 0; s < 3; ++s)
+                        {
+                            ImGui::TextColored(s < stars ? starColor : emptyStarColor, "*");
+                            if (s < 2) ImGui::SameLine(0.0f, 2.0f);
+                        }
+                        
+                        ImGui::EndGroup();
+                        ImGui::SameLine(260.0f);
+
+                        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.40f, 0.32f, 1.0f));
+                        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.20f, 0.50f, 0.40f, 1.0f));
+                        if (ImGui::Button("Play", ImVec2(70.0f, 40.0f)))
+                        {
+                            StartGame(static_cast<int>(i));
+                            m_ShowLevelSelect = false;
+                        }
+                        ImGui::PopStyleColor(2);
+                    }
+                    ImGui::EndChild();
+                    
+                    ImGui::PopStyleVar();
+                    ImGui::PopStyleColor();
+                    ImGui::PopID();
+                    
+                    ImGui::Spacing();
+                }
+
+                ImGui::PopStyleVar(2);
+
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Spacing();
+
+                // Back button
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.15f, 0.15f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.35f, 0.20f, 0.20f, 1.0f));
+                if (ImGui::Button("BACK", ImVec2(120.0f, 40.0f)))
+                {
+                    m_ShowLevelSelect = false;
+                }
+                ImGui::PopStyleColor(2);
+            }
+            ImGui::End();
+
+            ImGui::PopStyleVar(2);
+            ImGui::PopStyleColor();
+            ImGui::PopFont();
+        }
+
     private:
         enum class IconSlot
         {
@@ -1826,19 +2790,42 @@ namespace BallGame {
 
         // Audio
         GameAudio m_Audio;
+        std::unique_ptr<b2ContactListener> m_ContactListener;
 
         // UI
         ImFont* m_UiFont = nullptr;
+        ImFont* m_TitleFont = nullptr;
         bool m_StyleInitialized = false;
 
         // UI textures
         std::shared_ptr<Pillar::Texture2D> m_TextureIcons;
+        std::shared_ptr<Pillar::Texture2D> m_TextureBooster;
 
         // Textures
         std::shared_ptr<Pillar::Texture2D> m_TextureGrass;
         std::shared_ptr<Pillar::Texture2D> m_TextureWall;
         std::shared_ptr<Pillar::Texture2D> m_TextureGoal;
         std::shared_ptr<Pillar::Texture2D> m_TextureBall;
+
+        // Main Menu state
+        bool m_ShowMainMenu = true;
+        float m_MenuAnimTime = 0.0f;
+        int m_HoveredButton = -1;
+        
+        // Menu particles for animated background
+        struct MenuParticle
+        {
+            glm::vec2 Position{0.0f};
+            glm::vec2 Velocity{0.0f};
+            float Size = 0.3f;
+            float Alpha = 0.5f;
+            float RotationSpeed = 0.0f;
+            float Rotation = 0.0f;
+            glm::vec4 Color{1.0f};
+            bool IsGravityWell = false;
+        };
+        std::vector<MenuParticle> m_MenuParticles;
+        static constexpr size_t m_MaxMenuParticles = 50;
     };
 
 } // namespace BallGame

@@ -1,0 +1,457 @@
+{
+  "entities": [
+    {
+      "gravityWell": {
+        "radius": 3.0,
+        "repulsor": true,
+        "strength": 26.0
+      },
+      "tag": "GravityWell",
+      "transform": {
+        "position": [
+          0.5,
+          -1.7999999523162842
+        ],
+        "rotation": 0.0,
+        "scale": [
+          6.0,
+          6.0
+        ]
+      },
+      "uuid": 17912122160676187688
+    },
+    {
+      "gravityWell": {
+        "radius": 3.4000000953674316,
+        "repulsor": false,
+        "strength": 28.0
+      },
+      "tag": "GravityWell",
+      "transform": {
+        "position": [
+          2.5,
+          1.5
+        ],
+        "rotation": 0.0,
+        "scale": [
+          6.800000190734863,
+          6.800000190734863
+        ]
+      },
+      "uuid": 13644927873621048522
+    },
+    {
+      "gravityWell": {
+        "radius": 3.799999952316284,
+        "repulsor": false,
+        "strength": 32.0
+      },
+      "tag": "GravityWell",
+      "transform": {
+        "position": [
+          -2.0,
+          0.5
+        ],
+        "rotation": 0.0,
+        "scale": [
+          7.599999904632568,
+          7.599999904632568
+        ]
+      },
+      "uuid": 8458440230763973732
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.30000001192092896,
+        "halfExtents": [
+          1.5199999809265137,
+          0.25
+        ],
+        "isSensor": false,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.800000011920929,
+        "type": "box"
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "Wall",
+      "transform": {
+        "position": [
+          2.5,
+          -2.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          3.0399999618530273,
+          0.5
+        ]
+      },
+      "uuid": 16261391248393515650,
+      "wall": {
+        "color": [
+          0.30000001192092896,
+          0.30000001192092896,
+          0.3499999940395355,
+          1.0
+        ],
+        "visible": true
+      }
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.30000001192092896,
+        "halfExtents": [
+          1.5199999809265137,
+          0.25
+        ],
+        "isSensor": false,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.800000011920929,
+        "type": "box"
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "Wall",
+      "transform": {
+        "position": [
+          -2.5,
+          2.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          3.0399999618530273,
+          0.5
+        ]
+      },
+      "uuid": 6988979308715597839,
+      "wall": {
+        "color": [
+          0.30000001192092896,
+          0.30000001192092896,
+          0.3499999940395355,
+          1.0
+        ],
+        "visible": true
+      }
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.30000001192092896,
+        "halfExtents": [
+          1.3199999332427979,
+          0.25
+        ],
+        "isSensor": false,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.800000011920929,
+        "type": "box"
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "Wall",
+      "transform": {
+        "position": [
+          0.0,
+          0.0
+        ],
+        "rotation": 1.5707963705062866,
+        "scale": [
+          2.6399998664855957,
+          0.5
+        ]
+      },
+      "uuid": 11070317544589900478,
+      "wall": {
+        "color": [
+          0.30000001192092896,
+          0.30000001192092896,
+          0.3499999940395355,
+          1.0
+        ],
+        "visible": true
+      }
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.30000001192092896,
+        "halfExtents": [
+          4.420000076293945,
+          0.30000001192092896
+        ],
+        "isSensor": false,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.800000011920929,
+        "type": "box"
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "Wall",
+      "transform": {
+        "position": [
+          8.5,
+          0.0
+        ],
+        "rotation": 1.5707963705062866,
+        "scale": [
+          8.84000015258789,
+          0.6000000238418579
+        ]
+      },
+      "uuid": 3361014939706503544,
+      "wall": {
+        "color": [
+          0.30000001192092896,
+          0.30000001192092896,
+          0.3499999940395355,
+          1.0
+        ],
+        "visible": true
+      }
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.30000001192092896,
+        "halfExtents": [
+          4.420000076293945,
+          0.30000001192092896
+        ],
+        "isSensor": false,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.800000011920929,
+        "type": "box"
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "Wall",
+      "transform": {
+        "position": [
+          -8.5,
+          0.0
+        ],
+        "rotation": 1.5707963705062866,
+        "scale": [
+          8.84000015258789,
+          0.6000000238418579
+        ]
+      },
+      "uuid": 17248876476686078632,
+      "wall": {
+        "color": [
+          0.30000001192092896,
+          0.30000001192092896,
+          0.3499999940395355,
+          1.0
+        ],
+        "visible": true
+      }
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.30000001192092896,
+        "halfExtents": [
+          8.420000076293945,
+          0.30000001192092896
+        ],
+        "isSensor": false,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.800000011920929,
+        "type": "box"
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "Wall",
+      "transform": {
+        "position": [
+          0.0,
+          -4.5
+        ],
+        "rotation": 0.0,
+        "scale": [
+          16.84000015258789,
+          0.6000000238418579
+        ]
+      },
+      "uuid": 17296330600216686360,
+      "wall": {
+        "color": [
+          0.30000001192092896,
+          0.30000001192092896,
+          0.3499999940395355,
+          1.0
+        ],
+        "visible": true
+      }
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.30000001192092896,
+        "halfExtents": [
+          8.420000076293945,
+          0.30000001192092896
+        ],
+        "isSensor": false,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "restitution": 0.800000011920929,
+        "type": "box"
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "Wall",
+      "transform": {
+        "position": [
+          0.0,
+          4.5
+        ],
+        "rotation": 0.0,
+        "scale": [
+          16.84000015258789,
+          0.6000000238418579
+        ]
+      },
+      "uuid": 6266094242088023624,
+      "wall": {
+        "color": [
+          0.30000001192092896,
+          0.30000001192092896,
+          0.3499999940395355,
+          1.0
+        ],
+        "visible": true
+      }
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.30000001192092896,
+        "isSensor": true,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "radius": 0.5,
+        "restitution": 0.0,
+        "type": "circle"
+      },
+      "goal": {
+        "captureRadius": 0.6000000238418579,
+        "captureSpeed": 2.5,
+        "captured": false,
+        "par": 4
+      },
+      "rigidbody": {
+        "bodyType": "static",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "Goal",
+      "transform": {
+        "position": [
+          7.0,
+          1.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          1.0,
+          1.0
+        ]
+      },
+      "uuid": 10369262127968893239
+    },
+    {
+      "collider": {
+        "density": 1.0,
+        "friction": 0.10000000149011612,
+        "isSensor": false,
+        "offset": [
+          0.0,
+          0.0
+        ],
+        "radius": 0.30000001192092896,
+        "restitution": 0.699999988079071,
+        "type": "circle"
+      },
+      "golfBall": {
+        "inGoal": false,
+        "isMoving": false,
+        "lastShotPos": [
+          -7.0,
+          -1.0
+        ],
+        "maxPower": 12.0,
+        "minPower": 2.0,
+        "shotCount": 0
+      },
+      "rigidbody": {
+        "bodyType": "dynamic",
+        "fixedRotation": false,
+        "gravityScale": 1.0
+      },
+      "tag": "GolfBall",
+      "transform": {
+        "position": [
+          -7.0,
+          -1.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          0.6000000238418579,
+          0.6000000238418579
+        ]
+      },
+      "uuid": 2733151476499085924
+    }
+  ],
+  "scene": {
+    "name": "Untitled",
+    "version": "1.0"
+  }
+}

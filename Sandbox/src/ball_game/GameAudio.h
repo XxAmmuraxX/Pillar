@@ -15,14 +15,16 @@ namespace BallGame {
         void Init()
         {
             // Load sound effects - using available audio files
-            m_ShootSound = Pillar::AudioClip::Create("audio/sfx_1.wav");
-            m_BounceSound = Pillar::AudioClip::Create("audio/sfx_2.wav");
+            m_ShootSound = Pillar::AudioClip::Create("audio/swing.wav");
+            m_BounceSound = Pillar::AudioClip::Create("audio/sfx_1.wav");
+            m_BoostSound = Pillar::AudioClip::Create("audio/boost.wav");
             m_GoalSound = Pillar::AudioClip::Create("audio/sfx_3.wav");
             m_BackgroundMusic = Pillar::AudioClip::Create("audio/background_music.wav");
             
             // Set default volumes
-            if (m_ShootSound) m_ShootSound->SetVolume(0.6f);
-            if (m_BounceSound) m_BounceSound->SetVolume(0.4f);
+            if (m_ShootSound) m_ShootSound->SetVolume(0.7f);
+            if (m_BounceSound) m_BounceSound->SetVolume(0.45f);
+            if (m_BoostSound) m_BoostSound->SetVolume(0.55f);
             if (m_GoalSound) m_GoalSound->SetVolume(0.8f);
             if (m_BackgroundMusic)
             {
@@ -42,6 +44,12 @@ namespace BallGame {
         {
             if (m_BounceSound && m_BounceSound->IsLoaded())
                 m_BounceSound->Play();
+        }
+
+        void PlayBoost()
+        {
+            if (m_BoostSound && m_BoostSound->IsLoaded())
+                m_BoostSound->Play();
         }
 
         void PlayGoal()
@@ -65,8 +73,9 @@ namespace BallGame {
         void SetMasterVolume(float volume)
         {
             m_MasterVolume = volume;
-            if (m_ShootSound) m_ShootSound->SetVolume(0.6f * volume);
-            if (m_BounceSound) m_BounceSound->SetVolume(0.4f * volume);
+            if (m_ShootSound) m_ShootSound->SetVolume(0.7f * volume);
+            if (m_BounceSound) m_BounceSound->SetVolume(0.45f * volume);
+            if (m_BoostSound) m_BoostSound->SetVolume(0.55f * volume);
             if (m_GoalSound) m_GoalSound->SetVolume(0.8f * volume);
             if (m_BackgroundMusic) m_BackgroundMusic->SetVolume(0.35f * volume);
         }
@@ -76,6 +85,7 @@ namespace BallGame {
     private:
         std::shared_ptr<Pillar::AudioClip> m_ShootSound;
         std::shared_ptr<Pillar::AudioClip> m_BounceSound;
+        std::shared_ptr<Pillar::AudioClip> m_BoostSound;
         std::shared_ptr<Pillar::AudioClip> m_GoalSound;
         std::shared_ptr<Pillar::AudioClip> m_BackgroundMusic;
         float m_MasterVolume = 1.0f;

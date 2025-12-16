@@ -21,10 +21,11 @@ namespace BallGame {
             levels.push_back(CreateLevel4());
             levels.push_back(CreateLevel5());
             levels.push_back(CreateLevel6());
+            //levels.push_back(CreateLevel7());
             return levels;
         }
 
-        static int GetLevelCount() { return 6; }
+        static int GetLevelCount() { return 7; }
 
     private:
         // ----------------------------------------
@@ -215,6 +216,31 @@ namespace BallGame {
             // Wells: repulsor to keep players off the deep channel and attractor that hugs the goal
             level.GravityWells.push_back({{0.0f, -2.4f}, 3.4f, 26.0f, true});
             level.GravityWells.push_back({{6.5f, 2.3f}, 3.0f, 20.0f, false});
+
+            return level;
+        }
+
+        // ----------------------------------------
+        // Level 7: "Twilight Circuit"
+        // Long, winding course using all mechanics
+        // Prefers loading from JSON if present
+        // ----------------------------------------
+        static LevelData CreateLevel7()
+        {
+            LevelData level;
+            level.Name = "Twilight Circuit";
+            level.LevelNumber = 7;
+            level.Par = 5;
+            level.BallStart = {-11.5f, -1.8f};
+            level.GoalPosition = {13.5f, 2.8f};
+
+            // Keep definitions minimal; the runtime will deserialize from JSON if present.
+            // Provide a light fallback so regen works if JSON is missing.
+            level.Walls.push_back({{0.0f, 0.0f}, {6.0f, 0.3f}, 0.0f});
+            level.GravityWells.push_back({{-7.5f, 1.5f}, 3.3f, 28.0f, false});
+            level.GravityWells.push_back({{0.0f, -3.2f}, 2.9f, 24.0f, true});
+            level.BoostPads.push_back({{-9.5f, -1.8f}, {1.8f, 1.0f}, {0.95f, 0.10f}, 12.5f});
+            level.MovingPlatforms.push_back({{-6.5f, -0.4f}, {-2.0f, 0.2f}, {1.2f, 0.35f}, 2.4f, 0.5f});
 
             return level;
         }
