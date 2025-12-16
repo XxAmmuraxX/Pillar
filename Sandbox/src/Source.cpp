@@ -10,6 +10,7 @@
 #include "ParticleEmitterDemo.h"
 #include "AnimationDemoLayer.h"
 #include "DemoMenuLayer.h"
+#include "ball_game/GravityGolfLayer.h"
 #include "Pillar/ImGuiLayer.h"
 
 class Sandbox : public Pillar::Application
@@ -19,7 +20,10 @@ public:
 	{
 		// CHOOSE YOUR DEMO: Uncomment one of the following lines
 		// Option 0: Demo Menu
-		PushLayer(new DemoMenuLayer());
+		//PushLayer(new DemoMenuLayer());
+		
+		// Option 8: Gravity Golf Game (Ball Game)
+		PushLayer(new BallGame::GravityGolfLayer());
 		
 		// Option 1: Physics Demo (Gameplay)
 		//PushLayer(new PhysicsDemoLayer());
