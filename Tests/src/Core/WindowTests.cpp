@@ -125,6 +125,14 @@ TEST_F(WindowTest, Window_SetVSync_Disable) {
     EXPECT_FALSE(window->IsVSync());
 }
 
+TEST_F(WindowTest, Window_VSync_RespectsInitialFlag)
+{
+    WindowProps props("No VSync", 800, 600, false);
+    std::unique_ptr<Window> window(Window::Create(props));
+
+    EXPECT_FALSE(window->IsVSync());
+}
+
 TEST_F(WindowTest, Window_SetVSync_Toggle) {
     WindowProps props;
     std::unique_ptr<Window> window(Window::Create(props));
@@ -134,6 +142,55 @@ TEST_F(WindowTest, Window_SetVSync_Toggle) {
     
     window->SetVSync(true);
     EXPECT_TRUE(window->IsVSync());
+}
+
+TEST_F(WindowTest, Window_SetResizable_TogglesAttribute)
+{
+    WindowProps props;
+    std::unique_ptr<Window> window(Window::Create(props));
+
+    GLFWwindow* glfwWindow = static_cast<GLFWwindow*>(window->GetNativeWindow());
+
+    window->SetResizable(false);
+    EXPECT_EQ(glfwGetWindowAttrib(glfwWindow, GLFW_RESIZABLE), GLFW_FALSE);
+
+    window->SetResizable(true);
+    EXPECT_EQ(glfwGetWindowAttrib(glfwWindow, GLFW_RESIZABLE), GLFW_TRUE);
+}
+
+TEST_F(WindowTest, Window_SetTitle_DoesNotCrash)
+{
+    WindowProps props;
+    std::unique_ptr<Window> window(Window::Create(props));
+
+    EXPECT_NO_THROW(window->SetTitle("Updated Title"));
+}
+
+TEST_F(WindowTest, Window_Fullscreen_ToggleMonitor)
+{
+    WindowProps props;
+    std::unique_ptr<Window> window(Window::Create(props));
+    GLFWwindow* glfwWindow = static_cast<GLFWwindow*>(window->GetNativeWindow());
+
+    window->SetFullscreen(true);
+    EXPECT_NE(glfwGetWindowMonitor(glfwWindow), nullptr);
+
+    window->SetFullscreen(false);
+    EXPECT_EQ(glfwGetWindowMonitor(glfwWindow), nullptr);
+
+    glfwDefaultWindowHints(); // Restore defaults for other tests
+}
+
+TEST_F(WindowTest, Window_ContentScale_Positive)
+{
+    WindowProps props;
+    std::unique_ptr<Window> window(Window::Create(props));
+
+    float scaleX = window->GetContentScaleX();
+    float scaleY = window->GetContentScaleY();
+
+    EXPECT_GT(scaleX, 0.0f);
+    EXPECT_GT(scaleY, 0.0f);
 }
 
 // ==============================
@@ -257,6 +314,9 @@ TEST(WindowPropsTests, WindowProps_DefaultConstructor) {
     EXPECT_EQ(props.Title, "Pillar Engine");
     EXPECT_EQ(props.Width, 1280);
     EXPECT_EQ(props.Height, 720);
+    EXPECT_TRUE(props.VSync);
+    EXPECT_FALSE(props.Fullscreen);
+    EXPECT_TRUE(props.Resizable);
 }
 
 TEST(WindowPropsTests, WindowProps_CustomConstructor) {
@@ -273,6 +333,15 @@ TEST(WindowPropsTests, WindowProps_TitleOnly) {
     EXPECT_EQ(props.Title, "Custom Title");
     EXPECT_EQ(props.Width, 1280);
     EXPECT_EQ(props.Height, 720);
+}
+
+TEST(WindowPropsTests, WindowProps_CustomFlags)
+{
+    WindowProps props("My Game", 1024, 768, false, true, false);
+
+    EXPECT_FALSE(props.VSync);
+    EXPECT_TRUE(props.Fullscreen);
+    EXPECT_FALSE(props.Resizable);
 }
 
 // ==============================

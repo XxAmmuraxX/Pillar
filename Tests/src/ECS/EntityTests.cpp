@@ -8,6 +8,13 @@
 
 using namespace Pillar;
 
+namespace {
+	struct DummyComponent
+	{
+		int Value = 0;
+	};
+}
+
 // ========================================
 // Entity Tests
 // ========================================
@@ -125,4 +132,77 @@ TEST(EntityTests, ModifyTransform_Persists)
 	EXPECT_EQ(transform2.Rotation, 1.5f);
 	EXPECT_EQ(transform2.Scale.x, 2.0f);
 	EXPECT_EQ(transform2.Scale.y, 3.0f);
+}
+
+TEST(EntityTests, TryGetComponent_ReturnsPointerWhenPresent)
+{
+	Scene scene;
+	Entity entity = scene.CreateEntity();
+
+	TagComponent* tag = entity.TryGetComponent<TagComponent>();
+	ASSERT_NE(tag, nullptr);
+	EXPECT_EQ(tag->Tag, "Entity");
+}
+
+TEST(EntityTests, TryGetComponent_ReturnsNullWhenMissing)
+{
+	Scene scene;
+	Entity entity = scene.CreateEntity();
+
+	entity.RemoveComponent<TransformComponent>();
+	EXPECT_EQ(entity.TryGetComponent<TransformComponent>(), nullptr);
+}
+
+TEST(EntityTests, GetOrAddComponent_AddsWhenAbsent)
+{
+	Scene scene;
+	Entity entity = scene.CreateEntity();
+
+	EXPECT_FALSE(entity.HasComponent<DummyComponent>());
+	DummyComponent& added = entity.GetOrAddComponent<DummyComponent>();
+	added.Value = 42;
+
+	EXPECT_TRUE(entity.HasComponent<DummyComponent>());
+	EXPECT_EQ(entity.GetComponent<DummyComponent>().Value, 42);
+}
+
+TEST(EntityTests, GetOrAddComponent_ReturnsExisting)
+{
+	Scene scene;
+	Entity entity = scene.CreateEntity();
+
+	DummyComponent& first = entity.AddComponent<DummyComponent>();
+	first.Value = 5;
+
+	DummyComponent& second = entity.GetOrAddComponent<DummyComponent>();
+	EXPECT_EQ(&first, &second);
+	EXPECT_EQ(second.Value, 5);
+}
+
+TEST(EntityTests, AddOrReplaceComponent_ReplacesValue)
+{
+	Scene scene;
+	Entity entity = scene.CreateEntity();
+
+	DummyComponent& first = entity.AddComponent<DummyComponent>();
+	first.Value = 10;
+
+	DummyComponent& replaced = entity.AddOrReplaceComponent<DummyComponent>();
+	replaced.Value = 20;
+
+	EXPECT_EQ(entity.GetComponent<DummyComponent>().Value, 20);
+}
+
+TEST(EntityTests, NameAndUUIDConvenienceAccessors)
+{
+	Scene scene;
+	Entity entity = scene.CreateEntity("Player");
+
+	EXPECT_TRUE(entity.HasComponent<TagComponent>());
+	EXPECT_EQ(entity.Name(), "Player");
+	entity.SetName("Hero");
+	EXPECT_EQ(entity.Name(), "Hero");
+
+	uint64_t uuidFromComponent = entity.GetComponent<UUIDComponent>().UUID;
+	EXPECT_EQ(entity.UUID(), uuidFromComponent);
 }

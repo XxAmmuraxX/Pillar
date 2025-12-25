@@ -5,9 +5,10 @@
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Gameplay/ParticleEmitterComponent.h"
 #include "Pillar/Logger.h"
+#include "Pillar/Utils/Random.h"
+#include "Pillar/Utils/Math2D.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
-#include <cstdlib>
 #include <cmath>
 
 namespace Pillar {
@@ -45,19 +46,19 @@ namespace Pillar {
 						glm::vec2 velocity = CalculateEmissionVelocity(emitter);
 
 						// Randomize lifetime
-						float lifetime = emitter.Lifetime + RandomRange(-emitter.LifetimeVariance, emitter.LifetimeVariance);
+						float lifetime = emitter.Lifetime + Random::Float(-emitter.LifetimeVariance, emitter.LifetimeVariance);
 						lifetime = glm::max(0.1f, lifetime);
 
 						// Randomize size
-						float size = emitter.Size + RandomRange(-emitter.SizeVariance, emitter.SizeVariance);
+						float size = emitter.Size + Random::Float(-emitter.SizeVariance, emitter.SizeVariance);
 						size = glm::max(0.01f, size);
 
 						// Randomize color
 						glm::vec4 color = emitter.StartColor;
-						color.r += RandomRange(-emitter.ColorVariance.r, emitter.ColorVariance.r);
-						color.g += RandomRange(-emitter.ColorVariance.g, emitter.ColorVariance.g);
-						color.b += RandomRange(-emitter.ColorVariance.b, emitter.ColorVariance.b);
-						color.a += RandomRange(-emitter.ColorVariance.a, emitter.ColorVariance.a);
+						color.r += Random::Float(-emitter.ColorVariance.r, emitter.ColorVariance.r);
+						color.g += Random::Float(-emitter.ColorVariance.g, emitter.ColorVariance.g);
+						color.b += Random::Float(-emitter.ColorVariance.b, emitter.ColorVariance.b);
+						color.a += Random::Float(-emitter.ColorVariance.a, emitter.ColorVariance.a);
 						color = glm::clamp(color, 0.0f, 1.0f);
 
 						// Spawn particle
@@ -91,19 +92,19 @@ namespace Pillar {
 					glm::vec2 velocity = CalculateEmissionVelocity(emitter);
 
 					// Randomize lifetime
-					float lifetime = emitter.Lifetime + RandomRange(-emitter.LifetimeVariance, emitter.LifetimeVariance);
+					float lifetime = emitter.Lifetime + Random::Float(-emitter.LifetimeVariance, emitter.LifetimeVariance);
 					lifetime = glm::max(0.1f, lifetime);
 
 					// Randomize size
-					float size = emitter.Size + RandomRange(-emitter.SizeVariance, emitter.SizeVariance);
+					float size = emitter.Size + Random::Float(-emitter.SizeVariance, emitter.SizeVariance);
 					size = glm::max(0.01f, size);
 
 					// Randomize color
 					glm::vec4 color = emitter.StartColor;
-					color.r += RandomRange(-emitter.ColorVariance.r, emitter.ColorVariance.r);
-					color.g += RandomRange(-emitter.ColorVariance.g, emitter.ColorVariance.g);
-					color.b += RandomRange(-emitter.ColorVariance.b, emitter.ColorVariance.b);
-					color.a += RandomRange(-emitter.ColorVariance.a, emitter.ColorVariance.a);
+					color.r += Random::Float(-emitter.ColorVariance.r, emitter.ColorVariance.r);
+					color.g += Random::Float(-emitter.ColorVariance.g, emitter.ColorVariance.g);
+					color.b += Random::Float(-emitter.ColorVariance.b, emitter.ColorVariance.b);
+					color.a += Random::Float(-emitter.ColorVariance.a, emitter.ColorVariance.a);
 					color = glm::clamp(color, 0.0f, 1.0f);
 
 					// Spawn particle
@@ -124,16 +125,16 @@ namespace Pillar {
 		case EmissionShape::Circle:
 		{
 			// Random angle and radius for circle emission
-			float angle = Random01() * 2.0f * glm::pi<float>();
-			float radius = Random01() * emitter.ShapeSize.x;
+			float angle = Random::AngleRadians();
+			float radius = Random::Float(0.0f, emitter.ShapeSize.x);
 			return basePos + glm::vec2(cos(angle), sin(angle)) * radius;
 		}
 
 		case EmissionShape::Box:
 		{
 			// Random position within box
-			float x = RandomRange(-emitter.ShapeSize.x * 0.5f, emitter.ShapeSize.x * 0.5f);
-			float y = RandomRange(-emitter.ShapeSize.y * 0.5f, emitter.ShapeSize.y * 0.5f);
+			float x = Random::Float(-emitter.ShapeSize.x * 0.5f, emitter.ShapeSize.x * 0.5f);
+			float y = Random::Float(-emitter.ShapeSize.y * 0.5f, emitter.ShapeSize.y * 0.5f);
 			return basePos + glm::vec2(x, y);
 		}
 
@@ -152,11 +153,11 @@ namespace Pillar {
 	glm::vec2 ParticleEmitterSystem::CalculateEmissionVelocity(const ParticleEmitterComponent& emitter)
 	{
 		// Base direction
-		glm::vec2 baseDir = glm::normalize(emitter.Direction);
+		glm::vec2 baseDir = Math2D::SafeNormalize(emitter.Direction);
 
 		// Add random spread
 		float spreadRadians = glm::radians(emitter.DirectionSpread);
-		float randomAngle = RandomRange(-spreadRadians, spreadRadians);
+		float randomAngle = Random::Float(-spreadRadians, spreadRadians);
 
 		// Rotate base direction by random angle
 		float cosA = cos(randomAngle);
@@ -167,21 +168,10 @@ namespace Pillar {
 		);
 
 		// Add random speed variance
-		float speed = emitter.Speed + RandomRange(-emitter.SpeedVariance, emitter.SpeedVariance);
+		float speed = emitter.Speed + Random::Float(-emitter.SpeedVariance, emitter.SpeedVariance);
 		speed = glm::max(0.1f, speed);
 
 		return rotatedDir * speed;
-	}
-
-	float ParticleEmitterSystem::RandomRange(float min, float max)
-	{
-		float t = Random01();
-		return min + t * (max - min);
-	}
-
-	float ParticleEmitterSystem::Random01()
-	{
-		return static_cast<float>(rand()) / static_cast<float>(RAND_MAX);
 	}
 
 } // namespace Pillar

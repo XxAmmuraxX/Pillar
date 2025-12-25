@@ -5,6 +5,7 @@
 # ==============================
 add_library(Pillar STATIC
     src/Pillar/Application.cpp
+    src/Pillar/Time.cpp
     src/Pillar/Logger.cpp
     src/Pillar/Events/ApplicationEvent.cpp
     src/Platform/WindowsWindow.cpp
@@ -15,6 +16,9 @@ add_library(Pillar STATIC
     src/Pillar/KeyCodes.h
     # Utils
     src/Pillar/Utils/AssetManager.cpp
+    src/Pillar/Utils/Random.cpp
+    src/Pillar/Utils/Random.h
+    src/Pillar/Utils/Math2D.h
     # Audio
     src/Pillar/Audio/AudioEngine.cpp
     src/Pillar/Audio/AudioBuffer.cpp
@@ -52,6 +56,7 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Scene.cpp
     src/Pillar/ECS/SceneManager.cpp
     src/Pillar/ECS/SceneSerializer.cpp
+    src/Pillar/ECS/PrefabSerializer.cpp
     src/Pillar/ECS/ComponentRegistry.cpp
     src/Pillar/ECS/BuiltinComponentRegistrations.cpp
     src/Pillar/ECS/ObjectPool.cpp

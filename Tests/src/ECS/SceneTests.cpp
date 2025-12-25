@@ -1,4 +1,6 @@
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <vector>
 // SceneTests: basic Scene API tests covering entity creation/destruction,
 // UUID uniqueness and default component values.
 #include "Pillar/ECS/Scene.h"
@@ -8,6 +10,13 @@
 #include "Pillar/ECS/Components/Core/UUIDComponent.h"
 
 using namespace Pillar;
+
+namespace {
+	struct DummyComponent
+	{
+		int Value = 0;
+	};
+}
 
 // ========================================
 // Scene Tests
@@ -122,4 +131,39 @@ TEST(SceneTests, TransformComponent_GetTransform)
 
 	// Basic check that matrix is not identity
 	EXPECT_NE(mat, glm::mat4(1.0f));
+}
+
+TEST(SceneTests, EachEntity_VisitsAllEntities)
+{
+	Scene scene;
+	Entity a = scene.CreateEntity("A");
+	Entity b = scene.CreateEntity("B");
+	Entity c = scene.CreateEntity("C");
+
+	std::vector<std::string> names;
+	scene.EachEntity([&](Entity entity)
+	{
+		names.push_back(entity.Name());
+	});
+
+	EXPECT_EQ(names.size(), 3u);
+	EXPECT_NE(std::find(names.begin(), names.end(), "A"), names.end());
+	EXPECT_NE(std::find(names.begin(), names.end(), "B"), names.end());
+	EXPECT_NE(std::find(names.begin(), names.end(), "C"), names.end());
+}
+
+TEST(SceneTests, ForEach_ProvidesComponentsAndEntity)
+{
+	Scene scene;
+	Entity entity = scene.CreateEntity("Target");
+	entity.AddComponent<DummyComponent>().Value = 1;
+
+	scene.ForEach<TagComponent, DummyComponent>([](Entity e, TagComponent& tag, DummyComponent& dummy)
+	{
+		tag.Tag = "Renamed";
+		dummy.Value = 99;
+	});
+
+	EXPECT_EQ(entity.Name(), "Renamed");
+	EXPECT_EQ(entity.GetComponent<DummyComponent>().Value, 99);
 }

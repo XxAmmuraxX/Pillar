@@ -2,6 +2,7 @@
 #include "Components/Core/TagComponent.h"
 #include "Components/Core/TransformComponent.h"
 #include "Components/Core/UUIDComponent.h"
+#include "Components/Core/HierarchyComponent.h"
 #include "Components/Physics/RigidbodyComponent.h"
 #include "Components/Physics/ColliderComponent.h"
 #include "Components/Physics/VelocityComponent.h"
@@ -96,6 +97,25 @@ namespace Pillar {
 				d.Rotation = s.Rotation;
 				d.Scale = s.Scale;
 				d.Dirty = true;
+			}
+		);
+
+		// HierarchyComponent
+		registry.Register<HierarchyComponent>("hierarchy",
+			[](Entity e) -> json {
+				if (!e.HasComponent<HierarchyComponent>()) return nullptr;
+				auto& h = e.GetComponent<HierarchyComponent>();
+				return json{ { "parentUUID", h.ParentUUID } };
+			},
+			[](Entity e, const json& j) {
+				auto& h = e.AddOrReplaceComponent<HierarchyComponent>();
+				h.ParentUUID = j.value("parentUUID", 0ull);
+			},
+			[](Entity src, Entity dst) {
+				if (!src.HasComponent<HierarchyComponent>()) return;
+				auto& s = src.GetComponent<HierarchyComponent>();
+				auto& d = dst.AddOrReplaceComponent<HierarchyComponent>();
+				d.ParentUUID = s.ParentUUID;
 			}
 		);
 

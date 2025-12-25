@@ -30,6 +30,9 @@ add_executable(PillarTests
     src/Core/InputTests.cpp
     src/Core/WindowTests.cpp
     src/Core/AssetManagerTests.cpp
+    src/Core/Math2DTests.cpp
+    src/Core/RandomTests.cpp
+    src/Core/TimeTests.cpp
 
     # ===================
     # ECS Tests
@@ -37,6 +40,7 @@ add_executable(PillarTests
     src/ECS/SceneTests.cpp
     src/ECS/EntityTests.cpp
     src/ECS/ComponentTests.cpp
+    src/ECS/TransformComponentExtendedTests.cpp
     src/ECS/ComponentRegistryTests.cpp
     src/ECS/SceneSerializerTests.cpp
     src/ECS/ObjectPoolTests.cpp
@@ -46,6 +50,7 @@ add_executable(PillarTests
     # Renderer Tests
     # ===================
     src/Renderer/CameraTests.cpp
+    src/Renderer/Renderer2DBackendTests.cpp
 
     # ===================
     # Audio Tests
@@ -82,6 +87,7 @@ add_executable(PillarTests
     src/Integration/AssetPipelineE2ETests.cpp
     src/Integration/GameFrameE2ETests.cpp
     src/Integration/ComponentSerializationTests.cpp
+    src/Integration/PrefabSerializationTests.cpp
 )
 
 # Set output directory
