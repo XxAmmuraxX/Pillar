@@ -6,6 +6,7 @@
 #include "Pillar/Window.h"
 #include "Pillar/Application.h"
 #include <memory>
+#include <cmath>
 
 using namespace Pillar;
 
@@ -51,42 +52,42 @@ protected:
 // Define the static member
 std::unique_ptr<Application> InputTest::s_Application = nullptr;
 
-TEST_F(InputTest, IsKeyPressed_ReturnsFalseForUnpressedKey) {
+TEST_F(InputTest, IsKeyDown_ReturnsFalseForUnpressedKey) {
     // Without simulating input, keys should be unpressed
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_W));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_A));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_S));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_D));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_W));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_A));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_S));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_D));
 }
 
-TEST_F(InputTest, IsKeyPressed_WorksWithDifferentKeyCodes) {
+TEST_F(InputTest, IsKeyDown_WorksWithDifferentKeyCodes) {
     // Test various key code ranges
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_SPACE));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_ESCAPE));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_ENTER));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_TAB));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_SPACE));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_ESCAPE));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_ENTER));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_TAB));
 }
 
-TEST_F(InputTest, IsKeyPressed_WorksWithAlphanumericKeys) {
+TEST_F(InputTest, IsKeyDown_WorksWithAlphanumericKeys) {
     // Test all letter keys
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_A));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_Z));
-    
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_A));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_Z));
+
     // Test number keys
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_0));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_9));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_0));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_9));
 }
 
-TEST_F(InputTest, IsKeyPressed_WorksWithFunctionKeys) {
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_F1));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_F12));
+TEST_F(InputTest, IsKeyDown_WorksWithFunctionKeys) {
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_F1));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_F12));
 }
 
-TEST_F(InputTest, IsKeyPressed_WorksWithArrowKeys) {
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_UP));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_DOWN));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_LEFT));
-    EXPECT_FALSE(Input::IsKeyPressed(PIL_KEY_RIGHT));
+TEST_F(InputTest, IsKeyDown_WorksWithArrowKeys) {
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_UP));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_DOWN));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_LEFT));
+    EXPECT_FALSE(Input::IsKeyDown(PIL_KEY_RIGHT));
 }
 
 TEST_F(InputTest, IsMouseButtonPressed_ReturnsFalseForUnpressedButton) {
@@ -130,14 +131,25 @@ TEST_F(InputTest, GetMousePosition_MatchesIndividualGetters) {
     EXPECT_FLOAT_EQ(posY, y);
 }
 
+TEST_F(InputTest, OnUpdate_ProducesFiniteDeltas) {
+    // First update initializes mouse state and yields zero deltas
+    EXPECT_NO_THROW(Input::OnUpdate());
+    auto delta = Input::GetMouseDelta();
+    auto scroll = Input::GetScrollDelta();
+    EXPECT_FLOAT_EQ(delta.first, 0.0f);
+    EXPECT_FLOAT_EQ(delta.second, 0.0f);
+    EXPECT_FLOAT_EQ(scroll.first, 0.0f);
+    EXPECT_FLOAT_EQ(scroll.second, 0.0f);
+}
+
 // ==============================
 // Input Polling Consistency Tests
 // ==============================
 
-TEST_F(InputTest, IsKeyPressed_ConsistentAcrossMultipleCalls) {
+TEST_F(InputTest, IsKeyDown_ConsistentAcrossMultipleCalls) {
     // Multiple calls should return the same result
-    bool firstCall = Input::IsKeyPressed(PIL_KEY_W);
-    bool secondCall = Input::IsKeyPressed(PIL_KEY_W);
+    bool firstCall = Input::IsKeyDown(PIL_KEY_W);
+    bool secondCall = Input::IsKeyDown(PIL_KEY_W);
     
     EXPECT_EQ(firstCall, secondCall);
 }
@@ -153,15 +165,38 @@ TEST_F(InputTest, IsMouseButtonPressed_ConsistentAcrossMultipleCalls) {
 // Edge Case Tests
 // ==============================
 
-TEST_F(InputTest, IsKeyPressed_HandlesInvalidKeyCode) {
+TEST_F(InputTest, IsKeyDown_HandlesInvalidKeyCode) {
     // Test with an invalid/out-of-range key code
     // Should not crash, just return false
-    EXPECT_FALSE(Input::IsKeyPressed(-1));
-    EXPECT_FALSE(Input::IsKeyPressed(9999));
+    EXPECT_FALSE(Input::IsKeyDown(-1));
+    EXPECT_FALSE(Input::IsKeyDown(9999));
 }
 
 TEST_F(InputTest, IsMouseButtonPressed_HandlesInvalidButton) {
     // Test with invalid mouse button codes
     EXPECT_FALSE(Input::IsMouseButtonPressed(-1));
     EXPECT_FALSE(Input::IsMouseButtonPressed(10));
+}
+
+// ==============================
+// Action Binding and Cursor Mode
+// ==============================
+
+TEST_F(InputTest, ActionBinding_DefaultsToFalse) {
+    Input::BindAction("Jump", { PIL_KEY_SPACE }, {});
+    EXPECT_FALSE(Input::IsActionDown("Jump"));
+    EXPECT_FALSE(Input::IsActionPressed("Jump"));
+    EXPECT_FALSE(Input::IsActionReleased("Jump"));
+    Input::UnbindAction("Jump");
+}
+
+TEST_F(InputTest, CursorMode_CanBeSetAndQueried) {
+    Input::SetCursorMode(CursorMode::Normal);
+    EXPECT_EQ(Input::GetCursorMode(), CursorMode::Normal);
+    Input::SetCursorMode(CursorMode::Hidden);
+    EXPECT_EQ(Input::GetCursorMode(), CursorMode::Hidden);
+    Input::SetCursorMode(CursorMode::Locked);
+    EXPECT_EQ(Input::GetCursorMode(), CursorMode::Locked);
+    // Reset to normal to avoid side effects on other tests
+    Input::SetCursorMode(CursorMode::Normal);
 }

@@ -11,8 +11,10 @@
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
 #include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
 #include "Pillar/ECS/Components/Rendering/CameraComponent.h"
+#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/constants.hpp>
 
 using namespace Pillar;
 
@@ -77,9 +79,17 @@ TEST(TransformComponentTests, DirtyFlag_SetOnChange)
 	transform.GetTransform(); // Clear dirty flag
 	EXPECT_FALSE(transform.Dirty);
 
-	transform.Position = glm::vec2(5.0f, 5.0f);
-	transform.Dirty = true; // Manual set (in real use, would be done automatically)
-	
+	transform.SetPosition(glm::vec2(5.0f, 5.0f));
+	EXPECT_TRUE(transform.Dirty);
+	transform.GetTransform();
+	EXPECT_FALSE(transform.Dirty);
+
+	transform.SetRotation(glm::radians(45.0f));
+	EXPECT_TRUE(transform.Dirty);
+	transform.GetTransform();
+	EXPECT_FALSE(transform.Dirty);
+
+	transform.SetScale(glm::vec2(2.0f, 2.0f));
 	EXPECT_TRUE(transform.Dirty);
 }
 
@@ -97,6 +107,34 @@ TEST(TransformComponentTests, GetTransform_WithRotation)
 	EXPECT_NEAR(matrix[0][1], 1.0f, 0.001f);
 	EXPECT_NEAR(matrix[1][0], -1.0f, 0.001f);
 	EXPECT_NEAR(matrix[1][1], 0.0f, 0.001f);
+}
+
+TEST(TransformComponentTests, MarkDirty_Helper)
+{
+	TransformComponent transform;
+	transform.Dirty = false;
+
+	transform.MarkDirty();
+	EXPECT_TRUE(transform.Dirty);
+}
+
+TEST(TransformComponentTests, ForwardRightRotateAndLookAtHelpers)
+{
+	float angle = glm::quarter_pi<float>(); // 45 degrees
+
+	glm::vec2 forward = Transform2D::Forward(angle);
+	glm::vec2 right = Transform2D::Right(angle);
+	EXPECT_NEAR(forward.x, std::cos(angle), 0.0001f);
+	EXPECT_NEAR(forward.y, std::sin(angle), 0.0001f);
+	EXPECT_NEAR(right.x, -std::sin(angle), 0.0001f);
+	EXPECT_NEAR(right.y, std::cos(angle), 0.0001f);
+
+	glm::vec2 rotated = Transform2D::RotateAround(glm::vec2(1.0f, 0.0f), glm::vec2(0.0f, 0.0f), glm::half_pi<float>());
+	EXPECT_NEAR(rotated.x, 0.0f, 0.0001f);
+	EXPECT_NEAR(rotated.y, 1.0f, 0.0001f);
+
+	float lookAngle = Transform2D::LookAtAngle(glm::vec2(0.0f, 0.0f), glm::vec2(1.0f, 1.0f));
+	EXPECT_NEAR(lookAngle, glm::quarter_pi<float>(), 0.0001f);
 }
 
 // ============================================================================
@@ -280,6 +318,38 @@ TEST(SpriteComponentTests, ZIndexSorting)
 	foreground.ZIndex = 10.0f;
 
 	EXPECT_LT(background.ZIndex, foreground.ZIndex);
+}
+
+TEST(SpriteComponentTests, SetUVRect_NormalizesPixels)
+{
+	SpriteComponent sprite;
+	sprite.SetUVRect(glm::vec2(16.0f, 32.0f), glm::vec2(48.0f, 64.0f), 256.0f, 128.0f);
+
+	EXPECT_NEAR(sprite.TexCoordMin.x, 16.0f / 256.0f, 0.0001f);
+	EXPECT_NEAR(sprite.TexCoordMin.y, 32.0f / 128.0f, 0.0001f);
+	EXPECT_NEAR(sprite.TexCoordMax.x, 48.0f / 256.0f, 0.0001f);
+	EXPECT_NEAR(sprite.TexCoordMax.y, 64.0f / 128.0f, 0.0001f);
+}
+
+TEST(SpriteComponentTests, SetUVFromGrid_ComputesCell)
+{
+	SpriteComponent sprite;
+	sprite.SetUVFromGrid(1, 2, 16.0f, 16.0f, 64.0f, 64.0f);
+
+	EXPECT_NEAR(sprite.TexCoordMin.x, 16.0f / 64.0f, 0.0001f);
+	EXPECT_NEAR(sprite.TexCoordMin.y, 32.0f / 64.0f, 0.0001f);
+	EXPECT_NEAR(sprite.TexCoordMax.x, 32.0f / 64.0f, 0.0001f);
+	EXPECT_NEAR(sprite.TexCoordMax.y, 48.0f / 64.0f, 0.0001f);
+}
+
+TEST(SpriteComponentTests, SetLayer_AssignsPresetDepth)
+{
+	SpriteComponent sprite;
+	sprite.SetLayer(SpriteLayer::UI);
+	EXPECT_FLOAT_EQ(sprite.ZIndex, 10.0f);
+
+	sprite.SetLayer(SpriteLayer::Background);
+	EXPECT_FLOAT_EQ(sprite.ZIndex, -10.0f);
 }
 
 // ============================================================================

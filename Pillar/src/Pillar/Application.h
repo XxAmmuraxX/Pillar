@@ -18,6 +18,7 @@ namespace Pillar
 
 		void Run();
 		void OnEvent(Event& e);
+		void Close();
 
 		// Layers API
 		void PushLayer(Layer* layer);

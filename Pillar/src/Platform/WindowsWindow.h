@@ -13,9 +13,17 @@ namespace Pillar
 	public:
 		WindowsWindow(const WindowProps& props);
 		virtual ~WindowsWindow();
+		void PollEvents() override;
 		void OnUpdate() override;
 		inline unsigned int GetWidth() const override { return m_Data.Width; }
 		inline unsigned int GetHeight() const override { return m_Data.Height; }
+		void SetTitle(const std::string& title) override;
+		void SetIcon(const std::string& iconPath) override;
+		void SetResizable(bool resizable) override;
+		void SetFullscreen(bool fullscreen) override;
+		bool IsFullscreen() const override { return m_Data.Fullscreen; }
+		float GetContentScaleX() const override;
+		float GetContentScaleY() const override;
 		void SetEventCallback(const EventCallbackFn& callback) override { m_Data.EventCallback = callback; }
 		void SetVSync(bool enabled) override;
 		bool IsVSync() const override;
@@ -31,7 +39,11 @@ namespace Pillar
 		{
 			std::string Title;
 			unsigned int Width, Height;
+			int WindowPosX = 0, WindowPosY = 0;
+			int WindowedWidth = 0, WindowedHeight = 0;
 			bool VSync;
+			bool Fullscreen = false;
+			bool Resizable = true;
 			EventCallbackFn EventCallback;
 		};
 		WindowData m_Data;

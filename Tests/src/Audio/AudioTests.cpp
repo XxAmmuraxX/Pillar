@@ -76,6 +76,56 @@ TEST_F(AudioEngineTests, MasterVolume_ClampsToBounds) {
     EXPECT_GE(AudioEngine::GetMasterVolume(), 0.0f);
 }
 
+TEST_F(AudioEngineTests, PlayOneShot_InvalidPath_ReturnsNull) {
+    AudioEngine::Init();
+
+    auto source = AudioEngine::PlayOneShot("nonexistent.wav");
+    EXPECT_EQ(source, nullptr);
+}
+
+TEST_F(AudioEngineTests, BusVolume_AppliesToTrackedSource) {
+    AudioEngine::Init();
+
+    auto source = AudioEngine::CreateSource();
+    ASSERT_NE(source, nullptr);
+
+    AudioEngine::SetSourceBus(source, AudioEngine::AudioBus::Music);
+    AudioEngine::SetSourceVolume(source, 0.8f);
+    AudioEngine::SetBusVolume(AudioEngine::AudioBus::Music, 0.5f);
+
+    EXPECT_NEAR(source->GetVolume(), 0.4f, 1e-3f);
+}
+
+TEST_F(AudioEngineTests, BusMute_ForcesZeroGain) {
+    AudioEngine::Init();
+
+    auto source = AudioEngine::CreateSource();
+    ASSERT_NE(source, nullptr);
+
+    AudioEngine::SetSourceVolume(source, 0.7f);
+    AudioEngine::MuteBus(AudioEngine::AudioBus::SFX);
+
+    EXPECT_NEAR(source->GetVolume(), 0.0f, 1e-4f);
+}
+
+TEST_F(AudioEngineTests, BusFade_ReachesTarget) {
+    AudioEngine::Init();
+
+    auto source = AudioEngine::CreateSource();
+    ASSERT_NE(source, nullptr);
+
+    AudioEngine::SetSourceVolume(source, 1.0f);
+    AudioEngine::FadeBusTo(AudioEngine::AudioBus::SFX, 0.0f, 1.0f);
+
+    AudioEngine::Update(0.5f);
+    float midVolume = source->GetVolume();
+    EXPECT_LT(midVolume, 1.0f);
+    EXPECT_GT(midVolume, 0.0f);
+
+    AudioEngine::Update(1.0f);
+    EXPECT_NEAR(source->GetVolume(), 0.0f, 1e-3f);
+}
+
 TEST_F(AudioEngineTests, ListenerPosition_SetAndGet) {
     AudioEngine::Init();
     

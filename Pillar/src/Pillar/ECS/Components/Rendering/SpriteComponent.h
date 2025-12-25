@@ -6,6 +6,13 @@
 
 namespace Pillar {
 
+	enum class SpriteLayer : int
+	{
+		Background = -10,
+		Gameplay = 0,
+		UI = 10
+	};
+
 	/**
 	 * @brief Component for rendering 2D sprites with batch support
 	 * 
@@ -28,8 +35,9 @@ namespace Pillar {
 		bool FlipX = false;  // Flip sprite horizontally
 		bool FlipY = false;  // Flip sprite vertically
 
-	SpriteComponent() = default;
-	SpriteComponent(const SpriteComponent&) = default;		// Constructor with just color (no texture)
+		SpriteComponent() = default;
+		SpriteComponent(const SpriteComponent&) = default;
+		// Constructor with just color (no texture)
 		SpriteComponent(const glm::vec4& color)
 			: Color(color) {}
 
@@ -40,6 +48,28 @@ namespace Pillar {
 		// Constructor with texture and color tint
 		SpriteComponent(std::shared_ptr<Texture2D> texture, const glm::vec4& color)
 			: Texture(texture), Color(color) {}
+
+		void SetUVRect(const glm::vec2& pxMin, const glm::vec2& pxMax, float sheetWidth, float sheetHeight)
+		{
+			if (sheetWidth <= 0.0f || sheetHeight <= 0.0f)
+				return;
+
+			glm::vec2 invSize = { 1.0f / sheetWidth, 1.0f / sheetHeight };
+			TexCoordMin = pxMin * invSize;
+			TexCoordMax = pxMax * invSize;
+		}
+
+		void SetUVFromGrid(int column, int row, float cellWidth, float cellHeight, float sheetWidth, float sheetHeight)
+		{
+			glm::vec2 pxMin(column * cellWidth, row * cellHeight);
+			glm::vec2 pxMax = pxMin + glm::vec2(cellWidth, cellHeight);
+			SetUVRect(pxMin, pxMax, sheetWidth, sheetHeight);
+		}
+
+		void SetLayer(SpriteLayer layer)
+		{
+			ZIndex = static_cast<float>(layer);
+		}
 	};
 
 } // namespace Pillar
