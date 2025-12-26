@@ -9,8 +9,8 @@ namespace Pillar {
 
 namespace
 {
-    constexpr int MaxKeys = 512;
-    constexpr int MaxMouseButtons = 8;
+    constexpr int MaxKeys = GLFW_KEY_LAST + 1;
+    constexpr int MaxMouseButtons = GLFW_MOUSE_BUTTON_LAST + 1;
 
     struct ActionBinding
     {
@@ -56,13 +56,14 @@ void Input::OnUpdate()
     s_KeyPrevious = s_KeyCurrent;
     s_MousePrevious = s_MouseCurrent;
 
-    for (int key = 0; key < MaxKeys; ++key)
+    s_KeyCurrent.fill(false);
+    for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_LAST; ++key)
     {
         int state = glfwGetKey(window, key);
         s_KeyCurrent[key] = state == GLFW_PRESS || state == GLFW_REPEAT;
     }
 
-    for (int button = 0; button < MaxMouseButtons; ++button)
+    for (int button = 0; button <= GLFW_MOUSE_BUTTON_LAST; ++button)
     {
         int state = glfwGetMouseButton(window, button);
         s_MouseCurrent[button] = state == GLFW_PRESS;
