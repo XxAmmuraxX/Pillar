@@ -4,6 +4,8 @@
 #include "Pillar/Events/KeyEvent.h"
 #include "Pillar/Events/MouseEvent.h"
 #include "Pillar/Logger.h"
+#include "Pillar/Input.h"
+#include "stb_image.h"
 #include <GLFW/glfw3.h>
 
 namespace Pillar
@@ -30,6 +32,9 @@ namespace Pillar
 		m_Data.Title = props.Title;
 		m_Data.Width = props.Width;
 		m_Data.Height = props.Height;
+		m_Data.VSync = props.VSync;
+		m_Data.Fullscreen = props.Fullscreen;
+		m_Data.Resizable = props.Resizable;
 
 		PIL_CORE_INFO("Creating window {0} ({1}, {2})", props.Title, props.Width, props.Height);
 
@@ -44,6 +49,8 @@ namespace Pillar
 			s_GLFWInitialized = true;
 		}
 
+		glfwWindowHint(GLFW_RESIZABLE, props.Resizable ? GLFW_TRUE : GLFW_FALSE);
+
 		m_Window = glfwCreateWindow((int)m_Data.Width, (int)m_Data.Height, m_Data.Title.c_str(), nullptr, nullptr);
 		if (!m_Window)
 		{
@@ -57,7 +64,17 @@ namespace Pillar
 		m_Context->Init();
 
 		glfwSetWindowUserPointer(m_Window, &m_Data);
-		SetVSync(true);
+		m_Data.EventCallback = [](Event&) {};
+		SetVSync(props.VSync);
+
+		glfwGetWindowPos(m_Window, &m_Data.WindowPosX, &m_Data.WindowPosY);
+		m_Data.WindowedWidth = static_cast<int>(m_Data.Width);
+		m_Data.WindowedHeight = static_cast<int>(m_Data.Height);
+
+		if (props.Fullscreen)
+		{
+			SetFullscreen(true);
+		}
 
 		// Setting up GLFW callbacks
 		glfwSetWindowSizeCallback(m_Window, [](GLFWwindow* window, int width, int height)
@@ -140,6 +157,7 @@ namespace Pillar
 			{
 				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 				MouseScrolledEvent event((float)xOffset, (float)yOffset);
+				Input::OnScroll((float)xOffset, (float)yOffset);
 				data.EventCallback(event);
 			});
 
@@ -162,6 +180,8 @@ namespace Pillar
 			{
 				WindowData& data = *(WindowData*)glfwGetWindowUserPointer(window);
 				WindowMovedEvent event;
+				data.WindowPosX = xPos;
+				data.WindowPosY = yPos;
 				data.EventCallback(event);
 			});
 
@@ -177,8 +197,81 @@ namespace Pillar
 
 	void WindowsWindow::OnUpdate()
 	{
-		glfwPollEvents();
 		m_Context->SwapBuffers();
+	}
+
+	void WindowsWindow::SetTitle(const std::string& title)
+	{
+		m_Data.Title = title;
+		if (m_Window)
+		{
+			glfwSetWindowTitle(m_Window, m_Data.Title.c_str());
+		}
+	}
+
+	void WindowsWindow::SetIcon(const std::string& iconPath)
+	{
+		int width = 0, height = 0, channels = 0;
+		stbi_uc* pixels = stbi_load(iconPath.c_str(), &width, &height, &channels, 4);
+		if (!pixels)
+		{
+			PIL_CORE_WARN("Failed to load window icon: {0}", iconPath);
+			return;
+		}
+
+		GLFWimage image;
+		image.width = width;
+		image.height = height;
+		image.pixels = pixels;
+		glfwSetWindowIcon(m_Window, 1, &image);
+		stbi_image_free(pixels);
+	}
+
+	void WindowsWindow::SetResizable(bool resizable)
+	{
+		m_Data.Resizable = resizable;
+		glfwSetWindowAttrib(m_Window, GLFW_RESIZABLE, resizable ? GLFW_TRUE : GLFW_FALSE);
+	}
+
+	void WindowsWindow::SetFullscreen(bool fullscreen)
+	{
+		if (fullscreen == m_Data.Fullscreen)
+		{
+			return;
+		}
+
+		if (fullscreen)
+		{
+			glfwGetWindowPos(m_Window, &m_Data.WindowPosX, &m_Data.WindowPosY);
+			glfwGetWindowSize(m_Window, &m_Data.WindowedWidth, &m_Data.WindowedHeight);
+			GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+			const GLFWvidmode* mode = glfwGetVideoMode(monitor);
+			glfwSetWindowMonitor(m_Window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+			m_Data.Width = mode->width;
+			m_Data.Height = mode->height;
+		}
+		else
+		{
+			glfwSetWindowMonitor(m_Window, nullptr, m_Data.WindowPosX, m_Data.WindowPosY, m_Data.WindowedWidth, m_Data.WindowedHeight, 0);
+			m_Data.Width = static_cast<unsigned int>(m_Data.WindowedWidth);
+			m_Data.Height = static_cast<unsigned int>(m_Data.WindowedHeight);
+		}
+
+		m_Data.Fullscreen = fullscreen;
+	}
+
+	float WindowsWindow::GetContentScaleX() const
+	{
+		float scaleX = 1.0f, scaleY = 1.0f;
+		glfwGetWindowContentScale(m_Window, &scaleX, &scaleY);
+		return scaleX;
+	}
+
+	float WindowsWindow::GetContentScaleY() const
+	{
+		float scaleX = 1.0f, scaleY = 1.0f;
+		glfwGetWindowContentScale(m_Window, &scaleX, &scaleY);
+		return scaleY;
 	}
 
 	void WindowsWindow::SetVSync(bool enabled)
@@ -194,5 +287,10 @@ namespace Pillar
 	bool WindowsWindow::IsVSync() const
 	{
 		return m_Data.VSync;
+	}
+
+	void WindowsWindow::PollEvents()
+	{
+		glfwPollEvents();
 	}
 }

@@ -8,10 +8,11 @@ namespace Pillar {
 
     /**
      * @brief AssetManager handles asset path resolution and file loading
-     * 
+     *
      * Searches for assets in Sandbox/assets/ folder in the workspace (for development),
      * falling back to assets/ folder next to the executable (for distribution).
      * For textures, it specifically checks assets/textures/ subdirectory.
+     * For audio, it specifically checks assets/audio/ subdirectory.
      */
     class PIL_API AssetManager
     {
@@ -29,6 +30,27 @@ namespace Pillar {
          * @return Full path to the texture if found in assets/textures/, otherwise returns original
          */
         static std::string GetTexturePath(const std::string& textureName);
+
+        /**
+         * @brief Resolves an audio asset path
+         * @param audioName The audio filename (e.g., "explosion.wav")
+         * @return Full path to the audio file if found in assets/audio/, otherwise returns original
+         */
+        static std::string GetAudioPath(const std::string& audioName);
+
+        /**
+         * @brief Resolves a sound effect path (assets/audio/sfx/)
+         * @param sfxName The sound effect filename
+         * @return Full path to the SFX file if found
+         */
+        static std::string GetSFXPath(const std::string& sfxName);
+
+        /**
+         * @brief Resolves a music path (assets/audio/music/)
+         * @param musicName The music filename
+         * @return Full path to the music file if found
+         */
+        static std::string GetMusicPath(const std::string& musicName);
 
         /**
          * @brief Sets the base assets directory (overrides automatic detection)

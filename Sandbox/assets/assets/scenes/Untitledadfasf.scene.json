@@ -1,0 +1,83 @@
+{
+  "entities": [
+    {
+      "tag": "Camera",
+      "transform": {
+        "position": [
+          5.699999809265137,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          1.0,
+          1.0
+        ]
+      },
+      "uuid": 671196988314859253
+    },
+    {
+      "tag": "Enemy",
+      "transform": {
+        "position": [
+          -3.0,
+          1.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          0.800000011920929,
+          0.800000011920929
+        ]
+      },
+      "uuid": 10261053035427620418
+    },
+    {
+      "tag": "Enemy",
+      "transform": {
+        "position": [
+          3.0,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          0.800000011920929,
+          0.800000011920929
+        ]
+      },
+      "uuid": 14443398770293983555
+    },
+    {
+      "tag": "Ground",
+      "transform": {
+        "position": [
+          0.0,
+          -3.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          10.0,
+          1.0
+        ]
+      },
+      "uuid": 6813723544799579219
+    },
+    {
+      "tag": "Player",
+      "transform": {
+        "position": [
+          0.0,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          1.0,
+          1.0
+        ]
+      },
+      "uuid": 15756618229491819087
+    }
+  ],
+  "scene": {
+    "name": "Untitledadfasf",
+    "version": "1.0"
+  }
+}

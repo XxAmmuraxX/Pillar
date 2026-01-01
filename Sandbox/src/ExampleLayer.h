@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2D.h"
+#include "Pillar/Renderer/Renderer2DBackend.h"
 #include <imgui.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
@@ -44,25 +44,25 @@ public:
 		Pillar::Renderer::Clear();
 
 		// Begin Renderer2D scene with camera from controller
-		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
 
 		// Test 1: Draw colored quads
-		Pillar::Renderer2D::DrawQuad({ -0.75f, 0.5f }, { 0.5f, 0.5f }, { 1.0f, 0.0f, 0.0f, 1.0f });
-		Pillar::Renderer2D::DrawQuad({ 0.75f, 0.5f }, { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f });
-		Pillar::Renderer2D::DrawQuad({ -0.75f, -0.5f }, { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f });
+		Pillar::Renderer2DBackend::DrawQuad({ -0.75f, 0.5f }, { 0.5f, 0.5f }, { 1.0f, 0.0f, 0.0f, 1.0f });
+		Pillar::Renderer2DBackend::DrawQuad({ 0.75f, 0.5f }, { 0.5f, 0.5f }, { 0.0f, 1.0f, 0.0f, 1.0f });
+		Pillar::Renderer2DBackend::DrawQuad({ -0.75f, -0.5f }, { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f });
 		
 		// Test 2: Draw textured quad
-		Pillar::Renderer2D::DrawQuad({ 0.75f, -0.5f }, { 0.5f, 0.5f }, m_Texture);
+		Pillar::Renderer2DBackend::DrawQuad({ 0.75f, -0.5f }, { 0.5f, 0.5f }, m_Texture);
 		
 		// Test 3: Draw animated textured quad in center
 		float scale = 0.8f + sin(m_Time * 2.0f) * 0.2f;
-		Pillar::Renderer2D::DrawQuad({ 0.0f, 0.0f, 0.1f }, { scale, scale }, m_Texture);
+		Pillar::Renderer2DBackend::DrawQuad({ 0.0f, 0.0f, 0.1f }, { scale, scale }, m_Texture);
 		
 		// Test 4: Draw textured quad with tint color
 		glm::vec4 tint = { 1.0f, 0.5f + sin(m_Time) * 0.5f, 0.5f, 1.0f };
-		Pillar::Renderer2D::DrawQuad({ 0.0f, -1.2f }, { 0.6f, 0.3f }, m_Texture, tint);
+		Pillar::Renderer2DBackend::DrawQuad({ 0.0f, -1.2f }, { 0.6f, 0.3f }, m_Texture, tint);
 
-		Pillar::Renderer2D::EndScene();
+		Pillar::Renderer2DBackend::EndScene();
     }
     
     void OnEvent(Pillar::Event& event) override
@@ -82,8 +82,16 @@ public:
 	
 	void OnImGuiRender() override 
 	{
-		ImGui::Begin("Renderer2D Test");
-		ImGui::Text("Renderer2D and Texture Test");
+		ImGui::Begin("Pillar Engine - Renderer2D Demo");
+		
+		// Credits section
+		ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Developed by:");
+		ImGui::BulletText("Ayse Sila Solak");
+		ImGui::BulletText("Chika Libuku");
+		ImGui::BulletText("Omar Akkawi");
+		ImGui::Spacing();
+		ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.4f, 1.0f), "Supervisor:");
+		ImGui::BulletText("Dr hab. inz. Jerzy Balicki, prof. PW");
 		ImGui::Separator();
 		
 		// Camera debug panel
@@ -104,11 +112,13 @@ public:
 		ImGui::Text("Zoom Level: %.2fx", zoom);
 		ImGui::Separator();
 		
-		// Camera settings
-		float translationSpeed = m_CameraController.GetTranslationSpeed();
-		if (ImGui::SliderFloat("Move Speed", &translationSpeed, 1.0f, 20.0f))
+		// Camera Settings (adjustable)
+		ImGui::Text("Camera Settings:");
+		
+		float baseTranslationSpeed = m_CameraController.GetBaseTranslationSpeed();
+		if (ImGui::SliderFloat("Move Speed", &baseTranslationSpeed, 1.0f, 20.0f))
 		{
-			m_CameraController.SetTranslationSpeed(translationSpeed);
+			m_CameraController.SetBaseTranslationSpeed(baseTranslationSpeed);
 		}
 		
 		float rotationSpeed = m_CameraController.GetRotationSpeed();
@@ -128,6 +138,7 @@ public:
 			m_CameraController.GetCamera().SetPosition({ 0.0f, 0.0f, 0.0f });
 			m_CameraController.GetCamera().SetRotation(0.0f);
 			m_CameraController.SetZoomLevel(1.0f);
+			m_CameraController.SetBaseTranslationSpeed(5.0f);
 		}
 		
 		ImGui::Separator();

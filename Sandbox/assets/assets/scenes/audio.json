@@ -1,0 +1,166 @@
+{
+  "entities": [
+    {
+      "audioSource": {
+        "audioFile": "sfx_4.wav",
+        "is3D": true,
+        "loop": false,
+        "maxDistance": 20.0,
+        "minDistance": 1.0,
+        "pitch": 1.0,
+        "playOnAwake": false,
+        "rolloffFactor": 1.0,
+        "volume": 1.0
+      },
+      "tag": "SFX_Front",
+      "transform": {
+        "position": [
+          0.0,
+          3.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          0.15000000596046448,
+          0.15000000596046448
+        ]
+      },
+      "uuid": 9001234567890123461
+    },
+    {
+      "audioSource": {
+        "audioFile": "sfx_3.wav",
+        "is3D": true,
+        "loop": false,
+        "maxDistance": 20.0,
+        "minDistance": 1.0,
+        "pitch": 1.0,
+        "playOnAwake": false,
+        "rolloffFactor": 1.0,
+        "volume": 1.0
+      },
+      "tag": "SFX_Right",
+      "transform": {
+        "position": [
+          3.0,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          0.15000000596046448,
+          0.15000000596046448
+        ]
+      },
+      "uuid": 9001234567890123460
+    },
+    {
+      "audioSource": {
+        "audioFile": "sfx_2.wav",
+        "is3D": true,
+        "loop": false,
+        "maxDistance": 20.0,
+        "minDistance": 1.0,
+        "pitch": 1.0,
+        "playOnAwake": false,
+        "rolloffFactor": 1.0,
+        "volume": 1.0
+      },
+      "tag": "SFX_Left",
+      "transform": {
+        "position": [
+          -3.0,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          0.15000000596046448,
+          0.15000000596046448
+        ]
+      },
+      "uuid": 9001234567890123459
+    },
+    {
+      "audioSource": {
+        "audioFile": "sfx_1.wav",
+        "is3D": true,
+        "loop": false,
+        "maxDistance": 20.0,
+        "minDistance": 1.0,
+        "pitch": 1.0,
+        "playOnAwake": false,
+        "rolloffFactor": 1.0,
+        "volume": 1.0
+      },
+      "tag": "SFX_MovingSound",
+      "transform": {
+        "position": [
+          5.0,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          0.20000000298023224,
+          0.20000000298023224
+        ]
+      },
+      "uuid": 9001234567890123458
+    },
+    {
+      "audioSource": {
+        "audioFile": "background_music.wav",
+        "is3D": false,
+        "loop": true,
+        "maxDistance": 100.0,
+        "minDistance": 1.0,
+        "pitch": 1.0,
+        "playOnAwake": false,
+        "rolloffFactor": 1.0,
+        "volume": 0.5
+      },
+      "tag": "BackgroundMusic",
+      "transform": {
+        "position": [
+          0.0,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          1.0,
+          1.0
+        ]
+      },
+      "uuid": 9001234567890123457
+    },
+    {
+      "audioListener": {
+        "forward": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "isActive": true,
+        "up": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "tag": "Listener",
+      "transform": {
+        "position": [
+          0.0,
+          0.0
+        ],
+        "rotation": 0.0,
+        "scale": [
+          1.0,
+          1.0
+        ]
+      },
+      "uuid": 9001234567890123456
+    }
+  ],
+  "scene": {
+    "name": "Audio Demo Scene",
+    "version": "1.0"
+  }
+}
