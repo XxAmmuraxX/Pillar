@@ -32,7 +32,7 @@ Entity ObjectPool::Acquire()
 		entity = m_AvailableEntities.back();
 		m_AvailableEntities.pop_back();
 
-		//PIL_CORE_TRACE("ObjectPool: Reusing entity from pool (available: {0})", m_AvailableEntities.size());
+		PIL_CORE_TRACE("ObjectPool: Reusing entity from pool (available: {0})", m_AvailableEntities.size());
 	}
 	else
 	{
@@ -64,7 +64,7 @@ void ObjectPool::Release(Entity entity)
 
 	// Return entity to pool
 	m_AvailableEntities.push_back(entity);
-	//PIL_CORE_TRACE("ObjectPool: Released entity back to pool (available: {0})", m_AvailableEntities.size());
+	PIL_CORE_TRACE("ObjectPool: Released entity back to pool (available: {0})", m_AvailableEntities.size());
 }
 
 bool ObjectPool::IsInPool(Entity entity) const

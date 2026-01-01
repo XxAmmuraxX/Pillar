@@ -10,7 +10,6 @@
 #include "ParticleEmitterDemo.h"
 #include "AnimationDemoLayer.h"
 #include "DemoMenuLayer.h"
-#include "ArenaProtocol/ArenaProtocolLayer.h"
 #include "Pillar/ImGuiLayer.h"
 
 class Sandbox : public Pillar::Application
@@ -19,34 +18,32 @@ public:
 	Sandbox()
 	{
 		// CHOOSE YOUR DEMO: Uncomment one of the following lines
-		// Option 0: Arena Protocol (Feature Showcase Game)
-		PushLayer(new Pillar::ArenaProtocolLayer());
+		// Option 0: Demo Menu
+		PushLayer(new DemoMenuLayer());
 		
-		// Option 1: Demo Menu
-		//PushLayer(new DemoMenuLayer());
-		
-		// Option 2: Physics Demo (Gameplay)
+		// Option 1: Physics Demo (Gameplay)
 		//PushLayer(new PhysicsDemoLayer());
 		
-		// Option 3: Light Entity Performance Demo
+		// Option 2: Light Entity Performance Demo
 		//PushLayer(new LightEntityPerfDemo());
 
-		// Option 4: Particle System Demo
+		// Option 2b: Particle System Demo
 		//PushLayer(new ParticleSystemDemo());
 
-		// Option 5: Particle Emitter Demo
+		// Option 2c: Particle Emitter Demo
 		//PushLayer(new ParticleEmitterDemo());
+		
 
-		// Option 6: Heavy Entity Performance Demo
+		// Option 3: Heavy Entity Performance Demo
 		//PushLayer(new HeavyEntityPerfDemo());
 
-		// Option 7: Object Pool Demo
+		// Option 4: Object Pool Demo
 		//PushLayer(new ObjectPoolDemo());
 
-		// Option 8: Audio System Demo
+		// Option 5: Audio System Demo
 		//PushLayer(new AudioDemoLayer());
 		
-		// Option 9: Scene System Demo
+		// Option 6: Scene System Demo
 		//PushLayer(new SceneDemoLayer());
 		
 		// Option 7: Animation System Demo (NEW!)
