@@ -45,12 +45,25 @@ namespace Pillar {
         // Default implementation (subclass must override)
     }
 
-    void BatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size, 
-                                  const glm::vec4& color, Texture2D* texture,
-                                  const glm::vec2& texCoordMin, const glm::vec2& texCoordMax)
-    {
-        // Default implementation (subclass must override)
-    }
+	void BatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
+						  const glm::vec4& color, Texture2D* texture,
+						  const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
+						  bool flipX, bool flipY)
+	{
+		// Default implementation (subclass must override)
+	}
+
+	void BatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
+						  const glm::vec4& color)
+	{
+		// Default implementation (subclass must override)
+	}
+
+	void BatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
+						  Texture2D* texture)
+	{
+		// Default implementation (subclass must override)
+	}
 
     void BatchRenderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
                                          float rotation, const glm::vec4& color)
@@ -60,6 +73,20 @@ namespace Pillar {
 
     void BatchRenderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
                                          float rotation, const glm::vec4& color, Texture2D* texture)
+    {
+        // Default implementation (subclass must override)
+    }
+
+    void BatchRenderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
+                                         float rotation, const glm::vec4& color)
+    {
+        // Default implementation (subclass must override)
+    }
+
+    void BatchRenderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
+                                         float rotation, const glm::vec4& color, Texture2D* texture,
+                                         const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
+                                         bool flipX, bool flipY)
     {
         // Default implementation (subclass must override)
     }

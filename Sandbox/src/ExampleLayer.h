@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/Renderer2DBackend.h"
 #include <imgui.h>
 #include <glm/gtc/matrix_transform.hpp>

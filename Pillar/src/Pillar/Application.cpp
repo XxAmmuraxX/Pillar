@@ -2,11 +2,11 @@
 #include "Application.h"
 #include "Pillar/Logger.h"
 #include "Pillar/Renderer/Renderer.h"
-#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Audio/AudioEngine.h"
 #include "Pillar/Renderer/Renderer2DBackend.h"
 #include <chrono>
 #include "Pillar/Input.h"
+#include "Pillar/Time.h"
 
 namespace Pillar
 {
@@ -27,8 +27,7 @@ namespace Pillar
 
 		// Initialize Renderer
 		Renderer::Init();
-		Renderer2D::Init();
-		Renderer2DBackend::Init(Renderer2DBackend::API::Batch);  // Start with batch renderer
+		Renderer2DBackend::Init();  // Batch renderer
 
 		// Create and push ImGui layer as an overlay
 		m_ImGuiLayer = new ImGuiLayer();
@@ -39,7 +38,6 @@ namespace Pillar
 	{
 		// Ensure layers are detached and destroyed via LayerStack destructor
 		Renderer2DBackend::Shutdown();
-		Renderer2D::Shutdown();
 		Renderer::Shutdown();
 		AudioEngine::Shutdown();
 	}
@@ -71,8 +69,13 @@ namespace Pillar
 
 	bool Application::OnWindowClose(WindowCloseEvent& e)
 	{
-		m_Running = false;
+		Close();
 		return true;
+	}
+
+	void Application::Close()
+	{
+		m_Running = false;
 	}
 
 	void Application::PushLayer(Layer* layer)
@@ -93,14 +96,19 @@ namespace Pillar
 		PIL_CORE_ERROR("This is an error message for demonstration purposes.");
 		PIL_CORE_WARN("This is a warning message for demonstration purposes.");
 
-		auto lastTime = std::chrono::high_resolution_clock::now();
+		auto lastTime = std::chrono::steady_clock::now();
 		while (m_Running)
 		{// Simulate application running
 			// Delta time
-			auto now = std::chrono::high_resolution_clock::now();
+			auto now = std::chrono::steady_clock::now();
 			std::chrono::duration<float> dt = now - lastTime;
 			lastTime = now;
-			float deltaTime = dt.count();
+			float unscaledDeltaTime = dt.count();
+			Time::Tick(unscaledDeltaTime);
+			float deltaTime = Time::GetDeltaTime();
+
+			m_Window->PollEvents();
+			Input::OnUpdate();
 
 			// Clear screen
 			Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });

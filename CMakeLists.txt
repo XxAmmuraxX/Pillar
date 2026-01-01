@@ -148,8 +148,15 @@ FetchContent_Declare(
   GIT_TAG docking
 )
 
+# ImGuizmo (for transform gizmos)
+FetchContent_Declare(
+  imguizmo
+  GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo.git
+  GIT_TAG master
+)
+
 # Make dependencies available (except glad - we'll handle it specially)
-FetchContent_MakeAvailable(spdlog glfw glm stb imgui entt box2d nlohmann_json openal)
+FetchContent_MakeAvailable(spdlog glfw glm stb imgui imguizmo entt box2d openal nlohmann_json)
 
 # Now make GLAD available and generate the loader
 FetchContent_MakeAvailable(glad)
@@ -178,7 +185,20 @@ target_compile_definitions(imgui PUBLIC IMGUI_IMPL_OPENGL_LOADER_GLAD)
 
 target_link_libraries(imgui PUBLIC glfw glad_gl_core_46)
 
+# Create ImGuizmo library
+set(IMGUIZMO_DIR ${imguizmo_SOURCE_DIR})
+add_library(imguizmo STATIC
+    ${IMGUIZMO_DIR}/ImGuizmo.cpp
+)
+
+target_include_directories(imguizmo PUBLIC
+    ${IMGUIZMO_DIR}
+)
+
+target_link_libraries(imguizmo PUBLIC imgui)
+
 # Add subdirectories
 add_subdirectory(Pillar)
 add_subdirectory(Sandbox)
+add_subdirectory(PillarEditor)
 add_subdirectory(Tests)

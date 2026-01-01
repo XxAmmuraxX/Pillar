@@ -34,16 +34,31 @@ namespace Pillar {
         
         void DrawQuad(const glm::vec2& position, const glm::vec2& size, 
                      const glm::vec4& color, Texture2D* texture) override;
-        
-        void DrawQuad(const glm::vec3& position, const glm::vec2& size, 
-                     const glm::vec4& color, Texture2D* texture,
-                     const glm::vec2& texCoordMin, const glm::vec2& texCoordMax) override;
+
+        void DrawQuad(const glm::vec3& position, const glm::vec2& size,
+                 const glm::vec4& color) override;
+
+        void DrawQuad(const glm::vec3& position, const glm::vec2& size,
+                 Texture2D* texture) override;
+
+        void DrawQuad(const glm::vec3& position, const glm::vec2& size,
+                 const glm::vec4& color, Texture2D* texture,
+                 const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
+                 bool flipX = false, bool flipY = false) override;
 
         void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
-                            float rotation, const glm::vec4& color) override;
+                     float rotation, const glm::vec4& color) override;
         
         void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
-                            float rotation, const glm::vec4& color, Texture2D* texture) override;
+                     float rotation, const glm::vec4& color, Texture2D* texture) override;
+
+        void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
+                     float rotation, const glm::vec4& color) override;
+
+        void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
+                     float rotation, const glm::vec4& color, Texture2D* texture,
+                     const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
+                     bool flipX = false, bool flipY = false) override;
 
     protected:
         void Init() override;
@@ -93,14 +108,12 @@ namespace Pillar {
         // Camera
         glm::mat4 m_ViewProjectionMatrix;
 
-        // Helper methods
-        void StartBatch();
-        void NextBatch();
-        uint32_t GetOrAddTextureSlot(Texture2D* texture);
-        void AddQuadToBatch(const glm::vec3& position, const glm::vec2& size,
-                           const glm::vec4& color, Texture2D* texture,
-                           const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
-                           float rotation = 0.0f);
-    };
-
-} // namespace Pillar
+    // Helper methods
+    void StartBatch();
+    void NextBatch();
+    uint32_t GetOrAddTextureSlot(Texture2D* texture);
+    void AddQuadToBatch(const glm::vec3& position, const glm::vec2& size,
+                       const glm::vec4& color, Texture2D* texture,
+                       const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
+                       float rotation, bool flipX = false, bool flipY = false);
+};} // namespace Pillar

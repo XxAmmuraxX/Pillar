@@ -5,6 +5,7 @@
 # ==============================
 add_library(Pillar STATIC
     src/Pillar/Application.cpp
+    src/Pillar/Time.cpp
     src/Pillar/Logger.cpp
     src/Pillar/Events/ApplicationEvent.cpp
     src/Platform/WindowsWindow.cpp
@@ -15,6 +16,9 @@ add_library(Pillar STATIC
     src/Pillar/KeyCodes.h
     # Utils
     src/Pillar/Utils/AssetManager.cpp
+    src/Pillar/Utils/Random.cpp
+    src/Pillar/Utils/Random.h
+    src/Pillar/Utils/Math2D.h
     # Audio
     src/Pillar/Audio/AudioEngine.cpp
     src/Pillar/Audio/AudioBuffer.cpp
@@ -29,13 +33,13 @@ add_library(Pillar STATIC
     # Renderer
     src/Pillar/Renderer/RenderAPI.cpp
     src/Pillar/Renderer/Renderer.cpp
-    src/Pillar/Renderer/Renderer2D.cpp
     src/Pillar/Renderer/Renderer2DBackend.cpp
     src/Pillar/Renderer/RenderCommand.cpp
     src/Pillar/Renderer/Shader.cpp
     src/Pillar/Renderer/Buffer.cpp
     src/Pillar/Renderer/VertexArray.cpp
     src/Pillar/Renderer/Texture.cpp
+    src/Pillar/Renderer/Framebuffer.cpp
     src/Pillar/Renderer/OrthographicCamera.cpp
     src/Pillar/Renderer/OrthographicCameraController.cpp
     src/Pillar/Renderer/BatchRenderer2D.cpp
@@ -46,11 +50,13 @@ add_library(Pillar STATIC
     src/Platform/OpenGL/OpenGLBuffer.cpp
     src/Platform/OpenGL/OpenGLVertexArray.cpp
     src/Platform/OpenGL/OpenGLTexture.cpp
+    src/Platform/OpenGL/OpenGLFramebuffer.cpp
     src/Platform/OpenGL/OpenGLBatchRenderer2D.cpp
     # ECS - Entity Component System
     src/Pillar/ECS/Scene.cpp
     src/Pillar/ECS/SceneManager.cpp
     src/Pillar/ECS/SceneSerializer.cpp
+    src/Pillar/ECS/PrefabSerializer.cpp
     src/Pillar/ECS/ComponentRegistry.cpp
     src/Pillar/ECS/BuiltinComponentRegistrations.cpp
     src/Pillar/ECS/ObjectPool.cpp
@@ -93,6 +99,14 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Systems/ParticleEmitterSystem.h
     # ECS - Components (Rendering)
     src/Pillar/ECS/Components/Rendering/SpriteComponent.h
+    src/Pillar/ECS/Components/Rendering/AnimationFrame.h
+    src/Pillar/ECS/Components/Rendering/AnimationClip.h
+    src/Pillar/ECS/Components/Rendering/AnimationComponent.h
+    # Animation System
+    src/Pillar/ECS/Systems/AnimationSystem.cpp
+    src/Pillar/ECS/Systems/AnimationSystem.h
+    src/Pillar/Utils/AnimationLoader.cpp
+    src/Pillar/Utils/AnimationLoader.h
 )
 
 # Override for all configurations

@@ -9,8 +9,7 @@ class DemoMenuLayer : public Pillar::Layer
 public:
 	DemoMenuLayer(std::function<void(int)> switchCallback = nullptr)
 		: Layer("DemoMenuLayer"),
-		  m_SwitchCallback(switchCallback),
-		  m_CurrentBackend(1)  // 0 = Basic, 1 = Batch (default to Batch)
+		  m_SwitchCallback(switchCallback)
 	{
 	}
 
@@ -21,26 +20,10 @@ public:
 		ImGui::Text("Pillar Engine - ECS/Physics Demos");
 		ImGui::Separator();
 
-		// Renderer Backend Selection
+		// Renderer Info
 		ImGui::Text("Renderer Backend:");
-		const char* backends[] = { "Basic (Legacy)", "Batch (GPU-Optimized)" };
-		if (ImGui::Combo("##Backend", &m_CurrentBackend, backends, 2))
-		{
-			Pillar::Renderer2DBackend::API api = (m_CurrentBackend == 0) ?
-				Pillar::Renderer2DBackend::API::Basic :
-				Pillar::Renderer2DBackend::API::Batch;
-			Pillar::Renderer2DBackend::SetAPI(api);
-			PIL_INFO("Switched to {0} renderer", backends[m_CurrentBackend]);
-		}
-		
-		if (m_CurrentBackend == 0)
-		{
-			ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.2f, 1.0f), "* Basic: 1 draw call per quad");
-		}
-		else
-		{
-			ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.3f, 1.0f), "* Batch: Up to 10,000 quads per draw call");
-		}
+		ImGui::TextColored(ImVec4(0.2f, 0.8f, 0.3f, 1.0f), "* Batch Renderer (GPU-Optimized)");
+		ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f), "  Up to 10,000 quads per draw call");
 
 		// Only show demo selection if callback is provided
 		if (m_SwitchCallback)
@@ -80,5 +63,4 @@ public:
 
 private:
 	std::function<void(int)> m_SwitchCallback;
-	int m_CurrentBackend;
 };

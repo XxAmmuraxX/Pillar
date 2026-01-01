@@ -100,7 +100,7 @@ public:
 		Pillar::RenderCommand::Clear();
 
 		// Render scene
-		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
 
 		if (m_Scene)
 		{
@@ -111,7 +111,7 @@ public:
 			}
 		}
 
-		Pillar::Renderer2D::EndScene();
+		Pillar::Renderer2DBackend::EndScene();
 	}
 
 	void OnEvent(Pillar::Event& event) override

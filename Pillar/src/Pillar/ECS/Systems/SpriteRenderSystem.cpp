@@ -44,57 +44,7 @@ namespace Pillar {
 	void SpriteRenderSystem::RenderSprite(const TransformComponent& transform,
 		const SpriteComponent& sprite)
 	{
-		// Calculate final size (sprite size * transform scale)
-		glm::vec2 finalSize = sprite.Size * transform.Scale;
-
-		// Handle rotation if needed
-		if (transform.Rotation != 0.0f)
-		{
-			if (sprite.Texture)
-			{
-				Renderer2DBackend::DrawRotatedQuad(
-					transform.Position,
-					finalSize,
-					transform.Rotation,
-					sprite.Color,
-					sprite.Texture
-				);
-			}
-			else
-			{
-				Renderer2DBackend::DrawRotatedQuad(
-					transform.Position,
-					finalSize,
-					transform.Rotation,
-					sprite.Color
-				);
-			}
-		}
-		else
-		{
-			// No rotation
-			if (sprite.Texture)
-			{
-				// Use texture coordinates for sprite sheet support
-				Renderer2DBackend::DrawQuad(
-					glm::vec3(transform.Position, sprite.ZIndex),
-					finalSize,
-					sprite.Color,
-					sprite.Texture,
-					sprite.TexCoordMin,
-					sprite.TexCoordMax
-				);
-			}
-			else
-			{
-				// No texture - just use vec2 position (Z-index ignored for untextured quads)
-				Renderer2DBackend::DrawQuad(
-					transform.Position,
-					finalSize,
-					sprite.Color
-				);
-			}
-		}
+		Renderer2DBackend::DrawSprite(transform, sprite);
 	}
 
 } // namespace Pillar

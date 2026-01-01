@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/Renderer2DBackend.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
