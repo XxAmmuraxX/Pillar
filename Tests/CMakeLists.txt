@@ -19,23 +19,75 @@ enable_testing()
 
 # Create test executable
 add_executable(PillarTests
-    src/EventTests.cpp
-    src/LayerTests.cpp
-    src/CameraTests.cpp
-    src/LoggerTests.cpp
-    src/InputTests.cpp
-    src/ApplicationTests.cpp
-    src/WindowTests.cpp
-    src/SceneTests.cpp
-    src/EntityTests.cpp
-    src/VelocityIntegrationTests.cpp
-    src/BulletCollisionTests.cpp
-    src/SpatialHashGridTests.cpp
-    src/XPCollectionTests.cpp
-    src/AudioTests.cpp
-    src/AudioExtendedTests.cpp
-    src/SceneSerializerTests.cpp
-    src/AnimationTests.cpp
+    # ===================
+    # Core Engine Tests
+    # ===================
+    src/Core/EventTests.cpp
+    src/Core/LayerTests.cpp
+    src/Core/LoggerTests.cpp
+    src/Core/ApplicationTests.cpp
+    src/Core/ApplicationEventTests.cpp
+    src/Core/InputTests.cpp
+    src/Core/WindowTests.cpp
+    src/Core/AssetManagerTests.cpp
+    src/Core/Math2DTests.cpp
+    src/Core/RandomTests.cpp
+    src/Core/TimeTests.cpp
+
+    # ===================
+    # ECS Tests
+    # ===================
+    src/ECS/SceneTests.cpp
+    src/ECS/EntityTests.cpp
+    src/ECS/ComponentTests.cpp
+    src/ECS/TransformComponentExtendedTests.cpp
+    src/ECS/ComponentRegistryTests.cpp
+    src/ECS/SceneSerializerTests.cpp
+    src/ECS/ObjectPoolTests.cpp
+    src/ECS/SpecializedPoolsTests.cpp
+
+    # ===================
+    # Renderer Tests
+    # ===================
+    src/Renderer/CameraTests.cpp
+    src/Renderer/Renderer2DBackendTests.cpp
+
+    # ===================
+    # Audio Tests
+    # ===================
+    src/Audio/AudioTests.cpp
+    src/Audio/AudioExtendedTests.cpp
+
+    # ===================
+    # Gameplay System Tests
+    # ===================
+    src/Gameplay/VelocityIntegrationTests.cpp
+    src/Gameplay/BulletCollisionTests.cpp
+    src/Gameplay/SpatialHashGridTests.cpp
+    src/Gameplay/XPCollectionTests.cpp
+    src/Gameplay/ParticleSystemTests.cpp
+    src/Gameplay/AnimationTests.cpp
+
+    # ===================
+    # Physics Tests
+    # ===================
+    src/Physics/Box2DContactListenerTests.cpp
+    src/Physics/Box2DBodyFactoryTests.cpp
+    src/Physics/PhysicsSystemTests.cpp
+    
+    # ===================
+    # Integration Tests
+    # ===================
+    src/Integration/ECSIntegrationTests.cpp
+    src/Integration/PerformanceTests.cpp
+    src/Integration/AudioIntegrationTests.cpp
+    src/Integration/GameplayScenarioTests.cpp
+    src/Integration/EndToEndSceneTests.cpp
+    src/Integration/RenderingIntegrationTests.cpp
+    src/Integration/AssetPipelineE2ETests.cpp
+    src/Integration/GameFrameE2ETests.cpp
+    src/Integration/ComponentSerializationTests.cpp
+    src/Integration/PrefabSerializationTests.cpp
 )
 
 # Set output directory
@@ -68,4 +120,6 @@ add_custom_command(TARGET PillarTests POST_BUILD
 
 # Discover tests for CTest integration
 include(GoogleTest)
-gtest_discover_tests(PillarTests)
+gtest_discover_tests(PillarTests
+    DISCOVERY_MODE PRE_TEST
+)

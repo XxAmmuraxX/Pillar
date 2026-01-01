@@ -3,12 +3,15 @@
 #include "Pillar/Application.h"
 #include "Pillar/Logger.h"
 #include "Pillar/Input.h"
+#include "Pillar/Time.h"
 #include "Pillar/KeyCodes.h"
 #include "Pillar/Layer.h"
 #include "Pillar/ImguiLayer.h"
 
 // Utils
 #include "Pillar/Utils/AssetManager.h"
+#include "Pillar/Utils/Math2D.h"
+#include "Pillar/Utils/Random.h"
 
 // Audio
 #include "Pillar/Audio/AudioEngine.h"

@@ -3,6 +3,7 @@
 #include "Pillar/Core.h"
 #include <glm/glm.hpp>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -51,6 +52,15 @@ namespace Pillar {
          */
         static std::shared_ptr<AudioSource> CreateSource();
 
+        enum class AudioBus
+        {
+            Master = 0,
+            SFX,
+            Music,
+            UI,
+            Count
+        };
+
         /**
          * @brief Set the master volume for all audio.
          * @param volume Volume level (0.0 = silent, 1.0 = full volume).
@@ -62,6 +72,13 @@ namespace Pillar {
          * @return Current master volume level.
          */
         static float GetMasterVolume();
+
+        /**
+         * @brief Simple one-shot playback helper.
+         * Creates a transient source, assigns the buffer, and plays immediately.
+         * @return The created source, or nullptr if the buffer fails to load or audio is not initialized.
+         */
+        static std::shared_ptr<AudioSource> PlayOneShot(const std::string& filepath, float volume = 1.0f, float pitch = 1.0f, std::optional<glm::vec3> position = std::nullopt, AudioBus bus = AudioBus::SFX);
 
         /**
          * @brief Set the listener's position in 3D space.
@@ -103,9 +120,53 @@ namespace Pillar {
          */
         static void ResumeAllSounds();
 
+        // ==================== Bus Controls ====================
+        static void SetBusVolume(AudioBus bus, float volume);
+        static float GetBusVolume(AudioBus bus);
+        static void MuteBus(AudioBus bus);
+        static void UnmuteBus(AudioBus bus);
+        static bool IsBusMuted(AudioBus bus);
+
+        // ==================== Bus Fades ====================
+        static void FadeBusTo(AudioBus bus, float targetVolume, float durationSeconds);
+        static void FadeIn(AudioBus bus, float durationSeconds, float targetVolume = 1.0f);
+        static void FadeOut(AudioBus bus, float durationSeconds, float targetVolume = 0.0f);
+        static void Update(float deltaSeconds);
+
+        // ==================== Source Routing ====================
+        static void SetSourceBus(const std::shared_ptr<AudioSource>& source, AudioBus bus);
+        static AudioBus GetSourceBus(const std::shared_ptr<AudioSource>& source);
+        static void SetSourceVolume(const std::shared_ptr<AudioSource>& source, float volume);
+        static float GetSourceUserVolume(const std::shared_ptr<AudioSource>& source);
+
     private:
-        static std::vector<std::weak_ptr<AudioSource>> s_ActiveSources;
+        struct BusState
+        {
+            float Volume = 1.0f;
+            bool Muted = false;
+            bool Fading = false;
+            float FadeStart = 1.0f;
+            float FadeTarget = 1.0f;
+            float FadeDuration = 0.0f;
+            float FadeElapsed = 0.0f;
+        };
+
+        struct TrackedSource
+        {
+            std::weak_ptr<AudioSource> Source;
+            AudioBus Bus = AudioBus::SFX;
+            float UserVolume = 1.0f;
+        };
+
+        static std::vector<TrackedSource> s_TrackedSources;
+        static std::vector<BusState> s_BusStates;
+
         static void RegisterSource(const std::shared_ptr<AudioSource>& source);
+        static void CleanupSources();
+        static void ApplyAllBusGains();
+        static void ApplyGainToSource(TrackedSource& tracked);
+        static BusState& GetBusState(AudioBus bus);
+        static float GetEffectiveBusVolume(AudioBus bus);
         friend class AudioSource;
     };
 

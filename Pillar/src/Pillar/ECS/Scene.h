@@ -45,6 +45,13 @@ namespace Pillar {
 		std::vector<Entity> GetAllEntities();
 		size_t GetEntityCount() const;
 
+		// Entity iteration helpers
+		template<typename... Components, typename Func>
+		void ForEach(Func&& fn);
+
+		template<typename Func>
+		void EachEntity(Func&& fn);
+
 		// Scene properties
 		const std::string& GetName() const { return m_Name; }
 		void SetName(const std::string& name) { m_Name = name; }
@@ -92,3 +99,6 @@ namespace Pillar {
 	};
 
 } // namespace Pillar
+
+// Include Entity after Scene declaration so template definitions can use the complete type
+#include "Entity.h"

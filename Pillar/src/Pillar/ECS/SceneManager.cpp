@@ -71,6 +71,8 @@ namespace Pillar {
 		m_ActiveScene = nullptr;
 		m_PendingScene.clear();
 		m_IsTransitioning = false;
+		m_OnSceneChange = nullptr;
+		m_OnSceneLoaded = nullptr;
 		PIL_CORE_INFO("Cleared all scenes");
 	}
 

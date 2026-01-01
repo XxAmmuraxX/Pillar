@@ -53,16 +53,6 @@ namespace Pillar {
 		 */
 		glm::vec2 CalculateEmissionVelocity(const class ParticleEmitterComponent& emitter);
 
-		/**
-		 * @brief Get random value in range [-1, 1]
-		 */
-		float RandomRange(float min, float max);
-
-		/**
-		 * @brief Get random float in [0, 1]
-		 */
-		float Random01();
-
 	private:
 		ParticlePool* m_ParticlePool = nullptr;
 		uint32_t m_EmitterCount = 0;

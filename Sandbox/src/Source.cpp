@@ -49,8 +49,8 @@ public:
 		// Option 9: Scene System Demo
 		//PushLayer(new SceneDemoLayer());
 		
-		// Option 10: Animation System Demo
-		//PushLayer(new AnimationDemoLayer());
+		// Option 7: Animation System Demo (NEW!)
+		PushLayer(new AnimationDemoLayer());
 	}
 
 	~Sandbox()
