@@ -840,6 +840,228 @@ namespace Pillar {
 				// Note: OnAnimationEvent callback is not copied (must be set per entity)
 			}
 		);
-	}
+
+	// ParticleComponent
+	registry.Register<ParticleComponent>(
+		"ParticleComponent",
+		// Serialize
+		[](Entity e) -> json {
+			if (!e.HasComponent<ParticleComponent>()) return nullptr;
+			auto& p = e.GetComponent<ParticleComponent>();
+			json j;
+			j["lifetime"] = p.Lifetime;
+			j["age"] = p.Age;
+			j["dead"] = p.Dead;
+			j["startSize"] = JsonHelpers::SerializeVec2(p.StartSize);
+			j["endSize"] = JsonHelpers::SerializeVec2(p.EndSize);
+			j["startColor"] = JsonHelpers::SerializeVec4(p.StartColor);
+			j["endColor"] = JsonHelpers::SerializeVec4(p.EndColor);
+			j["startRotation"] = p.StartRotation;
+			j["endRotation"] = p.EndRotation;
+			j["fadeOut"] = p.FadeOut;
+			j["scaleOverTime"] = p.ScaleOverTime;
+			j["rotateOverTime"] = p.RotateOverTime;
+			return j;
+		},
+		// Deserialize
+		[](Entity e, const json& j) {
+			auto& p = e.AddComponent<ParticleComponent>();
+			if (j.contains("lifetime"))
+				p.Lifetime = j["lifetime"].get<float>();
+			if (j.contains("age"))
+				p.Age = j["age"].get<float>();
+			if (j.contains("dead"))
+				p.Dead = j["dead"].get<bool>();
+			if (j.contains("startSize"))
+				p.StartSize = JsonHelpers::DeserializeVec2(j["startSize"]);
+			if (j.contains("endSize"))
+				p.EndSize = JsonHelpers::DeserializeVec2(j["endSize"]);
+			if (j.contains("startColor"))
+				p.StartColor = JsonHelpers::DeserializeVec4(j["startColor"]);
+			if (j.contains("endColor"))
+				p.EndColor = JsonHelpers::DeserializeVec4(j["endColor"]);
+			if (j.contains("startRotation"))
+				p.StartRotation = j["startRotation"].get<float>();
+			if (j.contains("endRotation"))
+				p.EndRotation = j["endRotation"].get<float>();
+			if (j.contains("fadeOut"))
+				p.FadeOut = j["fadeOut"].get<bool>();
+			if (j.contains("scaleOverTime"))
+				p.ScaleOverTime = j["scaleOverTime"].get<bool>();
+			if (j.contains("rotateOverTime"))
+				p.RotateOverTime = j["rotateOverTime"].get<bool>();
+		},
+		// Copy
+		[](Entity src, Entity dst) {
+			if (!src.HasComponent<ParticleComponent>()) return;
+			auto& s = src.GetComponent<ParticleComponent>();
+			auto& d = dst.AddComponent<ParticleComponent>();
+			d.Lifetime = s.Lifetime;
+			d.Age = s.Age;
+			d.Dead = s.Dead;
+			d.StartSize = s.StartSize;
+			d.EndSize = s.EndSize;
+			d.StartColor = s.StartColor;
+			d.EndColor = s.EndColor;
+			d.StartRotation = s.StartRotation;
+			d.EndRotation = s.EndRotation;
+			d.FadeOut = s.FadeOut;
+			d.ScaleOverTime = s.ScaleOverTime;
+			d.RotateOverTime = s.RotateOverTime;
+		}
+	);
+
+	// ParticleEmitterComponent
+	registry.Register<ParticleEmitterComponent>("particleEmitter",
+		// Serialize
+		[](Entity e) -> json {
+			if (!e.HasComponent<ParticleEmitterComponent>()) return nullptr;
+			auto& pe = e.GetComponent<ParticleEmitterComponent>();
+			json j;
+			j["enabled"] = pe.Enabled;
+			j["emissionRate"] = pe.EmissionRate;
+			j["burstMode"] = pe.BurstMode;
+			j["burstCount"] = pe.BurstCount;
+			
+			// Emission shape
+			std::string shapeStr = "point";
+			switch (pe.Shape)
+			{
+				case EmissionShape::Point: shapeStr = "point"; break;
+				case EmissionShape::Circle: shapeStr = "circle"; break;
+				case EmissionShape::Box: shapeStr = "box"; break;
+				case EmissionShape::Cone: shapeStr = "cone"; break;
+			}
+			j["shape"] = shapeStr;
+			j["shapeSize"] = JsonHelpers::SerializeVec2(pe.ShapeSize);
+			
+			// Direction & speed
+			j["direction"] = JsonHelpers::SerializeVec2(pe.Direction);
+			j["directionSpread"] = pe.DirectionSpread;
+			j["speed"] = pe.Speed;
+			j["speedVariance"] = pe.SpeedVariance;
+			
+			// Particle properties
+			j["lifetime"] = pe.Lifetime;
+			j["lifetimeVariance"] = pe.LifetimeVariance;
+			j["size"] = pe.Size;
+			j["sizeVariance"] = pe.SizeVariance;
+			j["startColor"] = JsonHelpers::SerializeVec4(pe.StartColor);
+			j["colorVariance"] = JsonHelpers::SerializeVec4(pe.ColorVariance);
+			
+			// Visual effects
+			j["fadeOut"] = pe.FadeOut;
+			j["scaleOverTime"] = pe.ScaleOverTime;
+			j["rotateOverTime"] = pe.RotateOverTime;
+			j["endScale"] = pe.EndScale;
+			j["rotationSpeed"] = pe.RotationSpeed;
+			
+			// Gravity
+			j["gravity"] = JsonHelpers::SerializeVec2(pe.Gravity);
+			
+			return j;
+		},
+		// Deserialize
+		[](Entity e, const json& j) {
+			auto& pe = e.AddComponent<ParticleEmitterComponent>();
+			
+			if (j.contains("enabled"))
+				pe.Enabled = j["enabled"].get<bool>();
+			if (j.contains("emissionRate"))
+				pe.EmissionRate = j["emissionRate"].get<float>();
+			if (j.contains("burstMode"))
+				pe.BurstMode = j["burstMode"].get<bool>();
+			if (j.contains("burstCount"))
+				pe.BurstCount = j["burstCount"].get<int>();
+			
+			// Emission shape
+			if (j.contains("shape"))
+			{
+				std::string shapeStr = j["shape"].get<std::string>();
+				if (shapeStr == "circle") pe.Shape = EmissionShape::Circle;
+				else if (shapeStr == "box") pe.Shape = EmissionShape::Box;
+				else if (shapeStr == "cone") pe.Shape = EmissionShape::Cone;
+				else pe.Shape = EmissionShape::Point;
+			}
+			if (j.contains("shapeSize"))
+				pe.ShapeSize = JsonHelpers::DeserializeVec2(j["shapeSize"]);
+			
+			// Direction & speed
+			if (j.contains("direction"))
+				pe.Direction = JsonHelpers::DeserializeVec2(j["direction"]);
+			if (j.contains("directionSpread"))
+				pe.DirectionSpread = j["directionSpread"].get<float>();
+			if (j.contains("speed"))
+				pe.Speed = j["speed"].get<float>();
+			if (j.contains("speedVariance"))
+				pe.SpeedVariance = j["speedVariance"].get<float>();
+			
+			// Particle properties
+			if (j.contains("lifetime"))
+				pe.Lifetime = j["lifetime"].get<float>();
+			if (j.contains("lifetimeVariance"))
+				pe.LifetimeVariance = j["lifetimeVariance"].get<float>();
+			if (j.contains("size"))
+				pe.Size = j["size"].get<float>();
+			if (j.contains("sizeVariance"))
+				pe.SizeVariance = j["sizeVariance"].get<float>();
+			if (j.contains("startColor"))
+				pe.StartColor = JsonHelpers::DeserializeVec4(j["startColor"]);
+			if (j.contains("colorVariance"))
+				pe.ColorVariance = JsonHelpers::DeserializeVec4(j["colorVariance"]);
+			
+			// Visual effects
+			if (j.contains("fadeOut"))
+				pe.FadeOut = j["fadeOut"].get<bool>();
+			if (j.contains("scaleOverTime"))
+				pe.ScaleOverTime = j["scaleOverTime"].get<bool>();
+			if (j.contains("rotateOverTime"))
+				pe.RotateOverTime = j["rotateOverTime"].get<bool>();
+			if (j.contains("endScale"))
+				pe.EndScale = j["endScale"].get<float>();
+			if (j.contains("rotationSpeed"))
+				pe.RotationSpeed = j["rotationSpeed"].get<float>();
+			
+			// Gravity
+			if (j.contains("gravity"))
+				pe.Gravity = JsonHelpers::DeserializeVec2(j["gravity"]);
+		},
+		// Copy
+		[](Entity src, Entity dst) {
+			if (!src.HasComponent<ParticleEmitterComponent>()) return;
+			auto& s = src.GetComponent<ParticleEmitterComponent>();
+			auto& d = dst.AddComponent<ParticleEmitterComponent>();
+			
+			d.Enabled = s.Enabled;
+			d.EmissionRate = s.EmissionRate;
+			d.BurstMode = s.BurstMode;
+			d.BurstCount = s.BurstCount;
+			d.BurstFired = false; // Reset burst state
+			
+			d.Shape = s.Shape;
+			d.ShapeSize = s.ShapeSize;
+			
+			d.Direction = s.Direction;
+			d.DirectionSpread = s.DirectionSpread;
+			d.Speed = s.Speed;
+			d.SpeedVariance = s.SpeedVariance;
+			
+			d.Lifetime = s.Lifetime;
+			d.LifetimeVariance = s.LifetimeVariance;
+			d.Size = s.Size;
+			d.SizeVariance = s.SizeVariance;
+			d.StartColor = s.StartColor;
+			d.ColorVariance = s.ColorVariance;
+			
+			d.FadeOut = s.FadeOut;
+			d.ScaleOverTime = s.ScaleOverTime;
+			d.RotateOverTime = s.RotateOverTime;
+			d.EndScale = s.EndScale;
+			d.RotationSpeed = s.RotationSpeed;
+			
+			d.Gravity = s.Gravity;
+		}
+	);
+}
 
 } // namespace Pillar
