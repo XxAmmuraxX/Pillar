@@ -11,6 +11,8 @@
 #include "Pillar/ECS/Components/Core/UUIDComponent.h"
 #include "Pillar/ECS/Components/Core/HierarchyComponent.h"
 #include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
+#include "Pillar/ECS/Components/Rendering/Light2DComponent.h"
+#include "Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h"
 #include "Pillar/ECS/Components/Rendering/AnimationComponent.h"
 #include "Pillar/ECS/Components/Physics/VelocityComponent.h"
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
@@ -146,6 +148,62 @@ TEST_F(ComponentSerializationTests, TransformComponent_SmallValues)
     auto& loadedTransform = loaded.GetComponent<TransformComponent>();
     EXPECT_NEAR(loadedTransform.Position.x, 0.0001f, 0.00001f);
     EXPECT_NEAR(loadedTransform.Scale.x, 0.01f, 0.0001f);
+}
+
+// -----------------------------------------------------------------------------
+// Lighting2D Component Serialization Tests
+// -----------------------------------------------------------------------------
+
+TEST_F(ComponentSerializationTests, Light2DComponent_RoundTrip)
+{
+    Entity entity = m_Scene->CreateEntity("Torch");
+    entity.AddComponent<Light2DComponent>();
+
+    auto& l = entity.GetComponent<Light2DComponent>();
+    l.Type = Light2DType::Point;
+    l.Color = { 1.0f, 0.8f, 0.6f };
+    l.Intensity = 2.5f;
+    l.Radius = 7.0f;
+    l.CastShadows = true;
+    l.ShadowStrength = 0.9f;
+    l.LayerMask = 0x0000FFFFu;
+
+    Entity loaded = RoundTripEntity(entity);
+    ASSERT_TRUE(loaded);
+    ASSERT_TRUE(loaded.HasComponent<Light2DComponent>());
+
+    auto& ll = loaded.GetComponent<Light2DComponent>();
+    EXPECT_EQ((int)ll.Type, (int)Light2DType::Point);
+    EXPECT_NEAR(ll.Color.r, 1.0f, 0.001f);
+    EXPECT_NEAR(ll.Intensity, 2.5f, 0.001f);
+    EXPECT_NEAR(ll.Radius, 7.0f, 0.001f);
+    EXPECT_TRUE(ll.CastShadows);
+    EXPECT_NEAR(ll.ShadowStrength, 0.9f, 0.001f);
+    EXPECT_EQ(ll.LayerMask, 0x0000FFFFu);
+}
+
+TEST_F(ComponentSerializationTests, ShadowCaster2DComponent_RoundTrip)
+{
+    Entity entity = m_Scene->CreateEntity("Wall");
+    entity.AddComponent<ShadowCaster2DComponent>();
+
+    auto& c = entity.GetComponent<ShadowCaster2DComponent>();
+    c.Closed = true;
+    c.TwoSided = false;
+    c.LayerMask = 0x0000000Fu;
+    c.Points = { { -1.0f, -0.5f }, { 1.0f, -0.5f }, { 1.0f, 0.5f }, { -1.0f, 0.5f } };
+
+    Entity loaded = RoundTripEntity(entity);
+    ASSERT_TRUE(loaded);
+    ASSERT_TRUE(loaded.HasComponent<ShadowCaster2DComponent>());
+
+    auto& cc = loaded.GetComponent<ShadowCaster2DComponent>();
+    EXPECT_TRUE(cc.Closed);
+    EXPECT_FALSE(cc.TwoSided);
+    EXPECT_EQ(cc.LayerMask, 0x0000000Fu);
+    ASSERT_EQ(cc.Points.size(), 4u);
+    EXPECT_NEAR(cc.Points[0].x, -1.0f, 0.001f);
+    EXPECT_NEAR(cc.Points[3].y, 0.5f, 0.001f);
 }
 
 // -----------------------------------------------------------------------------
