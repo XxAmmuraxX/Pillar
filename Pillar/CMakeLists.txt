@@ -40,6 +40,8 @@ add_library(Pillar STATIC
     src/Pillar/Renderer/VertexArray.cpp
     src/Pillar/Renderer/Texture.cpp
     src/Pillar/Renderer/Framebuffer.cpp
+    src/Pillar/Renderer/Lighting2D.cpp
+    src/Pillar/Renderer/Lighting2DGeometry.cpp
     src/Pillar/Renderer/OrthographicCamera.cpp
     src/Pillar/Renderer/OrthographicCameraController.cpp
     src/Pillar/Renderer/BatchRenderer2D.cpp
@@ -93,12 +95,16 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Systems/AudioSystem.cpp
     src/Pillar/ECS/Systems/SpriteRenderSystem.cpp
     src/Pillar/ECS/Systems/SpriteRenderSystem.h
+    src/Pillar/ECS/Systems/Lighting2DSystem.cpp
+    src/Pillar/ECS/Systems/Lighting2DSystem.h
     src/Pillar/ECS/Systems/ParticleSystem.cpp
     src/Pillar/ECS/Systems/ParticleSystem.h
     src/Pillar/ECS/Systems/ParticleEmitterSystem.cpp
     src/Pillar/ECS/Systems/ParticleEmitterSystem.h
     # ECS - Components (Rendering)
     src/Pillar/ECS/Components/Rendering/SpriteComponent.h
+    src/Pillar/ECS/Components/Rendering/Light2DComponent.h
+    src/Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h
     src/Pillar/ECS/Components/Rendering/AnimationFrame.h
     src/Pillar/ECS/Components/Rendering/AnimationClip.h
     src/Pillar/ECS/Components/Rendering/AnimationComponent.h

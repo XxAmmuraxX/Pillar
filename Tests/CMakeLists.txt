@@ -51,6 +51,8 @@ add_executable(PillarTests
     # ===================
     src/Renderer/CameraTests.cpp
     src/Renderer/Renderer2DBackendTests.cpp
+    src/Renderer/Lighting2DAPITests.cpp
+    src/Renderer/Lighting2DGeometryTests.cpp
 
     # ===================
     # Audio Tests

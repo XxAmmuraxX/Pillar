@@ -11,6 +11,8 @@
 #include "Components/Gameplay/ParticleComponent.h"
 #include "Components/Gameplay/ParticleEmitterComponent.h"
 #include "Components/Rendering/SpriteComponent.h"
+#include "Components/Rendering/Light2DComponent.h"
+#include "Components/Rendering/ShadowCaster2DComponent.h"
 #include "Components/Rendering/CameraComponent.h"
 #include "Components/Rendering/AnimationComponent.h"
 #include "Components/Audio/AudioSourceComponent.h"
@@ -426,6 +428,87 @@ namespace Pillar {
 				d.ZIndex = s.ZIndex;
 				d.FlipX = s.FlipX;
 				d.FlipY = s.FlipY;
+			}
+		);
+
+		// Light2DComponent
+		registry.Register<Light2DComponent>("light2d",
+			// Serialize
+			[](Entity e) -> json {
+				if (!e.HasComponent<Light2DComponent>()) return nullptr;
+				auto& l = e.GetComponent<Light2DComponent>();
+				return json{
+					{ "type", (int)l.Type },
+					{ "color", JsonHelpers::SerializeVec3(l.Color) },
+					{ "intensity", l.Intensity },
+					{ "radius", l.Radius },
+					{ "innerAngleRadians", l.InnerAngleRadians },
+					{ "outerAngleRadians", l.OuterAngleRadians },
+					{ "castShadows", l.CastShadows },
+					{ "shadowStrength", l.ShadowStrength },
+					{ "layerMask", l.LayerMask }
+				};
+			},
+			// Deserialize
+			[](Entity e, const json& j) {
+				auto& l = e.AddComponent<Light2DComponent>();
+				l.Type = (Light2DType)j.value("type", (int)Light2DType::Point);
+				if (j.contains("color")) l.Color = JsonHelpers::DeserializeVec3(j["color"]);
+				l.Intensity = j.value("intensity", 1.0f);
+				l.Radius = j.value("radius", 6.0f);
+				l.InnerAngleRadians = j.value("innerAngleRadians", 0.25f);
+				l.OuterAngleRadians = j.value("outerAngleRadians", 0.5f);
+				l.CastShadows = j.value("castShadows", true);
+				l.ShadowStrength = j.value("shadowStrength", 1.0f);
+				l.LayerMask = j.value("layerMask", 0xFFFFFFFFu);
+			},
+			// Copy
+			[](Entity src, Entity dst) {
+				if (!src.HasComponent<Light2DComponent>()) return;
+				auto& s = src.GetComponent<Light2DComponent>();
+				auto& d = dst.AddComponent<Light2DComponent>();
+				d = s;
+			}
+		);
+
+		// ShadowCaster2DComponent
+		registry.Register<ShadowCaster2DComponent>("shadowCaster2d",
+			// Serialize
+			[](Entity e) -> json {
+				if (!e.HasComponent<ShadowCaster2DComponent>()) return nullptr;
+				auto& c = e.GetComponent<ShadowCaster2DComponent>();
+				json points = json::array();
+				for (const auto& p : c.Points)
+					points.push_back(JsonHelpers::SerializeVec2(p));
+				return json{
+					{ "points", points },
+					{ "closed", c.Closed },
+					{ "twoSided", c.TwoSided },
+					{ "layerMask", c.LayerMask }
+				};
+			},
+			// Deserialize
+			[](Entity e, const json& j) {
+				auto& c = e.AddComponent<ShadowCaster2DComponent>();
+				c.Closed = j.value("closed", true);
+				c.TwoSided = j.value("twoSided", false);
+				c.LayerMask = j.value("layerMask", 0xFFFFFFFFu);
+				c.Points.clear();
+				if (j.contains("points") && j["points"].is_array())
+				{
+					for (const auto& pj : j["points"])
+					{
+						if (pj.is_array() && pj.size() >= 2)
+							c.Points.push_back(JsonHelpers::DeserializeVec2(pj));
+					}
+				}
+			},
+			// Copy
+			[](Entity src, Entity dst) {
+				if (!src.HasComponent<ShadowCaster2DComponent>()) return;
+				auto& s = src.GetComponent<ShadowCaster2DComponent>();
+				auto& d = dst.AddComponent<ShadowCaster2DComponent>();
+				d = s;
 			}
 		);
 
