@@ -3,8 +3,6 @@
 
 #include "Core.h"
 #include "spdlog/spdlog.h"
-#include "spdlog/fmt/ostr.h"
-#include "Pillar/Logger.h"
 
 namespace Pillar
 {
