@@ -129,11 +129,15 @@ set_target_properties(Pillar PROPERTIES
 )
 
 # Include directories
-target_include_directories(Pillar PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${IMGUI_DIR}
-    ${IMGUI_DIR}/backends
-    ${stb_SOURCE_DIR}
+target_include_directories(Pillar
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+        $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:include/thirdparty>
+    PRIVATE
+        ${IMGUI_DIR}
+        ${IMGUI_DIR}/backends
+        ${stb_SOURCE_DIR}
 )
 
 # Link libraries - all PUBLIC for static linking
@@ -155,6 +159,9 @@ if(WIN32)
     target_link_libraries(Pillar PUBLIC
         opengl32
     )
+
+    # Propagate platform define to SDK consumers (required by EntryPoint.h)
+    target_compile_definitions(Pillar PUBLIC PIL_WINDOWS)
 endif()
 
 # No longer need PIL_EXPORT for static library

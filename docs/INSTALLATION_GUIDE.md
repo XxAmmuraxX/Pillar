@@ -1,16 +1,17 @@
 # Pillar Engine - Installation Guide
 
-This guide covers the complete installation process for building and running the Pillar Engine from source.
+This guide covers two supported ways to get started:
+
+1) Install the prebuilt **Pillar** ZIP from GitHub Releases
+2) Build Pillar Engine from source (engine development)
 
 ## Table of Contents
 
 1. [System Requirements](#system-requirements)
 2. [Prerequisites](#prerequisites)
-3. [Installing Dependencies](#installing-dependencies)
-4. [Cloning the Repository](#cloning-the-repository)
-5. [Building the Engine](#building-the-engine)
-6. [Verifying Installation](#verifying-installation)
-7. [Troubleshooting](#troubleshooting)
+3. [Install Pillar (GitHub Releases)](#install-pillar-github-releases)
+4. [Build From Source (Engine Development)](#build-from-source-engine-development)
+5. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -42,7 +43,7 @@ This guide covers the complete installation process for building and running the
 
 ### Required Software
 
-1. **Visual Studio 2022** (Community, Professional, or Enterprise)
+1. **Visual Studio 2022 or later** (Community, Professional, or Enterprise)
    - Download: https://visualstudio.microsoft.com/downloads/
    - Required workloads:
      - "Desktop development with C++"
@@ -58,7 +59,7 @@ This guide covers the complete installation process for building and running the
    - Or install via: `winget install Ninja-build.Ninja`
    - Verify: `ninja --version`
 
-4. **Python 3.8+**
+4. **Python 3.8+** (only required if building Pillar from source)
    - Download: https://www.python.org/downloads/
    - Ensure "Add Python to PATH" is checked during installation
    - Verify: `python --version`
@@ -69,7 +70,51 @@ This guide covers the complete installation process for building and running the
 
 ---
 
-## Installing Dependencies
+## Install Pillar (GitHub Releases)
+
+This is the recommended path if you just want to make a game with Pillar.
+
+### Step 1: Download the ZIP
+
+1. Go to the repository **Releases** page on GitHub.
+2. Download the ZIP asset (for example: `Pillar-<version>-Windows-x64.zip`).
+3. Extract it somewhere stable.
+
+After extracting, you should see folders like:
+
+- `include/`
+- `lib/`
+- `editor/`
+- `templates/`
+- `docs/`
+
+### Step 2: Create a New Game Project from the Template
+
+1. (Optional) Rename the project name inside `CMakeLists.txt`.
+
+2. Configure and build:
+
+```powershell
+cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
+cmake --build build --config Debug --parallel
+```
+Or use Visual Studio support for CMake.
+
+3. Run your game executable from the build output directory.
+
+### Step 3: Launch the Editor
+
+Run the editor executable from the SDK:
+
+```powershell
+& "<PILLAR_SDK_DIR>\editor\PillarEditor.exe"
+```
+
+---
+
+## Build From Source (Engine Development)
+
+Use this path if you are contributing to Pillar itself or need to rebuild the engine/editor.
 
 ### Step 1: Install Python Package (Required for GLAD2)
 
@@ -80,75 +125,23 @@ python -m pip install --upgrade pip
 python -m pip install jinja2
 ```
 
-### Step 2: Verify Python Setup
+### Step 2: Clone the Repository
 
-```powershell
-python -c "import jinja2; print('jinja2 installed successfully')"
-```
-
-If this fails, ensure Python is in your PATH.
-
----
-
-## Cloning the Repository
-
-### Option 1: HTTPS (Recommended)
+HTTPS:
 
 ```powershell
 git clone https://github.com/XxAmmuraxX/Pillar.git
 cd Pillar
 ```
 
-### Option 2: SSH
-
-```powershell
-git clone git@github.com:XxAmmuraxX/Pillar.git
-cd Pillar
-```
-
----
-
-## Building the Engine
-
-### Step 1: Open Developer PowerShell
-
-Open "Developer PowerShell for VS 2022" from the Start menu, or run:
-
-```powershell
-& "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1"
-```
-
-### Step 2: Navigate to Project Directory
-
-```powershell
-cd C:\path\to\Pillar
-```
-
-### Step 3: Configure CMake (First Time)
+### Step 3: Configure & Build
 
 ```powershell
 cmake -S . -B out/build/x64-Debug -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
-```
-
-**What this does:**
-- `-S .` - Source directory is current folder
-- `-B out/build/x64-Debug` - Build output directory
-- `-G "Ninja"` - Use Ninja generator (faster than MSBuild)
-- `-DCMAKE_BUILD_TYPE=Debug` - Debug configuration with symbols
-
-### Step 4: Build the Project
-
-```powershell
 cmake --build out/build/x64-Debug --config Debug --parallel
 ```
 
-**Expected build time:**
-- First build: 2-5 minutes (downloads dependencies)
-- Incremental builds: 10-30 seconds
-
-### Step 5: Build Output Locations
-
-After successful build:
+Build outputs:
 
 | Binary | Location |
 |--------|----------|
@@ -157,54 +150,19 @@ After successful build:
 | Unit Tests | `bin/Debug-x64/Tests/PillarTests.exe` |
 | Editor | `bin/Debug-x64/PillarEditor/PillarEditor.exe` |
 
----
+### Step 4: Verify
 
-## Verifying Installation
-
-### Run the Sandbox Application
+Run Sandbox:
 
 ```powershell
-.\bin\Debug-x64\Sandbox\SandboxApp.exe
+\.\bin\Debug-x64\Sandbox\SandboxApp.exe
 ```
 
-**Expected behavior:**
-- Window opens with rendered 2D scene
-- Camera controls: WASD (move), Q/E (rotate), Mouse wheel (zoom)
-- ImGui panel visible for debugging
-- Press ESC or close window to exit
-
-### Run Unit Tests
+Run tests:
 
 ```powershell
-.\bin\Debug-x64\Tests\PillarTests.exe
+\.\bin\Debug-x64\Tests\PillarTests.exe
 ```
-
-**Expected output:**
-- All tests should pass (green)
-- Test count: 200+ tests
-- Execution time: < 10 seconds
-
-### Run Tests with Detailed Output
-
-```powershell
-.\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml
-```
-
----
-
-## Building Release Configuration
-
-For optimized builds:
-
-```powershell
-# Configure Release build
-cmake -S . -B out/build/x64-Release -G "Ninja" -DCMAKE_BUILD_TYPE=Release
-
-# Build Release
-cmake --build out/build/x64-Release --config Release --parallel
-```
-
-Release binaries will be in `bin/Release-x64/`.
 
 ---
 
@@ -258,51 +216,3 @@ cmake --build out/build/x64-Debug --config Debug --parallel
 Ensure CMake configure step completed successfully. Re-run configuration.
 
 ---
-
-### Runtime Errors
-
-**Error:** Application crashes on startup
-
-**Possible causes:**
-1. Missing OpenGL drivers - Update GPU drivers
-2. Incompatible GPU - Ensure OpenGL 4.1+ support
-
----
-
-**Error:** Textures appear white/black
-
-**Solution:**
-Ensure assets folder exists at `Sandbox/assets/textures/` with texture files.
-
----
-
-### Performance Issues
-
-**Slow builds:**
-- Use Ninja instead of MSBuild
-- Enable parallel builds: `--parallel`
-- Use SSD for source and build directories
-
-**Slow application:**
-- Build in Release mode for better performance
-- Check GPU driver is up to date
-
----
-
-## Next Steps
-
-After successful installation:
-
-1. Read the [User's Guide](USERS_GUIDE.md) to learn how to use the engine
-2. Explore the `Sandbox` project for example code
-3. Check the `Pillar/docs/` folder for API documentation
-4. Run the tests to understand available features
-
----
-
-## Getting Help
-
-- **GitHub Issues:** https://github.com/XxAmmuraxX/Pillar/issues
-- **Documentation:** See `docs/` folder
-- **Examples:** See `Sandbox/src/` for demo implementations
-

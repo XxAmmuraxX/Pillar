@@ -1,0 +1,104 @@
+@PACKAGE_INIT@
+
+# Pillar SDK CMake package config
+# Provides the imported target: Pillar::Pillar
+# This file intentionally does not rely on install(EXPORT ...) because Pillar is built
+# with FetchContent dependencies whose exported targets would embed build-machine paths.
+
+# Helpful SDK variables for consumers
+get_filename_component(PILLAR_SDK_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+set(PILLAR_SDK_ROOT "${PILLAR_SDK_ROOT}" CACHE PATH "Pillar SDK root directory")
+set(PILLAR_EDITOR "${PILLAR_SDK_ROOT}/editor/PillarEditor.exe" CACHE FILEPATH "Pillar Editor executable")
+
+set(_PILLAR_SDK_INCLUDEDIR "${PILLAR_SDK_ROOT}/include")
+set(_PILLAR_SDK_THIRDPARTY_INCLUDEDIR "${PILLAR_SDK_ROOT}/include/thirdparty")
+
+function(_pillar_sdk_find_lib out_var config_dir)
+	cmake_parse_arguments(PARSE_ARGV 2 _P "" "" "NAMES")
+	if(NOT _P_NAMES)
+		message(FATAL_ERROR "_pillar_sdk_find_lib requires NAMES")
+	endif()
+
+	# NOTE: find_library() writes results to the CMake cache by default.
+	# This config file calls find_library() many times; if we reuse the same
+	# variable name, the first found result would be reused for all subsequent
+	# searches (breaking dependency linking).
+	unset(${out_var} CACHE)
+	unset(${out_var})
+	find_library(${out_var}
+		NAMES ${_P_NAMES}
+		PATHS "${config_dir}"
+		NO_DEFAULT_PATH
+	)
+endfunction()
+
+function(_pillar_sdk_add_imported_static target_name)
+	cmake_parse_arguments(PARSE_ARGV 1 _P "" "" "NAMES")
+	if(TARGET ${target_name})
+		return()
+	endif()
+
+	add_library(${target_name} STATIC IMPORTED)
+
+	set(_libdir_debug "${PILLAR_SDK_ROOT}/lib/Debug")
+	set(_libdir_release "${PILLAR_SDK_ROOT}/lib/Release")
+
+	_pillar_sdk_find_lib(_lib_debug "${_libdir_debug}" NAMES ${_P_NAMES})
+	_pillar_sdk_find_lib(_lib_release "${_libdir_release}" NAMES ${_P_NAMES})
+
+	# Allow SDKs that ship only Debug or only Release libraries.
+	# Multi-config generators (Visual Studio) still expect all configs to have a valid location.
+	if(NOT _lib_debug AND _lib_release)
+		set(_lib_debug "${_lib_release}")
+	endif()
+	if(NOT _lib_release AND _lib_debug)
+		set(_lib_release "${_lib_debug}")
+	endif()
+
+	if(NOT _lib_debug AND NOT _lib_release)
+		message(FATAL_ERROR "Pillar SDK is missing required library for ${target_name} in ${_libdir_debug} or ${_libdir_release}")
+	endif()
+
+	set_target_properties(${target_name} PROPERTIES
+		IMPORTED_LOCATION_DEBUG "${_lib_debug}"
+		IMPORTED_LOCATION_RELEASE "${_lib_release}"
+		IMPORTED_LOCATION_RELWITHDEBINFO "${_lib_release}"
+		IMPORTED_LOCATION_MINSIZEREL "${_lib_release}"
+	)
+endfunction()
+
+if(NOT TARGET Pillar::Pillar)
+	# Engine library
+	_pillar_sdk_add_imported_static(Pillar::Pillar NAMES Pillar)
+
+	# Dependency libs (installed into SDK lib/<config>)
+	_pillar_sdk_add_imported_static(Pillar::glfw NAMES glfw3 glfw)
+	_pillar_sdk_add_imported_static(Pillar::glad NAMES glad_gl_core_46)
+	_pillar_sdk_add_imported_static(Pillar::imgui NAMES imgui)
+	_pillar_sdk_add_imported_static(Pillar::box2d NAMES box2d)
+	_pillar_sdk_add_imported_static(Pillar::openal NAMES OpenAL32 OpenAL)
+	_pillar_sdk_add_imported_static(Pillar::spdlog NAMES spdlog spdlogd)
+
+	# Include paths + required compile defs for consumers
+	set_target_properties(Pillar::Pillar PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${_PILLAR_SDK_INCLUDEDIR};${_PILLAR_SDK_THIRDPARTY_INCLUDEDIR}"
+		INTERFACE_COMPILE_DEFINITIONS "PIL_STATIC_LIB;PIL_WINDOWS;SPDLOG_COMPILED_LIB"
+	)
+
+	# System + dependency link libs
+	if(WIN32)
+		set(_pillar_sys_libs opengl32 user32 gdi32 shell32 winmm avrt)
+	else()
+		set(_pillar_sys_libs "")
+	endif()
+
+	set_property(TARGET Pillar::Pillar APPEND PROPERTY INTERFACE_LINK_LIBRARIES
+		Pillar::glfw
+		Pillar::glad
+		Pillar::imgui
+		Pillar::box2d
+		Pillar::openal
+		Pillar::spdlog
+		${_pillar_sys_libs}
+	)
+endif()

@@ -1,6 +1,6 @@
 #pragma once
 #include "Core.h"
-#include "Platform/WindowsWindow.h"
+#include "Window.h"
 #include "Pillar/Events/ApplicationEvent.h"
 #include "Pillar/LayerStack.h"
 #include "Pillar/ImGuiLayer.h"
