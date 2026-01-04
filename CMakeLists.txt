@@ -300,6 +300,12 @@ if(PILLAR_ENABLE_SDK_INSTALL)
     )
   endif()
 
+  if(EXISTS "${CMAKE_SOURCE_DIR}/docs")
+    install(DIRECTORY "${CMAKE_SOURCE_DIR}/docs/"
+      DESTINATION "docs"
+    )
+  endif()
+
   if(EXISTS "${CMAKE_SOURCE_DIR}/LICENSE.txt")
     install(FILES "${CMAKE_SOURCE_DIR}/LICENSE.txt" DESTINATION ".")
   endif()
