@@ -3,8 +3,12 @@
 #include "Pillar/Core.h"
 #include <string>
 #include <filesystem>
+#include <memory>
 
 namespace Pillar {
+
+    // Forward declaration
+    class Texture2D;
 
     /**
      * @brief AssetManager handles asset path resolution and file loading
@@ -70,8 +74,20 @@ namespace Pillar {
          */
         static std::filesystem::path GetExecutableDirectory();
 
+        /**
+         * @brief Get the missing texture placeholder (pink checkerboard)
+         * @return Shared pointer to missing texture (created on first call)
+         */
+        static std::shared_ptr<Texture2D> GetMissingTexture();
+
+        /**
+         * @brief Initialize the missing texture (called automatically)
+         */
+        static void InitializeMissingTexture();
+
     private:
         static std::filesystem::path s_AssetsDirectory;
+        static std::shared_ptr<Texture2D> s_MissingTexture;
     };
 
 }

@@ -4,6 +4,8 @@
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/UUIDComponent.h"
 #include <imgui.h>
+#include <algorithm>
+#include <cctype>
 
 namespace PillarEditor {
 
@@ -31,6 +33,47 @@ namespace PillarEditor {
             ImGui::PopStyleColor();
             
             ImGui::Separator();
+            ImGui::Spacing();
+
+            // Search box
+            ImGui::PushItemWidth(-1);
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.12f, 0.12f, 0.14f, 1.0f));
+            if (ImGui::InputTextWithHint("##EntitySearch", "🔍 Search entities...", 
+                m_SearchBuffer, IM_ARRAYSIZE(m_SearchBuffer)))
+            {
+                // Update search state
+                m_IsSearching = (m_SearchBuffer[0] != '\0');
+            }
+            ImGui::PopStyleColor();
+            ImGui::PopItemWidth();
+            
+            // Clear button and shortcut hint
+            if (m_SearchBuffer[0] != '\0')
+            {
+                ImGui::SameLine();
+                if (ImGui::SmallButton("X"))
+                {
+                    m_SearchBuffer[0] = '\0';
+                    m_IsSearching = false;
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Clear search (ESC)");
+            }
+            
+            // ESC to clear search
+            if (m_IsSearching && ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Escape))
+            {
+                m_SearchBuffer[0] = '\0';
+                m_IsSearching = false;
+            }
+            
+            // Ctrl+F to focus search
+            if (ImGui::IsWindowFocused() && !ImGui::GetIO().WantTextInput && 
+                ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_F))
+            {
+                ImGui::SetKeyboardFocusHere(-1);  // Focus previous item (search box)
+            }
+            
             ImGui::Spacing();
 
             // Entity count
@@ -79,6 +122,23 @@ namespace PillarEditor {
             return;
 
         auto& tag = entity.GetComponent<Pillar::TagComponent>();
+        
+        // Filter entities based on search
+        if (m_IsSearching)
+        {
+            std::string tagLower = tag.Tag;
+            std::string searchLower = m_SearchBuffer;
+            
+            // Convert to lowercase for case-insensitive search
+            std::transform(tagLower.begin(), tagLower.end(), tagLower.begin(), 
+                [](unsigned char c){ return std::tolower(c); });
+            std::transform(searchLower.begin(), searchLower.end(), searchLower.begin(), 
+                [](unsigned char c){ return std::tolower(c); });
+            
+            // Skip if not matching
+            if (tagLower.find(searchLower) == std::string::npos)
+                return;
+        }
 
         ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | 
                                    ImGuiTreeNodeFlags_SpanAvailWidth |
@@ -169,6 +229,10 @@ namespace PillarEditor {
                     m_SelectionContext->RemoveFromSelection(entity);
                 }
                 m_Scene->DestroyEntity(entity);
+                
+                // Validate selection to ensure no dead entities remain
+                if (m_SelectionContext)
+                    m_SelectionContext->ValidateSelection();
             }
 
             ImGui::Separator();

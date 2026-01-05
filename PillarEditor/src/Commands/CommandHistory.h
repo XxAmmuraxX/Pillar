@@ -1,11 +1,15 @@
 #pragma once
 
 #include "Command.h"
+#include "../EditorConstants.h"
 #include <vector>
 #include <memory>
 #include <algorithm>
+#include <functional>
 
 namespace PillarEditor {
+
+    using namespace Constants;
 
     /**
      * @brief Manages command history for undo/redo functionality
@@ -16,7 +20,9 @@ namespace PillarEditor {
     class CommandHistory
     {
     public:
-        CommandHistory(size_t maxHistorySize = 100)
+        using OnCommandExecutedCallback = std::function<void()>;
+
+        CommandHistory(size_t maxHistorySize = Performance::MAX_UNDO_HISTORY)
             : m_MaxHistorySize(maxHistorySize)
         {
         }
@@ -44,6 +50,10 @@ namespace PillarEditor {
             {
                 m_UndoStack.erase(m_UndoStack.begin());
             }
+
+            // Notify callback
+            if (m_OnCommandExecuted)
+                m_OnCommandExecuted();
         }
 
         /**
@@ -71,6 +81,10 @@ namespace PillarEditor {
 
             // Move to redo stack
             m_RedoStack.push_back(std::move(command));
+
+            // Notify callback
+            if (m_OnCommandExecuted)
+                m_OnCommandExecuted();
 
             return true;
         }
@@ -100,6 +114,10 @@ namespace PillarEditor {
 
             // Move back to undo stack
             m_UndoStack.push_back(std::move(command));
+
+            // Notify callback
+            if (m_OnCommandExecuted)
+                m_OnCommandExecuted();
 
             return true;
         }
@@ -159,10 +177,19 @@ namespace PillarEditor {
          */
         size_t GetRedoStackSize() const { return m_RedoStack.size(); }
 
+        /**
+         * @brief Set callback to be called when commands are executed/undone/redone
+         */
+        void SetOnCommandExecuted(OnCommandExecutedCallback callback)
+        {
+            m_OnCommandExecuted = callback;
+        }
+
     private:
         std::vector<std::unique_ptr<Command>> m_UndoStack;
         std::vector<std::unique_ptr<Command>> m_RedoStack;
         size_t m_MaxHistorySize;
+        OnCommandExecutedCallback m_OnCommandExecuted;
     };
 
 } // namespace PillarEditor

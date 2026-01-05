@@ -6,6 +6,7 @@ add_executable(PillarEditor
     src/EditorLayer.cpp
     src/SelectionContext.cpp
     src/EditorCamera.cpp
+    src/EditorSettings.cpp
     src/TemplateManager.cpp
     src/Panels/SceneHierarchyPanel.cpp
     src/Panels/InspectorPanel.cpp
@@ -14,6 +15,7 @@ add_executable(PillarEditor
     src/Panels/ConsolePanel.cpp
     src/Panels/TemplateLibraryPanel.cpp
     src/Panels/AnimationManagerPanel.cpp
+    src/Panels/SpriteSheetEditorPanel.cpp
     src/Utils/FileDialog.cpp
 )
 
@@ -40,6 +42,11 @@ target_include_directories(PillarEditor PRIVATE
 
 # Define static lib for Pillar
 target_compile_definitions(PillarEditor PRIVATE PIL_STATIC_LIB)
+
+# Add /FS flag for parallel compilation on Windows
+if(MSVC)
+    target_compile_options(PillarEditor PRIVATE /FS)
+endif()
 
 # Create assets directory for editor icons
 add_custom_command(TARGET PillarEditor POST_BUILD

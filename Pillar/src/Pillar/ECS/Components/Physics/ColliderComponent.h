@@ -2,6 +2,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <cmath>
 
 namespace Pillar {
 
@@ -55,6 +56,34 @@ namespace Pillar {
 			ColliderComponent c;
 			c.Type = ColliderType::Box;
 			c.HalfExtents = halfExtents;
+			return c;
+		}
+
+		static ColliderComponent Polygon(const std::vector<glm::vec2>& vertices)
+		{
+			ColliderComponent c;
+			c.Type = ColliderType::Polygon;
+			c.Vertices = vertices;
+			return c;
+		}
+
+		// Helper: Create regular polygon (e.g., triangle, pentagon, hexagon)
+		static ColliderComponent RegularPolygon(int sides, float radius)
+		{
+			ColliderComponent c;
+			c.Type = ColliderType::Polygon;
+			c.Vertices.clear();
+
+			// Generate vertices in counter-clockwise order (Box2D requirement)
+			for (int i = 0; i < sides; ++i)
+			{
+				float angle = (2.0f * 3.14159265f * i) / sides;
+				c.Vertices.push_back({
+					radius * cosf(angle),
+					radius * sinf(angle)
+				});
+			}
+
 			return c;
 		}
 	};

@@ -70,6 +70,45 @@ namespace Pillar {
 		{
 			ZIndex = static_cast<float>(layer);
 		}
+
+		// === PIXELS-PER-UNIT HELPERS ===
+		// Note: These methods require EditorSettings to be available
+		// If called from engine code (no editor), use manual PPU value
+
+		/**
+		 * @brief Set sprite size in pixels (converts to world units using PPU)
+		 * @param pixelWidth Width in pixels
+		 * @param pixelHeight Height in pixels
+		 * @param pixelsPerUnit Pixels per unit ratio (default 100)
+		 */
+		void SetSizeInPixels(float pixelWidth, float pixelHeight, float pixelsPerUnit = 100.0f)
+		{
+			Size = glm::vec2(pixelWidth / pixelsPerUnit, pixelHeight / pixelsPerUnit);
+		}
+
+		/**
+		 * @brief Get sprite size in pixels (converts from world units using PPU)
+		 * @param pixelsPerUnit Pixels per unit ratio (default 100)
+		 * @return Size in pixels
+		 */
+		glm::vec2 GetSizeInPixels(float pixelsPerUnit = 100.0f) const
+		{
+			return Size * pixelsPerUnit;
+		}
+
+		/**
+		 * @brief Auto-size sprite to match texture dimensions
+		 * @param pixelsPerUnit Pixels per unit ratio (default 100)
+		 */
+		void MatchTextureSize(float pixelsPerUnit = 100.0f)
+		{
+			if (Texture)
+			{
+				SetSizeInPixels(static_cast<float>(Texture->GetWidth()),
+								static_cast<float>(Texture->GetHeight()),
+								pixelsPerUnit);
+			}
+		}
 	};
 
 } // namespace Pillar

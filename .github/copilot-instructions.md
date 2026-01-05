@@ -43,18 +43,26 @@ cmake -S . -B out/build/x64-Debug -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
 
 2. **Build** (incremental builds):
 ```powershell
-cmake --build out/build/x64-Debug --config Debug --parallel
+cmake --build out/build/x64-Debug --config Debug
 ```
 
-3. **Full Clean Build** (when needed):
+3. **Build with filtered output** (to see only errors and key events):
+```powershell
+cmake --build out/build/x64-Debug --config Debug 2>&1 | Select-String -Pattern "error|Building.*Emitter|succeeded|failed|Linking" -Context 0,1
+```
+
+4. **Full Clean Build** (when needed):
 ```powershell
 Remove-Item -Path out/build/x64-Debug -Recurse -Force -ErrorAction SilentlyContinue
 cmake -S . -B out/build/x64-Debug -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
-cmake --build out/build/x64-Debug --config Debug --parallel
+cmake --build out/build/x64-Debug --config Debug
 ```
+
+**Note:** Ninja is the recommended generator for faster builds and better parallel compilation support.
 
 **Build outputs:**
 - Pillar.lib → `bin/Debug-x64/Pillar/`
+- PillarEditor.exe → `bin/Debug-x64/PillarEditor/`
 - SandboxApp.exe → `bin/Debug-x64/Sandbox/`
 - PillarTests.exe → `bin/Debug-x64/Tests/`
 - Pillar is now a static library (no DLL copying needed)
@@ -409,6 +417,52 @@ PILLAR_/
   10. Publish test results using EnricoMi/publish-unit-test-result-action
 - **Mesa3D**: Uses software OpenGL rendering (llvmpipe) to enable window/input tests without hardware GPU
 - Smoke test for Sandbox is commented out (flaky in CI)
+
+## Documenting Missing Engine Features
+
+When working on a feature or task, if you discover that the engine is missing critical functionality that makes the task significantly harder or impossible to complete properly, **create a markdown file** documenting the missing capability. This helps prioritize engine development and identify gaps.
+
+**File Naming Convention:**
+- Use descriptive names: `MISSING_SPRITE_BATCHING.md`, `MISSING_SCENE_SERIALIZATION.md`, etc.
+- Place in the root directory alongside other planning documents
+
+**Required Content:**
+1. **Title:** Clear description of what's missing
+2. **Context:** What feature/task prompted this discovery
+3. **Problem:** Explain what's currently difficult or impossible without this
+4. **Impact:** How this limitation affects development or performance
+5. **Proposed Solution:** Brief outline of what would be needed (architecture, files, APIs)
+6. **Workarounds:** Document any temporary solutions being used
+7. **Priority Suggestion:** Low/Medium/High based on impact
+
+**Example:**
+```markdown
+# Missing: Texture Atlas System
+
+## Context
+While implementing sprite animation system, discovered no texture atlas support.
+
+## Problem
+Loading individual sprite frames as separate textures is inefficient and causes texture binding overhead.
+
+## Impact
+- Performance: Excessive texture swaps (30+ per frame)
+- Memory: Each texture requires OpenGL state
+- Workflow: Artists must export individual files
+
+## Proposed Solution
+- TextureAtlas class with sub-texture UV coordinates
+- Atlas packing tool or runtime packer
+- Sprite class that references atlas regions
+
+## Workarounds
+Currently loading each sprite frame as separate Texture2D.
+
+## Priority
+High - Critical for performant sprite-based games
+```
+
+This documentation will be reviewed later to decide whether to implement the missing feature or find alternative approaches.
 
 ## Common Development Tasks
 

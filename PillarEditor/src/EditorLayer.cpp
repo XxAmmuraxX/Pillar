@@ -1,5 +1,7 @@
 #include "EditorLayer.h"
+#include "EditorSettings.h"
 #include "Panels/ConsolePanel.h"
+#include "Panels/SpriteSheetEditorPanel.h"
 #include "Utils/FileDialog.h"
 #include "Pillar/Application.h"
 #include "Pillar/ECS/SceneSerializer.h"
@@ -24,6 +26,9 @@ namespace PillarEditor {
     {
         PIL_CORE_INFO("EditorLayer attached");
 
+        // Load editor settings
+        EditorSettings::Get().Load();
+
         // Setup custom editor style
         SetupImGuiStyle();
 
@@ -37,12 +42,26 @@ namespace PillarEditor {
         m_ConsolePanel = std::make_unique<ConsolePanel>();
         m_TemplateLibraryPanel = std::make_unique<TemplateLibraryPanel>();
         m_AnimationManagerPanel = std::make_unique<AnimationManagerPanel>();
+        m_SpriteSheetEditorPanel = std::make_unique<SpriteSheetEditorPanel>();
 
-        // Initialize animation system
+        // Initialize all game systems (order matters - some systems depend on others)
         m_AnimationSystem = std::make_unique<Pillar::AnimationSystem>();
+        m_VelocitySystem = std::make_unique<Pillar::VelocityIntegrationSystem>();
+        m_PhysicsSystem = std::make_unique<Pillar::PhysicsSystem>(glm::vec2(0.0f, -9.81f)); // Gravity
+        m_PhysicsSyncSystem = std::make_unique<Pillar::PhysicsSyncSystem>();
+        m_BulletCollisionSystem = std::make_unique<Pillar::BulletCollisionSystem>(m_PhysicsSystem.get()); // Needs PhysicsSystem
+        m_XPCollectionSystem = std::make_unique<Pillar::XPCollectionSystem>(2.0f); // Cell size
+        m_AudioSystem = std::make_unique<Pillar::AudioSystem>();
+        m_ParticleSystem = std::make_unique<Pillar::ParticleSystem>();
+        m_ParticleEmitterSystem = std::make_unique<Pillar::ParticleEmitterSystem>();
 
         // Initialize template panel
         m_TemplateLibraryPanel->SetTemplateManager(&m_TemplateManager);
+
+        // Set up command history callback to track scene modifications
+        m_CommandHistory.SetOnCommandExecuted([this]() {
+            SetSceneModified(true);
+        });
 
         // Create a default scene with some entities for demonstration
         NewScene();
@@ -59,11 +78,17 @@ namespace PillarEditor {
     void EditorLayer::OnDetach()
     {
         PIL_CORE_INFO("EditorLayer detached");
+        
+        // Save editor settings
+        EditorSettings::Get().Save();
     }
 
     void EditorLayer::OnUpdate(float deltaTime)
     {
         m_LastFrameTime = deltaTime;
+
+        // Validate selection to remove any invalid/deleted entities
+        m_SelectionContext.ValidateSelection();
 
         // Always update viewport panel - it handles its own hover checks internally
         m_ViewportPanel->OnUpdate(deltaTime);
@@ -71,11 +96,60 @@ namespace PillarEditor {
         // Update scene in play mode
         if (m_EditorState == EditorState::Play)
         {
-            m_ActiveScene->OnUpdate(deltaTime);
+            // Update all game systems in order
+            auto& registry = m_ActiveScene->GetRegistry();
             
-            // Update animation system
+            // 1. Input & AI (future)
+            
+            // 2. Physics & Movement
+            if (m_VelocitySystem)
+                m_VelocitySystem->OnUpdate(deltaTime);
+            
+            if (m_PhysicsSystem)
+                m_PhysicsSystem->OnUpdate(deltaTime);
+            
+            if (m_PhysicsSyncSystem)
+                m_PhysicsSyncSystem->OnUpdate(deltaTime);
+            
+            // 3. Collision & Gameplay
+            if (m_BulletCollisionSystem)
+                m_BulletCollisionSystem->OnUpdate(deltaTime);
+            
+            if (m_XPCollectionSystem)
+                m_XPCollectionSystem->OnUpdate(deltaTime);
+            
+            // 4. Particles & Effects
+            if (m_ParticleEmitterSystem)
+                m_ParticleEmitterSystem->OnUpdate(deltaTime);
+            
+            if (m_ParticleSystem)
+                m_ParticleSystem->OnUpdate(deltaTime);
+            
+            // 5. Animation
             if (m_AnimationSystem)
                 m_AnimationSystem->OnUpdate(deltaTime);
+            
+            // 6. Audio
+            if (m_AudioSystem)
+                m_AudioSystem->OnUpdate(deltaTime);
+            
+            // 7. Scene lifecycle
+            m_ActiveScene->OnUpdate(deltaTime);
+        }
+
+        // Auto-save logic (only in edit mode)
+        if (m_EditorState == EditorState::Edit && !m_CurrentScenePath.empty())
+        {
+            auto& settings = EditorSettings::Get();
+            if (settings.AutoSaveEnabled && m_SceneModified)
+            {
+                m_AutoSaveTimer += deltaTime;
+                if (m_AutoSaveTimer >= settings.AutoSaveInterval)
+                {
+                    PerformAutoSave();
+                    m_AutoSaveTimer = 0.0f;
+                }
+            }
         }
 
         // Render scene to viewport framebuffer
@@ -86,108 +160,181 @@ namespace PillarEditor {
     {
         ImGuiIO& io = ImGui::GetIO();
         
-        // Set default font size
+        // ========================================================================
+        // FONT CONFIGURATION - Modern, Crisp Typography
+        // ========================================================================
+        
+        // Try to load custom fonts for better readability
+        // If fonts aren't available, ImGui will fall back to its built-in ProggyClean font
+        ImFontConfig fontConfig;
+        fontConfig.OversampleH = 2;
+        fontConfig.OversampleV = 1;
+        fontConfig.PixelSnapH = true;
+        
+        // Attempt to load common system fonts (Windows paths)
+        // Try Segoe UI (Windows 10/11 default) - clean, modern, professional
+        ImFont* mainFont = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf", 16.0f, &fontConfig);
+        
+        // If Segoe UI isn't found, try Consolas for a monospace alternative
+        if (!mainFont)
+            mainFont = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/consola.ttf", 15.0f, &fontConfig);
+        
+        // If no custom fonts loaded, ensure default font is built
+        if (io.Fonts->Fonts.empty())
+            io.Fonts->AddFontDefault();
+        
         io.FontGlobalScale = 1.0f;
 
+        // ========================================================================
+        // STYLE CONFIGURATION - Sleek, Modern, Polished
+        // ========================================================================
+        
         ImGuiStyle& style = ImGui::GetStyle();
         
-        // Main style settings
-        style.WindowPadding = ImVec2(8.0f, 8.0f);
-        style.FramePadding = ImVec2(5.0f, 4.0f);
-        style.CellPadding = ImVec2(4.0f, 2.0f);
-        style.ItemSpacing = ImVec2(8.0f, 4.0f);
-        style.ItemInnerSpacing = ImVec2(4.0f, 4.0f);
-        style.IndentSpacing = 20.0f;
-        style.ScrollbarSize = 14.0f;
-        style.GrabMinSize = 12.0f;
-
-        // Borders
+        // --- SPACING & SIZING ---
+        // More generous spacing for better visual breathing room
+        style.WindowPadding = ImVec2(10.0f, 10.0f);
+        style.FramePadding = ImVec2(8.0f, 5.0f);
+        style.CellPadding = ImVec2(6.0f, 3.0f);
+        style.ItemSpacing = ImVec2(10.0f, 6.0f);
+        style.ItemInnerSpacing = ImVec2(6.0f, 4.0f);
+        style.IndentSpacing = 22.0f;
+        style.ScrollbarSize = 16.0f;
+        style.GrabMinSize = 14.0f;
+        
+        // Align text to padding
+        style.WindowTitleAlign = ImVec2(0.5f, 0.5f);  // Center window titles
+        style.ButtonTextAlign = ImVec2(0.5f, 0.5f);   // Center button text
+        
+        // --- BORDERS ---
+        // Subtle borders for definition without harshness
         style.WindowBorderSize = 1.0f;
         style.ChildBorderSize = 1.0f;
         style.PopupBorderSize = 1.0f;
-        style.FrameBorderSize = 0.0f;
+        style.FrameBorderSize = 0.0f;  // Frameless inputs for cleaner look
         style.TabBorderSize = 0.0f;
-
-        // Rounding
-        style.WindowRounding = 4.0f;
-        style.ChildRounding = 4.0f;
-        style.FrameRounding = 3.0f;
-        style.PopupRounding = 4.0f;
-        style.ScrollbarRounding = 6.0f;
-        style.GrabRounding = 3.0f;
-        style.TabRounding = 4.0f;
-
-        // Colors - Dark theme inspired by VS Code
+        
+        // --- ROUNDING ---
+        // Smooth, modern rounded corners throughout
+        style.WindowRounding = 6.0f;
+        style.ChildRounding = 5.0f;
+        style.FrameRounding = 4.0f;
+        style.PopupRounding = 5.0f;
+        style.ScrollbarRounding = 9.0f;
+        style.GrabRounding = 4.0f;
+        style.TabRounding = 5.0f;
+        
+        // --- SHADOWS & ANTI-ALIASING ---
+        style.AntiAliasedLines = true;
+        style.AntiAliasedLinesUseTex = true;
+        style.AntiAliasedFill = true;
+        
+        // ========================================================================
+        // COLOR SCHEME - Sophisticated Dark Theme
+        // ========================================================================
+        // Inspired by JetBrains IDEs, VS Code, and modern design systems
+        // Carefully balanced for extended coding sessions
+        
         ImVec4* colors = style.Colors;
         
-        // Backgrounds
-        colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.14f, 1.0f);
-        colors[ImGuiCol_ChildBg] = ImVec4(0.12f, 0.12f, 0.14f, 1.0f);
-        colors[ImGuiCol_PopupBg] = ImVec4(0.15f, 0.15f, 0.17f, 1.0f);
+        // --- BACKGROUNDS ---
+        // Deep, rich background with subtle variations for depth
+        colors[ImGuiCol_WindowBg] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);      // Main window background
+        colors[ImGuiCol_ChildBg] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);       // Child window background
+        colors[ImGuiCol_PopupBg] = ImVec4(0.16f, 0.17f, 0.18f, 0.98f);       // Popup background (slightly lighter)
+        colors[ImGuiCol_MenuBarBg] = ImVec4(0.16f, 0.17f, 0.18f, 1.00f);     // Menu bar background
+        colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.11f, 0.12f, 0.13f, 1.00f); // Empty docking area
         
-        // Borders
-        colors[ImGuiCol_Border] = ImVec4(0.25f, 0.25f, 0.28f, 1.0f);
-        colors[ImGuiCol_BorderShadow] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+        // --- TITLE BARS ---
+        // Darker title bars for visual hierarchy
+        colors[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.11f, 0.12f, 1.00f);
+        colors[ImGuiCol_TitleBgActive] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);
+        colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.10f, 0.11f, 0.12f, 0.75f);
         
-        // Frame backgrounds
-        colors[ImGuiCol_FrameBg] = ImVec4(0.18f, 0.18f, 0.20f, 1.0f);
-        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.22f, 0.22f, 0.25f, 1.0f);
-        colors[ImGuiCol_FrameBgActive] = ImVec4(0.25f, 0.25f, 0.28f, 1.0f);
+        // --- BORDERS & SEPARATORS ---
+        // Subtle but visible separation
+        colors[ImGuiCol_Border] = ImVec4(0.28f, 0.29f, 0.31f, 0.60f);
+        colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_Separator] = ImVec4(0.28f, 0.29f, 0.31f, 0.60f);
+        colors[ImGuiCol_SeparatorHovered] = ImVec4(0.40f, 0.62f, 0.85f, 0.78f);
+        colors[ImGuiCol_SeparatorActive] = ImVec4(0.40f, 0.62f, 0.85f, 1.00f);
         
-        // Title bar
-        colors[ImGuiCol_TitleBg] = ImVec4(0.10f, 0.10f, 0.12f, 1.0f);
-        colors[ImGuiCol_TitleBgActive] = ImVec4(0.12f, 0.12f, 0.14f, 1.0f);
-        colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.10f, 0.10f, 0.12f, 1.0f);
+        // --- INPUT FIELDS & FRAMES ---
+        // Slightly elevated from background
+        colors[ImGuiCol_FrameBg] = ImVec4(0.19f, 0.20f, 0.22f, 1.00f);
+        colors[ImGuiCol_FrameBgHovered] = ImVec4(0.23f, 0.24f, 0.26f, 1.00f);
+        colors[ImGuiCol_FrameBgActive] = ImVec4(0.26f, 0.28f, 0.30f, 1.00f);
         
-        // Menu bar
-        colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.16f, 1.0f);
+        // --- TEXT ---
+        // High contrast for readability with pleasant warmth
+        colors[ImGuiCol_Text] = ImVec4(0.90f, 0.90f, 0.91f, 1.00f);
+        colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.51f, 0.52f, 1.00f);
+        colors[ImGuiCol_TextSelectedBg] = ImVec4(0.40f, 0.62f, 0.85f, 0.35f);
         
-        // Scrollbar
-        colors[ImGuiCol_ScrollbarBg] = ImVec4(0.10f, 0.10f, 0.12f, 1.0f);
-        colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.30f, 0.30f, 0.33f, 1.0f);
-        colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.40f, 0.40f, 0.43f, 1.0f);
-        colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.50f, 0.50f, 0.53f, 1.0f);
+        // --- BUTTONS ---
+        // Professional, modern button styling with smooth interactions
+        colors[ImGuiCol_Button] = ImVec4(0.24f, 0.26f, 0.28f, 1.00f);
+        colors[ImGuiCol_ButtonHovered] = ImVec4(0.32f, 0.34f, 0.37f, 1.00f);
+        colors[ImGuiCol_ButtonActive] = ImVec4(0.40f, 0.62f, 0.85f, 1.00f);
         
-        // Buttons
-        colors[ImGuiCol_Button] = ImVec4(0.22f, 0.22f, 0.25f, 1.0f);
-        colors[ImGuiCol_ButtonHovered] = ImVec4(0.30f, 0.30f, 0.35f, 1.0f);
-        colors[ImGuiCol_ButtonActive] = ImVec4(0.20f, 0.45f, 0.75f, 1.0f);
+        // --- HEADERS & COLLAPSIBLES ---
+        // Tree nodes, collapsing headers, etc.
+        colors[ImGuiCol_Header] = ImVec4(0.24f, 0.26f, 0.28f, 0.80f);
+        colors[ImGuiCol_HeaderHovered] = ImVec4(0.32f, 0.34f, 0.37f, 0.90f);
+        colors[ImGuiCol_HeaderActive] = ImVec4(0.40f, 0.62f, 0.85f, 1.00f);
         
-        // Headers (collapsing headers, tree nodes, etc.)
-        colors[ImGuiCol_Header] = ImVec4(0.22f, 0.22f, 0.25f, 1.0f);
-        colors[ImGuiCol_HeaderHovered] = ImVec4(0.28f, 0.28f, 0.32f, 1.0f);
-        colors[ImGuiCol_HeaderActive] = ImVec4(0.20f, 0.45f, 0.75f, 1.0f);
+        // --- TABS ---
+        // Clean, modern tab bar
+        colors[ImGuiCol_Tab] = ImVec4(0.16f, 0.17f, 0.18f, 1.00f);
+        colors[ImGuiCol_TabHovered] = ImVec4(0.40f, 0.62f, 0.85f, 0.90f);
+        colors[ImGuiCol_TabActive] = ImVec4(0.20f, 0.22f, 0.24f, 1.00f);
+        colors[ImGuiCol_TabUnfocused] = ImVec4(0.14f, 0.15f, 0.16f, 1.00f);
+        colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.18f, 0.19f, 0.20f, 1.00f);
         
-        // Tabs
-        colors[ImGuiCol_Tab] = ImVec4(0.14f, 0.14f, 0.16f, 1.0f);
-        colors[ImGuiCol_TabHovered] = ImVec4(0.20f, 0.45f, 0.75f, 0.8f);
-        colors[ImGuiCol_TabActive] = ImVec4(0.18f, 0.18f, 0.20f, 1.0f);
-        colors[ImGuiCol_TabUnfocused] = ImVec4(0.14f, 0.14f, 0.16f, 1.0f);
-        colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.18f, 0.18f, 0.20f, 1.0f);
+        // --- DOCKING ---
+        // Visual feedback for docking operations
+        colors[ImGuiCol_DockingPreview] = ImVec4(0.40f, 0.62f, 0.85f, 0.70f);
         
-        // Docking
-        colors[ImGuiCol_DockingPreview] = ImVec4(0.20f, 0.45f, 0.75f, 0.7f);
-        colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.10f, 0.10f, 0.12f, 1.0f);
+        // --- SCROLLBARS ---
+        // Smooth, unobtrusive scrollbars
+        colors[ImGuiCol_ScrollbarBg] = ImVec4(0.11f, 0.12f, 0.13f, 1.00f);
+        colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.32f, 0.34f, 0.36f, 1.00f);
+        colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.42f, 0.44f, 0.46f, 1.00f);
+        colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.52f, 0.54f, 0.56f, 1.00f);
         
-        // Separator
-        colors[ImGuiCol_Separator] = ImVec4(0.25f, 0.25f, 0.28f, 1.0f);
-        colors[ImGuiCol_SeparatorHovered] = ImVec4(0.40f, 0.40f, 0.45f, 1.0f);
-        colors[ImGuiCol_SeparatorActive] = ImVec4(0.20f, 0.45f, 0.75f, 1.0f);
+        // --- SLIDERS & CHECKBOXES ---
+        // Accent color for interactive elements
+        colors[ImGuiCol_CheckMark] = ImVec4(0.45f, 0.70f, 0.95f, 1.00f);
+        colors[ImGuiCol_SliderGrab] = ImVec4(0.40f, 0.62f, 0.85f, 1.00f);
+        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.50f, 0.72f, 0.95f, 1.00f);
         
-        // Resize grip
-        colors[ImGuiCol_ResizeGrip] = ImVec4(0.25f, 0.25f, 0.28f, 0.5f);
-        colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.40f, 0.40f, 0.45f, 0.8f);
-        colors[ImGuiCol_ResizeGripActive] = ImVec4(0.20f, 0.45f, 0.75f, 1.0f);
+        // --- RESIZE GRIPS ---
+        // Subtle resize handles
+        colors[ImGuiCol_ResizeGrip] = ImVec4(0.28f, 0.29f, 0.31f, 0.40f);
+        colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.40f, 0.62f, 0.85f, 0.67f);
+        colors[ImGuiCol_ResizeGripActive] = ImVec4(0.40f, 0.62f, 0.85f, 0.95f);
         
-        // Text
-        colors[ImGuiCol_Text] = ImVec4(0.85f, 0.85f, 0.88f, 1.0f);
-        colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.53f, 1.0f);
-        colors[ImGuiCol_TextSelectedBg] = ImVec4(0.20f, 0.45f, 0.75f, 0.4f);
+        // --- TABLE COLORS ---
+        // For future table widgets
+        colors[ImGuiCol_TableHeaderBg] = ImVec4(0.19f, 0.20f, 0.22f, 1.00f);
+        colors[ImGuiCol_TableBorderStrong] = ImVec4(0.28f, 0.29f, 0.31f, 1.00f);
+        colors[ImGuiCol_TableBorderLight] = ImVec4(0.23f, 0.24f, 0.25f, 1.00f);
+        colors[ImGuiCol_TableRowBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+        colors[ImGuiCol_TableRowBgAlt] = ImVec4(1.00f, 1.00f, 1.00f, 0.04f);
         
-        // Checkmark, slider
-        colors[ImGuiCol_CheckMark] = ImVec4(0.30f, 0.65f, 1.0f, 1.0f);
-        colors[ImGuiCol_SliderGrab] = ImVec4(0.30f, 0.65f, 1.0f, 1.0f);
-        colors[ImGuiCol_SliderGrabActive] = ImVec4(0.40f, 0.75f, 1.0f, 1.0f);
+        // --- DRAG & DROP ---
+        colors[ImGuiCol_DragDropTarget] = ImVec4(0.45f, 0.70f, 0.95f, 0.90f);
+        
+        // --- NAVIGATION ---
+        // Keyboard/gamepad navigation highlight
+        colors[ImGuiCol_NavHighlight] = ImVec4(0.45f, 0.70f, 0.95f, 1.00f);
+        colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+        colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
+        
+        // --- MODALS ---
+        colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.20f, 0.20f, 0.20f, 0.50f);
+        
+        PIL_CORE_INFO("✨ Modern sleek theme applied successfully!");
     }
 
     void EditorLayer::SetupDockspace()
@@ -334,8 +481,18 @@ namespace PillarEditor {
         if (m_AnimationManagerPanel->IsVisible())
             m_AnimationManagerPanel->OnImGuiRender();
 
+        if (m_SpriteSheetEditorPanel->IsVisible())
+            m_SpriteSheetEditorPanel->OnImGuiRender();
+
         // Draw stats panel
         DrawStatsPanel();
+
+        // Draw preferences window if visible
+        if (m_ShowPreferences)
+            DrawPreferencesWindow();
+
+        // Draw status bar (always visible)
+        DrawStatusBar();
     }
 
     void EditorLayer::OnEvent(Pillar::Event& event)
@@ -618,6 +775,13 @@ namespace PillarEditor {
                     m_SelectionContext.ClearSelection();
                 }
 
+                ImGui::Separator();
+                
+                if (ImGui::MenuItem("Preferences..."))
+                {
+                    m_ShowPreferences = true;
+                }
+
                 ImGui::EndMenu();
             }
 
@@ -682,6 +846,12 @@ namespace PillarEditor {
                 if (ImGui::MenuItem("Console", nullptr, consoleVisible))
                 {
                     m_ConsolePanel->SetVisible(!consoleVisible);
+                }
+                
+                bool spriteSheetEditorVisible = m_SpriteSheetEditorPanel->IsVisible();
+                if (ImGui::MenuItem("Sprite Sheet Editor", nullptr, spriteSheetEditorVisible))
+                {
+                    m_SpriteSheetEditorPanel->SetVisible(!spriteSheetEditorVisible);
                 }
                 
                 ImGui::Separator();
@@ -936,6 +1106,239 @@ namespace PillarEditor {
         ImGui::End();
     }
 
+    void EditorLayer::DrawPreferencesWindow()
+    {
+        ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+        
+        if (ImGui::Begin("Preferences", &m_ShowPreferences))
+        {
+            // Auto-Save Settings
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Auto-Save Settings");
+            ImGui::Separator();
+            
+            auto& settings = EditorSettings::Get();
+            
+            ImGui::Checkbox("Enable Auto-Save", &settings.AutoSaveEnabled);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Automatically save backup copies of your scene");
+            
+            if (settings.AutoSaveEnabled)
+            {
+                ImGui::Spacing();
+                ImGui::Text("Auto-Save Interval:");
+                
+                // Convert seconds to minutes for display
+                float intervalMinutes = settings.AutoSaveInterval / 60.0f;
+                
+                if (ImGui::SliderFloat("##AutoSaveInterval", &intervalMinutes, 1.0f, 30.0f, "%.1f min"))
+                {
+                    // Clamp and convert back to seconds
+                    intervalMinutes = std::max(1.0f, std::min(30.0f, intervalMinutes));
+                    settings.AutoSaveInterval = intervalMinutes * 60.0f;
+                }
+                
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("How often to auto-save (1-30 minutes)");
+                
+                // Show time until next auto-save
+                if (!m_CurrentScenePath.empty() && m_SceneModified)
+                {
+                    float timeRemaining = settings.AutoSaveInterval - m_AutoSaveTimer;
+                    if (timeRemaining > 0)
+                    {
+                        int minutes = (int)(timeRemaining / 60.0f);
+                        int seconds = (int)timeRemaining % 60;
+                        ImGui::Text("Next auto-save in: %dm %ds", minutes, seconds);
+                    }
+                }
+                else if (!m_CurrentScenePath.empty() && !m_SceneModified)
+                {
+                    ImGui::TextDisabled("No unsaved changes");
+                }
+                else
+                {
+                    ImGui::TextDisabled("No scene loaded");
+                }
+            }
+            
+            ImGui::Spacing();
+            ImGui::Spacing();
+            
+            // Viewport Settings
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Viewport Settings");
+            ImGui::Separator();
+            
+            ImGui::Checkbox("Show Grid", &settings.ShowGrid);
+            ImGui::SliderFloat("Grid Size", &settings.GridSize, 0.1f, 10.0f, "%.1f");
+            ImGui::SliderFloat("Camera Speed", &settings.CameraSpeed, 1.0f, 20.0f, "%.1f");
+            
+            ImGui::Spacing();
+            ImGui::Spacing();
+            
+            // Editor Preferences
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Editor Preferences");
+            ImGui::Separator();
+            
+            ImGui::Checkbox("Show FPS", &settings.ShowFPS);
+            ImGui::Checkbox("Show Entity Count", &settings.ShowEntityCount);
+            ImGui::Checkbox("Confirm on Delete", &settings.ConfirmOnDelete);
+            ImGui::Checkbox("Auto Focus on Select", &settings.AutoFocusOnSelect);
+            
+            ImGui::Spacing();
+            ImGui::Spacing();
+            
+            // Recent Files
+            ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.0f, 1.0f), "Recent Files");
+            ImGui::Separator();
+            
+            if (ImGui::Button("Clear Recent Files"))
+            {
+                settings.ClearRecentFiles();
+            }
+            
+            ImGui::Text("%zu recent file(s)", settings.RecentFiles.size());
+            
+            ImGui::Spacing();
+            ImGui::Spacing();
+            
+            // Action buttons
+            ImGui::Separator();
+            if (ImGui::Button("Save Settings"))
+            {
+                settings.Save();
+                ConsolePanel::Log("Preferences saved", LogLevel::Info);
+            }
+            
+            ImGui::SameLine();
+            
+            if (ImGui::Button("Close"))
+            {
+                m_ShowPreferences = false;
+            }
+        }
+        
+        ImGui::End();
+    }
+
+    void EditorLayer::DrawStatusBar()
+    {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        
+        // Position at bottom of main viewport
+        float statusBarHeight = 26.0f;
+        ImVec2 statusBarPos = ImVec2(viewport->Pos.x, viewport->Pos.y + viewport->Size.y - statusBarHeight);
+        ImVec2 statusBarSize = ImVec2(viewport->Size.x, statusBarHeight);
+        
+        ImGui::SetNextWindowPos(statusBarPos);
+        ImGui::SetNextWindowSize(statusBarSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        
+        ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | 
+                                 ImGuiWindowFlags_NoMove | 
+                                 ImGuiWindowFlags_NoDocking |
+                                 ImGuiWindowFlags_NoSavedSettings |
+                                 ImGuiWindowFlags_NoFocusOnAppearing |
+                                 ImGuiWindowFlags_NoNav |
+                                 ImGuiWindowFlags_NoBringToFrontOnFocus;
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 4));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(16, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 1.0f);
+        
+        if (ImGui::Begin("##StatusBar", nullptr, flags))
+        {
+            // Left side: FPS
+            float fps = m_LastFrameTime > 0.0f ? 1.0f / m_LastFrameTime : 0.0f;
+            ImGui::Text("FPS: %.0f", fps);
+            
+            // Vertical separator
+            ImGui::SameLine();
+            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+            
+            // Entity count
+            ImGui::SameLine();
+            if (m_ActiveScene)
+            {
+                size_t entityCount = m_ActiveScene->GetEntityCount();
+                ImGui::Text("Entities: %zu", entityCount);
+            }
+            else
+            {
+                ImGui::TextDisabled("No scene");
+            }
+            
+            // Selected count
+            ImGui::SameLine();
+            size_t selectionCount = m_SelectionContext.GetSelectionCount();
+            if (selectionCount > 0)
+            {
+                ImGui::Text("| Selected: %zu", selectionCount);
+            }
+            
+            // Vertical separator
+            ImGui::SameLine();
+            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+            
+            // Current gizmo tool
+            ImGui::SameLine();
+            std::string toolName = "None";
+            if (m_ViewportPanel)
+            {
+                switch (m_ViewportPanel->GetGizmoMode())
+                {
+                    case GizmoMode::Translate: toolName = "Translate (W)"; break;
+                    case GizmoMode::Rotate: toolName = "Rotate (E)"; break;
+                    case GizmoMode::Scale: toolName = "Scale (R)"; break;
+                    default: toolName = "Select (Q)"; break;
+                }
+            }
+            ImGui::Text("Tool: %s", toolName.c_str());
+            
+            // Vertical separator
+            ImGui::SameLine();
+            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+            
+            // Camera zoom
+            ImGui::SameLine();
+            if (m_ViewportPanel)
+            {
+                float zoom = m_ViewportPanel->GetCamera().GetZoomLevel();
+                ImGui::Text("Zoom: %.0f%%", zoom * 100.0f);
+            }
+            
+            // Right side: Play mode indicator
+            ImGui::SameLine();
+            float rightOffset = 120.0f;
+            float availableWidth = ImGui::GetContentRegionAvail().x;
+            if (availableWidth > rightOffset)
+            {
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + availableWidth - rightOffset);
+            }
+            
+            if (m_EditorState == EditorState::Play)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.2f, 0.9f, 0.2f, 1.0f));
+                ImGui::Text("Playing");
+                ImGui::PopStyleColor();
+            }
+            else if (m_EditorState == EditorState::Pause)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.8f, 0.0f, 1.0f));
+                ImGui::Text("Paused");
+                ImGui::PopStyleColor();
+            }
+            else
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.5f, 0.5f, 0.5f, 1.0f));
+                ImGui::Text("Stopped");
+                ImGui::PopStyleColor();
+            }
+        }
+        ImGui::End();
+        
+        ImGui::PopStyleVar(3);
+    }
+
     void EditorLayer::NewScene()
     {
         m_ActiveScene = std::make_shared<Pillar::Scene>("Untitled");
@@ -956,6 +1359,10 @@ namespace PillarEditor {
         
         // Reset camera to origin when creating new scene
         m_ViewportPanel->ResetCamera();
+        
+        // Reset auto-save state
+        SetSceneModified(false);
+        m_AutoSaveTimer = 0.0f;
         
         ConsolePanel::Log("Created new scene", LogLevel::Info);
     }
@@ -1002,6 +1409,13 @@ namespace PillarEditor {
             // Reset camera when loading scene
             m_ViewportPanel->ResetCamera();
             
+            // Add to recent files
+            EditorSettings::Get().AddRecentFile(filepath);
+            
+            // Reset auto-save state
+            SetSceneModified(false);
+            m_AutoSaveTimer = 0.0f;
+            
             ConsolePanel::Log("Opened scene: " + filepath, LogLevel::Info);
         }
         else
@@ -1018,6 +1432,10 @@ namespace PillarEditor {
             Pillar::SceneSerializer serializer(m_ActiveScene.get());
             if (serializer.Serialize(m_CurrentScenePath))
             {
+                // Reset auto-save state after successful save
+                SetSceneModified(false);
+                m_AutoSaveTimer = 0.0f;
+                
                 ConsolePanel::Log("Saved scene: " + m_CurrentScenePath, LogLevel::Info);
             }
             else
@@ -1051,12 +1469,49 @@ namespace PillarEditor {
             Pillar::SceneSerializer serializer(m_ActiveScene.get());
             if (serializer.Serialize(path))
             {
+                // Add to recent files
+                EditorSettings::Get().AddRecentFile(path);
+                
+                // Reset auto-save state after successful save
+                SetSceneModified(false);
+                m_AutoSaveTimer = 0.0f;
+                
                 ConsolePanel::Log("Saved scene as: " + path, LogLevel::Info);
             }
             else
             {
                 ConsolePanel::Log("Failed to save scene", LogLevel::Error);
             }
+        }
+    }
+
+    void EditorLayer::PerformAutoSave()
+    {
+        if (m_CurrentScenePath.empty())
+            return;
+
+        // Create backup filename: scene.scene.json -> scene.autosave.scene.json
+        std::string backupPath = m_CurrentScenePath;
+        size_t dotPos = backupPath.find_last_of('.');
+        if (dotPos != std::string::npos)
+        {
+            backupPath.insert(dotPos, ".autosave");
+        }
+        else
+        {
+            backupPath += ".autosave";
+        }
+
+        // Save to backup file
+        Pillar::SceneSerializer serializer(m_ActiveScene.get());
+        if (serializer.Serialize(backupPath))
+        {
+            ConsolePanel::Log("Auto-saved scene to: " + backupPath, LogLevel::Info);
+            m_SceneModified = false;  // Reset modified flag after successful auto-save
+        }
+        else
+        {
+            ConsolePanel::Log("Failed to auto-save scene", LogLevel::Warn);
         }
     }
 
@@ -1073,6 +1528,26 @@ namespace PillarEditor {
         
         // Backup the editor scene
         m_EditorScene = Pillar::Scene::Copy(m_ActiveScene);
+        
+        // Attach all systems to the active scene
+        if (m_AnimationSystem)
+            m_AnimationSystem->OnAttach(m_ActiveScene.get());
+        if (m_VelocitySystem)
+            m_VelocitySystem->OnAttach(m_ActiveScene.get());
+        if (m_PhysicsSystem)
+            m_PhysicsSystem->OnAttach(m_ActiveScene.get());
+        if (m_PhysicsSyncSystem)
+            m_PhysicsSyncSystem->OnAttach(m_ActiveScene.get());
+        if (m_AudioSystem)
+            m_AudioSystem->OnAttach(m_ActiveScene.get());
+        if (m_ParticleSystem)
+            m_ParticleSystem->OnAttach(m_ActiveScene.get());
+        if (m_ParticleEmitterSystem)
+            m_ParticleEmitterSystem->OnAttach(m_ActiveScene.get());
+        if (m_BulletCollisionSystem)
+            m_BulletCollisionSystem->OnAttach(m_ActiveScene.get());
+        if (m_XPCollectionSystem)
+            m_XPCollectionSystem->OnAttach(m_ActiveScene.get());
         
         // Start runtime
         m_ActiveScene->OnRuntimeStart();
@@ -1095,6 +1570,26 @@ namespace PillarEditor {
             return;
 
         m_EditorState = EditorState::Edit;
+        
+        // Detach all systems
+        if (m_AnimationSystem)
+            m_AnimationSystem->OnDetach();
+        if (m_VelocitySystem)
+            m_VelocitySystem->OnDetach();
+        if (m_PhysicsSystem)
+            m_PhysicsSystem->OnDetach();
+        if (m_PhysicsSyncSystem)
+            m_PhysicsSyncSystem->OnDetach();
+        if (m_AudioSystem)
+            m_AudioSystem->OnDetach();
+        if (m_ParticleSystem)
+            m_ParticleSystem->OnDetach();
+        if (m_ParticleEmitterSystem)
+            m_ParticleEmitterSystem->OnDetach();
+        if (m_BulletCollisionSystem)
+            m_BulletCollisionSystem->OnDetach();
+        if (m_XPCollectionSystem)
+            m_XPCollectionSystem->OnDetach();
         
         // Stop runtime
         m_ActiveScene->OnRuntimeStop();

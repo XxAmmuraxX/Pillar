@@ -28,6 +28,10 @@ namespace PillarEditor {
     private:
         TemplateManager* m_TemplateManager = nullptr;
         
+        // Search/filter state
+        char m_SearchBuffer[256] = "";
+        bool m_IsSearching = false;
+        
         // Template save state
         Pillar::Entity m_EntityToSaveAsTemplate;
         bool m_ShowSaveTemplateDialog = false;
