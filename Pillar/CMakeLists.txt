@@ -168,6 +168,12 @@ endif()
 # Remove DLL export definitions
 target_compile_definitions(Pillar PUBLIC PIL_STATIC_LIB)
 
+# MSVC STL4043: fmt/spdlog (and sometimes the MSVC STL) can trigger deprecation
+# warnings for stdext::checked_array_iterator. Silence it engine-wide for MSVC.
+if(MSVC)
+    target_compile_definitions(Pillar PUBLIC _SILENCE_STDEXT_ARR_ITERS_DEPRECATION_WARNING)
+endif()
+
 
 
 

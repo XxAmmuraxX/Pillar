@@ -52,6 +52,7 @@ YourGame/
 │   ├── audio/               # WAV audio files
 │   │   ├── sfx/             # Sound effects
 │   │   └── music/           # Background music
+|   |── templates/           # Entity templates
 │   └── scenes/              # Serialized scene files (.json)
 └── CMakeLists.txt
 ```
@@ -258,26 +259,42 @@ m_Scene->DestroyEntity(player);
 
 ## Rendering
 
-### Using BatchRenderer2D
+Pillar’s recommended 2D rendering API is `Renderer2DBackend`, which uses the batch renderer internally.
+
+### Using Renderer2DBackend
 
 ```cpp
 void GameLayer::OnUpdate(float dt)
 {
     // Begin scene with camera
-    Pillar::BatchRenderer2D* renderer = GetBatchRenderer();
-    renderer->BeginScene(m_CameraController.GetCamera());
+    Pillar::Renderer2DBackend::ResetStats();
+    Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
     
     // Draw colored quad
-    renderer->DrawQuad({0.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f});
+    Pillar::Renderer2DBackend::DrawQuad({0.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f});
     
     // Draw textured quad
-    renderer->DrawQuad({2.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, m_Texture.get());
+    Pillar::Renderer2DBackend::DrawQuad({2.0f, 0.0f}, {1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 1.0f}, m_Texture);
     
     // Draw rotated quad
-    renderer->DrawRotatedQuad({-2.0f, 0.0f}, {1.0f, 1.0f}, 45.0f, {0.0f, 1.0f, 0.0f, 1.0f});
+    Pillar::Renderer2DBackend::DrawRotatedQuad({-2.0f, 0.0f}, {1.0f, 1.0f}, glm::radians(45.0f), {0.0f, 1.0f, 0.0f, 1.0f});
     
-    renderer->EndScene();
+    Pillar::Renderer2DBackend::EndScene();
+
+    // Optional: read stats (useful for perf HUDs)
+    // uint32_t drawCalls = Pillar::Renderer2DBackend::GetDrawCallCount();
+    // uint32_t quads = Pillar::Renderer2DBackend::GetQuadCount();
 }
+```
+
+> Note: The rotated quad APIs take rotation in **radians**.
+
+### Debug Shapes
+
+```cpp
+Pillar::Renderer2DBackend::DrawLine({0.0f, 0.0f}, {2.0f, 1.0f}, {1, 1, 0, 1}, 2.0f);
+Pillar::Renderer2DBackend::DrawRect({0.0f, 0.0f}, {2.0f, 1.0f}, {0, 1, 1, 1}, 2.0f);
+Pillar::Renderer2DBackend::DrawCircle({0.0f, 0.0f}, 1.0f, {1, 0, 1, 1}, 2.0f);
 ```
 
 ### Loading Textures
@@ -609,7 +626,7 @@ void GameLayer::OnImGuiRender()
    auto bullet = bulletPool.Spawn(position, direction, speed, damage);
    ```
 
-2. **Batch Draw Calls** - BatchRenderer2D automatically batches by texture
+2. **Batch Draw Calls** - `Renderer2DBackend` batches by texture
 
 3. **Minimize Component Queries** - Cache frequently accessed components
 
@@ -652,7 +669,7 @@ void GameLayer::OnImGuiRender()
 
 | Class | Purpose |
 |-------|---------|
-| `BatchRenderer2D` | Efficient 2D quad rendering |
+| `Renderer2DBackend` | Recommended batched 2D rendering API |
 | `OrthographicCamera` | 2D camera |
 | `OrthographicCameraController` | Camera input handling |
 | `Texture2D` | 2D texture |

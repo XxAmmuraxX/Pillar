@@ -113,13 +113,6 @@ target_link_libraries(PillarTests
         GTest::gmock
 )
 
-# Copy Pillar DLL to Tests directory
-add_custom_command(TARGET PillarTests POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:Pillar>
-        ${BINARY_OUTPUT_DIR}/Tests
-)
-
 # Discover tests for CTest integration
 include(GoogleTest)
 gtest_discover_tests(PillarTests
