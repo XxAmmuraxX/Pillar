@@ -3,6 +3,7 @@
 #include "EditorPanel.h"
 #include "../EditorCamera.h"
 #include "Pillar/Renderer/Framebuffer.h"
+#include "Pillar/Renderer/Lighting2D.h"
 #include "Pillar/Application.h"
 #include <glm/glm.hpp>
 #include <memory>
@@ -43,18 +44,34 @@ namespace PillarEditor {
         glm::vec2 GetViewportSize() const { return m_ViewportSize; }
         const glm::vec2* GetViewportBounds() const { return m_ViewportBounds; }
 
+        uint32_t GetFramebufferTextureID() const { return m_Framebuffer ? m_Framebuffer->GetColorAttachmentRendererID() : 0; }
+
+        void SetLitPreviewEnabled(bool enabled) { m_EnableLitPreview = enabled; }
+        bool IsLitPreviewEnabled() const { return m_EnableLitPreview; }
+
         // Gizmo controls
         void SetGizmoMode(GizmoMode mode) { m_GizmoMode = mode; }
         GizmoMode GetGizmoMode() const { return m_GizmoMode; }
 
     private:
+        void RenderSceneLit(Pillar::OrthographicCamera& activeCamera);
+        void RenderSceneUnlit(Pillar::OrthographicCamera& activeCamera);
+
         void DrawGrid();
+        void DrawSelectionOutlines();
         void DrawGizmos();
         void DrawGizmoToolbar();
         void DrawEntityLabels();
         void DrawEntityNameLabel(const glm::vec2& worldPos, const std::string& name);
         void DrawColliderGizmos();
         void DrawRigidbodyGizmos();
+
+        void DrawLightingSettingsPanel();
+
+        void DrawLightGizmos(Pillar::OrthographicCamera& activeCamera);
+        void DrawShadowCasterGizmos();
+        void DrawArc(const glm::vec3& center, float radius, float startAngleRadians, float endAngleRadians, const glm::vec4& color, int segments, float thickness);
+
         void DrawWireBox(const glm::vec2& position, const glm::vec2& size, float rotation, const glm::vec4& color);
         ImVec2 WorldToScreenImGui(const glm::vec2& worldPos);
         glm::vec4 GetEntityColor(const std::string& tag);
@@ -82,6 +99,12 @@ namespace PillarEditor {
         bool m_ShowEntityLabels = true;
         bool m_ShowColliderGizmos = true;
         bool m_ShowRigidbodyGizmos = true;
+
+        // Lighting preview options
+        bool m_EnableLitPreview = false;
+        bool m_ShowLightGizmos = true;
+        bool m_ShowLightingSettings = false;
+        Pillar::Lighting2DSettings m_LightingSettings{};
         
         // Gizmo state
         GizmoMode m_GizmoMode = GizmoMode::Translate;
