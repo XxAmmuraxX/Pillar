@@ -30,6 +30,7 @@ namespace Pillar {
 	private:
 		std::unique_ptr<Box2DWorld> m_World;
 		std::unique_ptr<Box2DContactListener> m_ContactListener;
+		glm::vec2 m_Gravity;
 		float m_Accumulator = 0.0f;
 		const float m_FixedTimeStep = 1.0f / 60.0f; // 60 Hz physics
 

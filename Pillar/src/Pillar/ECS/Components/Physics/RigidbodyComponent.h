@@ -13,6 +13,10 @@ namespace Pillar {
 		b2BodyType BodyType = b2_dynamicBody;
 		bool FixedRotation = false; // Prevent rotation (useful for characters)
 		float GravityScale = 1.0f;
+		float LinearDamping = 0.0f;  // Air resistance for linear motion
+		float AngularDamping = 0.0f; // Air resistance for rotation
+		bool IsBullet = false;       // Enable continuous collision detection for fast objects
+		bool IsEnabled = true;       // Can temporarily disable physics
 
 		RigidbodyComponent() = default;
 		RigidbodyComponent(b2BodyType type) : BodyType(type) {}

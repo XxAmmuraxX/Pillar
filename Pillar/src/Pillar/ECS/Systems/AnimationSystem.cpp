@@ -191,9 +191,12 @@ namespace Pillar {
 			}
 		}
 
-		// Update UV coordinates
-		sprite.TexCoordMin = frame.UVMin;
-		sprite.TexCoordMax = frame.UVMax;
+		// Update UV coordinates unless locked by editor
+		if (!sprite.LockUV)
+		{
+			sprite.TexCoordMin = frame.UVMin;
+			sprite.TexCoordMax = frame.UVMax;
+		}
 	}
 
 	void AnimationSystem::FireAnimationEvents(AnimationComponent& anim, AnimationClip& clip, 

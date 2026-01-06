@@ -6,7 +6,11 @@ add_executable(PillarEditor
     src/EditorLayer.cpp
     src/SelectionContext.cpp
     src/EditorCamera.cpp
+    src/EditorSettings.cpp
     src/TemplateManager.cpp
+    src/SpriteSheetMetadata.cpp
+    src/TexturePackerImporter.cpp
+    src/AsepriteImporter.cpp
     src/Panels/SceneHierarchyPanel.cpp
     src/Panels/InspectorPanel.cpp
     src/Panels/ViewportPanel.cpp
@@ -14,6 +18,8 @@ add_executable(PillarEditor
     src/Panels/ConsolePanel.cpp
     src/Panels/TemplateLibraryPanel.cpp
     src/Panels/AnimationManagerPanel.cpp
+    src/Panels/SpriteSheetEditorPanel.cpp
+    src/Panels/LayerEditorPanel.cpp
     src/Utils/FileDialog.cpp
 )
 
@@ -31,7 +37,7 @@ set_target_properties(PillarEditor PROPERTIES
 )
 
 # Link to Pillar engine (gets all dependencies transitively)
-target_link_libraries(PillarEditor PRIVATE Pillar imguizmo)
+target_link_libraries(PillarEditor PRIVATE Pillar imguizmo nlohmann_json::nlohmann_json)
 
 # Include directories
 target_include_directories(PillarEditor PRIVATE
@@ -40,6 +46,11 @@ target_include_directories(PillarEditor PRIVATE
 
 # Define static lib for Pillar
 target_compile_definitions(PillarEditor PRIVATE PIL_STATIC_LIB)
+
+# Add /FS flag for parallel compilation on Windows
+if(MSVC)
+    target_compile_options(PillarEditor PRIVATE /FS)
+endif()
 
 # Create assets directory for editor icons
 add_custom_command(TARGET PillarEditor POST_BUILD

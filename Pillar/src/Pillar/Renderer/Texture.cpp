@@ -3,6 +3,7 @@
 #include "Pillar/Utils/AssetManager.h"
 #include "Platform/OpenGL/OpenGLTexture.h"
 #include "Pillar/Logger.h"
+#include <filesystem>
 
 
 namespace Pillar {
@@ -26,17 +27,34 @@ namespace Pillar {
     {
         std::string resolvedPath = AssetManager::GetTexturePath(path);
         
-        switch (RenderAPI::GetAPI())
+        // Check if file exists
+        if (!std::filesystem::exists(resolvedPath))
         {
-            case RendererAPI::OpenGL:
-                return std::make_shared<OpenGLTexture2D>(resolvedPath);
-            case RendererAPI::None:
-                PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
-                return nullptr;
+            PIL_CORE_WARN("Texture not found: {0}, using missing texture placeholder", path);
+            return AssetManager::GetMissingTexture();
         }
+        
+        // Try to load texture
+        try
+        {
+            switch (RenderAPI::GetAPI())
+            {
+                case RendererAPI::OpenGL:
+                    return std::make_shared<OpenGLTexture2D>(resolvedPath);
+                case RendererAPI::None:
+                    PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
+                    return nullptr;
+            }
 
-        PIL_CORE_ASSERT(false, "Unknown RendererAPI!");
-        return nullptr;
+            PIL_CORE_ASSERT(false, "Unknown RendererAPI!");
+            return nullptr;
+        }
+        catch (const std::exception& e)
+        {
+            PIL_CORE_ERROR("Failed to load texture '{0}': {1}", path, e.what());
+            PIL_CORE_WARN("Using missing texture placeholder");
+            return AssetManager::GetMissingTexture();
+        }
     }
 
 }

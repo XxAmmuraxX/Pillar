@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+struct ImVec2;  // Forward declaration
+
 namespace PillarEditor {
 
     class EditorLayer;  // Forward declaration
@@ -49,8 +51,16 @@ namespace PillarEditor {
         void DrawGrid();
         void DrawGizmos();
         void DrawGizmoToolbar();
+        void DrawEntityLabels();
+        void DrawEntityNameLabel(const glm::vec2& worldPos, const std::string& name);
+        void DrawColliderGizmos();
+        void DrawRigidbodyGizmos();
+        void DrawWireBox(const glm::vec2& position, const glm::vec2& size, float rotation, const glm::vec4& color);
+        ImVec2 WorldToScreenImGui(const glm::vec2& worldPos);
         glm::vec4 GetEntityColor(const std::string& tag);
         glm::vec2 GetEntitySize(const std::string& tag, const glm::vec2& scale);
+        
+        void ApplyNudge(const glm::vec2& nudge);
         
         // Entity picking
         bool OnMouseButtonPressed(Pillar::MouseButtonPressedEvent& e);
@@ -67,6 +77,11 @@ namespace PillarEditor {
 
         bool m_ViewportFocused = false;
         bool m_ViewportHovered = false;
+        
+        // Display options
+        bool m_ShowEntityLabels = true;
+        bool m_ShowColliderGizmos = true;
+        bool m_ShowRigidbodyGizmos = true;
         
         // Gizmo state
         GizmoMode m_GizmoMode = GizmoMode::Translate;

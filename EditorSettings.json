@@ -1,0 +1,172 @@
+{
+    "autoSave": {
+        "enabled": true,
+        "interval": 300.0
+    },
+    "gizmo": {
+        "mode": 0,
+        "operation": 0
+    },
+    "layerManager": {
+        "layers": [
+            {
+                "baseZIndex": -100.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 0.800000011920929,
+                    "g": 0.5,
+                    "r": 0.30000001192092896
+                },
+                "locked": false,
+                "name": "Background",
+                "visible": true
+            },
+            {
+                "baseZIndex": -50.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 0.30000001192092896,
+                    "g": 0.699999988079071,
+                    "r": 0.5
+                },
+                "locked": false,
+                "name": "Terrain",
+                "visible": true
+            },
+            {
+                "baseZIndex": -10.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 1.0,
+                    "g": 1.0,
+                    "r": 1.0
+                },
+                "locked": false,
+                "name": "Decoration",
+                "visible": true
+            },
+            {
+                "baseZIndex": 0.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 1.0,
+                    "g": 1.0,
+                    "r": 1.0
+                },
+                "locked": false,
+                "name": "Default",
+                "visible": true
+            },
+            {
+                "baseZIndex": 10.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 0.20000000298023224,
+                    "g": 0.800000011920929,
+                    "r": 1.0
+                },
+                "locked": false,
+                "name": "Player",
+                "visible": true
+            },
+            {
+                "baseZIndex": 5.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 0.30000001192092896,
+                    "g": 0.30000001192092896,
+                    "r": 0.8999999761581421
+                },
+                "locked": false,
+                "name": "Enemies",
+                "visible": true
+            },
+            {
+                "baseZIndex": 20.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 1.0,
+                    "g": 1.0,
+                    "r": 1.0
+                },
+                "locked": false,
+                "name": "Projectiles",
+                "visible": true
+            },
+            {
+                "baseZIndex": 30.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 1.0,
+                    "g": 0.5,
+                    "r": 0.8999999761581421
+                },
+                "locked": false,
+                "name": "Effects",
+                "visible": true
+            },
+            {
+                "baseZIndex": 100.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 1.0,
+                    "g": 1.0,
+                    "r": 1.0
+                },
+                "locked": false,
+                "name": "UI Background",
+                "visible": true
+            },
+            {
+                "baseZIndex": 110.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 0.800000011920929,
+                    "g": 0.800000011920929,
+                    "r": 0.800000011920929
+                },
+                "locked": false,
+                "name": "UI Foreground",
+                "visible": true
+            },
+            {
+                "baseZIndex": 120.0,
+                "color": {
+                    "a": 1.0,
+                    "b": 1.0,
+                    "g": 1.0,
+                    "r": 1.0
+                },
+                "locked": false,
+                "name": "UI Overlay",
+                "visible": true
+            }
+        ]
+    },
+    "layout": {
+        "name": "default",
+        "restore": true
+    },
+    "preferences": {
+        "autoFocusOnSelect": true,
+        "confirmOnDelete": true,
+        "showEntityCount": true,
+        "showFPS": true
+    },
+    "recentFiles": [],
+    "sprite": {
+        "autoSizeOnLoad": false,
+        "pixelsPerUnit": 100.0
+    },
+    "viewport": {
+        "cameraPosition": {
+            "x": 0.0,
+            "y": 0.0,
+            "z": 0.0
+        },
+        "cameraSpeed": 5.0,
+        "cameraZoom": 5.0,
+        "gridSize": 1.0,
+        "showGrid": true
+    }
+}

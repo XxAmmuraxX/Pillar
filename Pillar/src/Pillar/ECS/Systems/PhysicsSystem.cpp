@@ -12,6 +12,7 @@ namespace Pillar {
 	PhysicsSystem::PhysicsSystem(const glm::vec2& gravity)
 		: m_World(std::make_unique<Box2DWorld>(gravity))
 		, m_ContactListener(std::make_unique<Box2DContactListener>())
+		, m_Gravity(gravity)
 	{
 	}
 
@@ -23,8 +24,14 @@ namespace Pillar {
 	{
 		System::OnAttach(scene);
 
+		// Recreate the Box2D world with a fresh state
+		m_World = std::make_unique<Box2DWorld>(m_Gravity);
+
 		// Set contact listener
 		m_World->GetWorld()->SetContactListener(m_ContactListener.get());
+
+		// Reset accumulator
+		m_Accumulator = 0.0f;
 
 		// Create physics bodies for existing entities
 		CreatePhysicsBodies();
@@ -33,6 +40,27 @@ namespace Pillar {
 	void PhysicsSystem::OnDetach()
 	{
 		System::OnDetach();
+
+		// Clean up all physics bodies
+		if (m_Scene)
+		{
+			auto view = m_Scene->GetRegistry().view<RigidbodyComponent>();
+			for (auto entity : view)
+			{
+				auto& rigidbody = view.get<RigidbodyComponent>(entity);
+				if (rigidbody.Body != nullptr)
+				{
+					m_World->GetWorld()->DestroyBody(rigidbody.Body);
+					rigidbody.Body = nullptr;
+				}
+			}
+		}
+
+		// Reset contact listener
+		if (m_World && m_World->GetWorld())
+		{
+			m_World->GetWorld()->SetContactListener(nullptr);
+		}
 	}
 
 	void PhysicsSystem::OnUpdate(float deltaTime)
@@ -87,7 +115,11 @@ namespace Pillar {
 				transform.Rotation,
 				rigidbody.BodyType,
 				rigidbody.FixedRotation,
-				rigidbody.GravityScale
+				rigidbody.GravityScale,
+				rigidbody.LinearDamping,
+				rigidbody.AngularDamping,
+				rigidbody.IsBullet,
+				rigidbody.IsEnabled
 			);
 
 			// Store entity handle in user data for collision callbacks

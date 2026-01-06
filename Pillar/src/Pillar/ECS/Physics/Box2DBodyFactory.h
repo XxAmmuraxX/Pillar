@@ -18,7 +18,11 @@ namespace Pillar {
 			float rotation,
 			b2BodyType bodyType,
 			bool fixedRotation = false,
-			float gravityScale = 1.0f
+			float gravityScale = 1.0f,
+			float linearDamping = 0.0f,
+			float angularDamping = 0.0f,
+			bool isBullet = false,
+			bool isEnabled = true
 		);
 
 		// Create fixtures from ColliderComponent
@@ -28,6 +32,7 @@ namespace Pillar {
 		static b2FixtureDef CreateFixtureDef(const ColliderComponent& collider);
 		static b2CircleShape CreateCircleShape(const ColliderComponent& collider);
 		static b2PolygonShape CreateBoxShape(const ColliderComponent& collider);
+		static b2PolygonShape CreatePolygonShape(const ColliderComponent& collider);
 	};
 
 } // namespace Pillar

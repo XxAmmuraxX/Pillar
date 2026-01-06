@@ -1,0 +1,24 @@
+{
+    "frameCount": 1,
+    "frameDuration": 0.10000000149011612,
+    "frames": [
+        {
+            "gridPos": [
+                0,
+                0
+            ],
+            "index": 0,
+            "name": "Frame 0",
+            "uvMax": [
+                0.1527777761220932,
+                1.0
+            ],
+            "uvMin": [
+                0.0,
+                0.3333333134651184
+            ]
+        }
+    ],
+    "name": "SpriteSheetAnimation",
+    "texture": "C:\\dev\\Pillar\\PillarEditor\\assets\\textures\\character_walk_cycle.png"
+}

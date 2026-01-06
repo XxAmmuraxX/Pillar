@@ -374,9 +374,13 @@ namespace Pillar {
 				{ "size", JsonHelpers::SerializeVec2(s.Size) },
 				{ "texCoordMin", JsonHelpers::SerializeVec2(s.TexCoordMin) },
 				{ "texCoordMax", JsonHelpers::SerializeVec2(s.TexCoordMax) },
+				{ "lockUV", s.LockUV },
 				{ "zIndex", s.ZIndex },
 				{ "flipX", s.FlipX },
-				{ "flipY", s.FlipY }
+				{ "flipY", s.FlipY },
+				{ "visible", s.Visible },
+				{ "layer", s.Layer },
+				{ "orderInLayer", s.OrderInLayer }
 			};
 			},
 			// Deserialize
@@ -407,12 +411,29 @@ namespace Pillar {
 					s.TexCoordMin = JsonHelpers::DeserializeVec2(j["texCoordMin"]);
 				if (j.contains("texCoordMax"))
 					s.TexCoordMax = JsonHelpers::DeserializeVec2(j["texCoordMax"]);
-				if (j.contains("zIndex"))
-					s.ZIndex = j["zIndex"].get<float>();
+				if (j.contains("lockUV"))
+					s.LockUV = j["lockUV"].get<bool>();
 				if (j.contains("flipX"))
 					s.FlipX = j["flipX"].get<bool>();
 				if (j.contains("flipY"))
 					s.FlipY = j["flipY"].get<bool>();
+				if (j.contains("visible"))
+					s.Visible = j["visible"].get<bool>();
+				if (j.contains("layer"))
+					s.Layer = j["layer"].get<std::string>();
+				if (j.contains("orderInLayer"))
+					s.OrderInLayer = j["orderInLayer"].get<int>();
+				
+				// Compute ZIndex from Layer if available, otherwise use saved value
+				if (!s.Layer.empty())
+				{
+					// Use GetFinalZIndex() which handles both fallback and layer-based computation
+					s.ZIndex = s.GetFinalZIndex();
+				}
+				else if (j.contains("zIndex"))
+				{
+					s.ZIndex = j["zIndex"].get<float>();
+				}
 			},
 			// Copy
 			[](Entity src, Entity dst) {
@@ -425,9 +446,13 @@ namespace Pillar {
 				d.Size = s.Size;
 				d.TexCoordMin = s.TexCoordMin;
 				d.TexCoordMax = s.TexCoordMax;
+				d.LockUV = s.LockUV;
 				d.ZIndex = s.ZIndex;
 				d.FlipX = s.FlipX;
 				d.FlipY = s.FlipY;
+				d.Visible = s.Visible;
+				d.Layer = s.Layer;
+				d.OrderInLayer = s.OrderInLayer;
 			}
 		);
 

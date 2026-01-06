@@ -1,5 +1,7 @@
 #include "Pillar/Utils/AssetManager.h"
+#include "Pillar/Renderer/Texture.h"
 #include "Pillar/Logger.h"
+#include <vector>
 
 #ifdef PIL_WINDOWS
     #include <windows.h>
@@ -8,6 +10,7 @@
 namespace Pillar {
 
     std::filesystem::path AssetManager::s_AssetsDirectory = "";
+    std::shared_ptr<Texture2D> AssetManager::s_MissingTexture = nullptr;
 
     std::filesystem::path AssetManager::GetExecutableDirectory()
     {
@@ -278,6 +281,60 @@ namespace Pillar {
             }
         }
         return s_AssetsDirectory.string();
+    }
+
+    void AssetManager::InitializeMissingTexture()
+    {
+        if (s_MissingTexture)
+            return; // Already initialized
+
+        PIL_CORE_INFO("AssetManager: Creating missing texture placeholder...");
+
+        // Create 64x64 pink/black checkerboard texture
+        const uint32_t width = 64;
+        const uint32_t height = 64;
+        const uint32_t checkSize = 8; // 8x8 pixel checks
+        std::vector<uint8_t> pixels(width * height * 4);
+
+        for (uint32_t y = 0; y < height; ++y)
+        {
+            for (uint32_t x = 0; x < width; ++x)
+            {
+                // Determine if this pixel is in a "pink" or "black" check
+                bool isPink = ((x / checkSize) + (y / checkSize)) % 2 == 0;
+
+                uint32_t index = (y * width + x) * 4;
+                if (isPink)
+                {
+                    pixels[index + 0] = 255; // R
+                    pixels[index + 1] = 0;   // G
+                    pixels[index + 2] = 255; // B
+                    pixels[index + 3] = 255; // A
+                }
+                else
+                {
+                    pixels[index + 0] = 0;   // R
+                    pixels[index + 1] = 0;   // G
+                    pixels[index + 2] = 0;   // B
+                    pixels[index + 3] = 255; // A
+                }
+            }
+        }
+
+        // Create texture from pixel data
+        s_MissingTexture = Texture2D::Create(width, height);
+        s_MissingTexture->SetData(pixels.data(), width * height * 4);
+
+        PIL_CORE_INFO("AssetManager: Missing texture created (64x64 pink/black checkerboard)");
+    }
+
+    std::shared_ptr<Texture2D> AssetManager::GetMissingTexture()
+    {
+        if (!s_MissingTexture)
+        {
+            InitializeMissingTexture();
+        }
+        return s_MissingTexture;
     }
 
 }
