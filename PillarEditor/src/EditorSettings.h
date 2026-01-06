@@ -105,6 +105,11 @@ namespace PillarEditor {
         float PixelsPerUnit = 100.0f; // How many pixels = 1 world unit (default: 100, Unity standard)
         bool AutoSizeSpritesOnLoad = false; // Automatically size sprites to match texture dimensions
 
+        // Lighting preview defaults
+        glm::vec3 DefaultAmbientColor = { 1.0f, 1.0f, 1.0f };
+        float DefaultAmbientIntensity = 0.15f;
+        bool DefaultShadowsEnabled = true;
+
     private:
         EditorSettings() = default;
         ~EditorSettings() = default;

@@ -87,6 +87,21 @@ namespace PillarEditor {
                 AutoSizeSpritesOnLoad = j["sprite"].value("autoSizeOnLoad", false);
             }
 
+            // Lighting preview defaults
+            if (j.contains("lightingPreview"))
+            {
+                DefaultAmbientIntensity = j["lightingPreview"].value("ambientIntensity", 0.15f);
+                DefaultShadowsEnabled = j["lightingPreview"].value("enableShadows", true);
+
+                if (j["lightingPreview"].contains("ambientColor"))
+                {
+                    auto c = j["lightingPreview"]["ambientColor"];
+                    DefaultAmbientColor.x = c.value("x", 1.0f);
+                    DefaultAmbientColor.y = c.value("y", 1.0f);
+                    DefaultAmbientColor.z = c.value("z", 1.0f);
+                }
+            }
+
             // Layer manager settings
             if (j.contains("layerManager"))
             {
@@ -140,6 +155,13 @@ namespace PillarEditor {
             // Sprite settings
             j["sprite"]["pixelsPerUnit"] = PixelsPerUnit;
             j["sprite"]["autoSizeOnLoad"] = AutoSizeSpritesOnLoad;
+
+            // Lighting preview defaults
+            j["lightingPreview"]["ambientColor"]["x"] = DefaultAmbientColor.x;
+            j["lightingPreview"]["ambientColor"]["y"] = DefaultAmbientColor.y;
+            j["lightingPreview"]["ambientColor"]["z"] = DefaultAmbientColor.z;
+            j["lightingPreview"]["ambientIntensity"] = DefaultAmbientIntensity;
+            j["lightingPreview"]["enableShadows"] = DefaultShadowsEnabled;
 
             // Layer manager settings
             LayerManager::Get().SaveToJSON(j["layerManager"]);

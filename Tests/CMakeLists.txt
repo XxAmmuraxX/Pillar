@@ -43,6 +43,7 @@ add_executable(PillarTests
     src/ECS/TransformComponentExtendedTests.cpp
     src/ECS/ComponentRegistryTests.cpp
     src/ECS/SceneSerializerTests.cpp
+    src/ECS/LightingComponentTests.cpp
     src/ECS/ObjectPoolTests.cpp
     src/ECS/SpecializedPoolsTests.cpp
 
