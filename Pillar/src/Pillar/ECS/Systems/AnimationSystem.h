@@ -66,6 +66,29 @@ namespace Pillar {
 		size_t GetClipCount() const { return m_AnimationLibrary.size(); }
 
 		/**
+		 * @brief Get all loaded animation clips (for editor iteration)
+		 * @return Reference to the clip library map
+		 */
+		const std::unordered_map<std::string, AnimationClip>& GetAllClips() const { return m_AnimationLibrary; }
+
+		/**
+		 * @brief Update animation for a specific entity (for edit-mode preview)
+		 * @param entity The entity to update
+		 * @param dt Delta time
+		 * 
+		 * This method allows updating a single entity's animation in edit mode
+		 * without requiring the Playing flag to be true.
+		 */
+		void UpdateInEditMode(entt::entity entity, float dt);
+
+		/**
+		 * @brief Unload a specific animation clip
+		 * @param name Name of the clip to unload
+		 * @return True if clip was found and unloaded
+		 */
+		bool UnloadClip(const std::string& name);
+
+		/**
 		 * @brief Clear all loaded animation clips
 		 */
 		void ClearLibrary();

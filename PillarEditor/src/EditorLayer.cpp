@@ -44,6 +44,7 @@ namespace PillarEditor {
         m_AnimationManagerPanel = std::make_unique<AnimationManagerPanel>();
         m_SpriteSheetEditorPanel = std::make_unique<SpriteSheetEditorPanel>();
         m_LayerEditorPanel = std::make_unique<LayerEditorPanel>();
+        m_AnimationEditorPanel = std::make_unique<AnimationEditorPanel>();
 
         // Initialize all game systems (order matters - some systems depend on others)
         m_AnimationSystem = std::make_unique<Pillar::AnimationSystem>();
@@ -63,6 +64,12 @@ namespace PillarEditor {
         m_CommandHistory.SetOnCommandExecuted([this]() {
             SetSceneModified(true);
         });
+
+        // Initialize animation library manager
+        m_AnimationLibraryManager.Initialize(m_AnimationSystem.get());
+
+        // Initialize animation editor panel
+        m_AnimationEditorPanel->Initialize(m_AnimationSystem.get(), &m_AnimationLibraryManager);
 
         // Create a default scene with some entities for demonstration
         NewScene();
@@ -91,8 +98,15 @@ namespace PillarEditor {
         // Validate selection to remove any invalid/deleted entities
         m_SelectionContext.ValidateSelection();
 
+        // Update animation library manager for file watching (hot-reload)
+        m_AnimationLibraryManager.Update();
+
         // Always update viewport panel - it handles its own hover checks internally
         m_ViewportPanel->OnUpdate(deltaTime);
+
+        // Update animation editor panel preview
+        if (m_AnimationEditorPanel)
+            m_AnimationEditorPanel->Update(deltaTime);
 
         // Update scene in play mode
         if (m_EditorState == EditorState::Play)
@@ -485,6 +499,9 @@ namespace PillarEditor {
         if (m_SpriteSheetEditorPanel->IsVisible())
             m_SpriteSheetEditorPanel->OnImGuiRender();
 
+        if (m_AnimationEditorPanel)
+            m_AnimationEditorPanel->OnImGuiRender();
+
         if (m_LayerEditorPanel)
             m_LayerEditorPanel->OnImGuiRender();
 
@@ -856,6 +873,12 @@ namespace PillarEditor {
                 if (ImGui::MenuItem("Sprite Sheet Editor", nullptr, spriteSheetEditorVisible))
                 {
                     m_SpriteSheetEditorPanel->SetVisible(!spriteSheetEditorVisible);
+                }
+
+                bool animationEditorVisible = m_AnimationEditorPanel && m_AnimationEditorPanel->IsVisible();
+                if (ImGui::MenuItem("Animation Editor", nullptr, animationEditorVisible))
+                {
+                    m_AnimationEditorPanel->SetVisible(!animationEditorVisible);
                 }
                 
                 ImGui::Separator();

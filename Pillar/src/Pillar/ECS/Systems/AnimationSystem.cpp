@@ -17,7 +17,8 @@ namespace Pillar {
 	void AnimationSystem::OnDetach()
 	{
 		PIL_CORE_INFO("AnimationSystem detached");
-		ClearLibrary();
+		// Note: Don't clear library here - clips should persist across play/stop cycles
+		// Animation clips are editor resources, not runtime state
 		System::OnDetach();
 	}
 
@@ -89,6 +90,26 @@ namespace Pillar {
 			return;
 
 		auto& registry = m_Scene->GetRegistry();
+		
+		// Validate entity exists and has required components
+		if (!registry.valid(entity))
+		{
+			PIL_CORE_WARN("UpdateAnimation: Invalid entity");
+			return;
+		}
+		
+		if (!registry.all_of<AnimationComponent>(entity))
+		{
+			PIL_CORE_WARN("UpdateAnimation: Entity missing AnimationComponent");
+			return;
+		}
+		
+		if (!registry.all_of<SpriteComponent>(entity))
+		{
+			PIL_CORE_WARN("UpdateAnimation: Entity missing SpriteComponent");
+			return;
+		}
+		
 		auto& anim = registry.get<AnimationComponent>(entity);
 
 		// Get the animation clip (even if not playing, to set initial frame)
@@ -213,6 +234,25 @@ namespace Pillar {
 				}
 			}
 		}
+	}
+
+	void AnimationSystem::UpdateInEditMode(entt::entity entity, float dt)
+	{
+		// Force update animation regardless of playing state
+		// This is used for edit-mode preview in the editor
+		UpdateAnimation(entity, dt);
+	}
+
+	bool AnimationSystem::UnloadClip(const std::string& name)
+	{
+		auto it = m_AnimationLibrary.find(name);
+		if (it != m_AnimationLibrary.end())
+		{
+			PIL_CORE_INFO("Unloaded animation clip: {0}", name);
+			m_AnimationLibrary.erase(it);
+			return true;
+		}
+		return false;
 	}
 
 } // namespace Pillar

@@ -18,9 +18,11 @@ add_executable(PillarEditor
     src/Panels/ConsolePanel.cpp
     src/Panels/TemplateLibraryPanel.cpp
     src/Panels/AnimationManagerPanel.cpp
+    src/Panels/AnimationEditorPanel.cpp
     src/Panels/SpriteSheetEditorPanel.cpp
     src/Panels/LayerEditorPanel.cpp
     src/Utils/FileDialog.cpp
+    src/Utils/AnimationLibraryManager.cpp
 )
 
 # Override output directory for all configurations

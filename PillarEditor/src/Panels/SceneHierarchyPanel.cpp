@@ -3,9 +3,13 @@
 #include "../TemplateManager.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/UUIDComponent.h"
+#include "Pillar/ECS/Components/Rendering/AnimationComponent.h"
+#include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
+#include "ConsolePanel.h"
 #include <imgui.h>
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 
 namespace PillarEditor {
 
@@ -196,6 +200,54 @@ namespace PillarEditor {
             ImGui::SetDragDropPayload("ENTITY_PAYLOAD", &uuid, sizeof(uint64_t));
             ImGui::Text("%s", tag.Tag.c_str());
             ImGui::EndDragDropSource();
+        }
+
+        // Drag-drop target for animation files
+        if (ImGui::BeginDragDropTarget())
+        {
+            if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("CONTENT_BROWSER_ITEM"))
+            {
+                std::string droppedPath = static_cast<const char*>(payload->Data);
+                
+                // Check if it's an animation file
+                if (droppedPath.size() >= 10 && droppedPath.substr(droppedPath.size() - 10) == ".anim.json")
+                {
+                    // Add SpriteComponent if not already present (required for animations)
+                    if (!entity.HasComponent<Pillar::SpriteComponent>())
+                    {
+                        entity.AddComponent<Pillar::SpriteComponent>();
+                        ConsolePanel::Log("Auto-added SpriteComponent to entity '" + tag.Tag + "'", 
+                            LogLevel::Info);
+                    }
+                    
+                    // Add AnimationComponent if not already present
+                    if (!entity.HasComponent<Pillar::AnimationComponent>())
+                    {
+                        entity.AddComponent<Pillar::AnimationComponent>();
+                        ConsolePanel::Log("Auto-added AnimationComponent to entity '" + tag.Tag + "'", 
+                            LogLevel::Info);
+                    }
+                    
+                    // Extract clip name from filename (remove path and extension)
+                    std::filesystem::path filepath(droppedPath);
+                    std::string clipName = filepath.stem().string(); // Removes .json
+                    if (clipName.size() > 5 && clipName.substr(clipName.size() - 5) == ".anim")
+                    {
+                        clipName = clipName.substr(0, clipName.size() - 5); // Remove .anim
+                    }
+                    
+                    // Assign clip to component
+                    auto& anim = entity.GetComponent<Pillar::AnimationComponent>();
+                    anim.CurrentClipName = clipName;
+                    
+                    // Make sure clip is loaded (should already be via AnimationLibraryManager)
+                    // If not, we could load it here, but that's handled automatically by the manager
+                    
+                    ConsolePanel::Log("Assigned animation '" + clipName + "' to entity '" + tag.Tag + "'", 
+                        LogLevel::Info);
+                }
+            }
+            ImGui::EndDragDropTarget();
         }
 
         if (opened)

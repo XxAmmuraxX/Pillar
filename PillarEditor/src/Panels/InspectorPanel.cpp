@@ -1273,6 +1273,247 @@ namespace PillarEditor {
             ImGui::PopStyleVar();
             ImGui::Unindent();
 
+            // === UV COORDINATES (VISUAL DEBUGGING) ===
+            ImGui::Spacing();
+            ImGui::Separator();
+            ImGui::Text("🔍 UV Coordinates (Debug)");
+            ImGui::Separator();
+            ImGui::Spacing();
+
+            // UV Lock toggle
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL_WIDE);
+            ImGui::Text("Lock UV");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Prevent AnimationSystem from modifying UV coordinates\nUseful for debugging or static sprite sheets");
+            ImGui::NextColumn();
+            
+            // Visual lock indicator
+            if (sprite.LockUV)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.3f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.4f, 0.4f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.2f, 0.2f, 1.0f));
+                if (ImGui::Button("🔒 Locked", ImVec2(100, 0)))
+                {
+                    sprite.LockUV = false;
+                }
+                ImGui::PopStyleColor(3);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("UV coordinates are locked - animations won't update this sprite\nClick to unlock");
+            }
+            else
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+                ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                if (ImGui::Button("🔓 Unlocked", ImVec2(100, 0)))
+                {
+                    sprite.LockUV = true;
+                }
+                ImGui::PopStyleColor(3);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("UV coordinates are unlocked - animations will update this sprite\nClick to lock");
+            }
+            ImGui::Columns(1);
+
+            ImGui::Spacing();
+
+            // Frame Preview (shows current UV region)
+            if (sprite.Texture)
+            {
+                ImGui::Text("Frame Preview:");
+                ImGui::SameLine();
+                ImGui::TextDisabled("(Current UV region)");
+                
+                // Calculate preview size
+                ImVec2 previewSize(128, 128);
+                float texWidth = (float)sprite.Texture->GetWidth();
+                float texHeight = (float)sprite.Texture->GetHeight();
+                float texAspect = texWidth / texHeight;
+                
+                if (texAspect > 1.0f)
+                {
+                    previewSize.y = previewSize.x / texAspect;
+                }
+                else
+                {
+                    previewSize.x = previewSize.y * texAspect;
+                }
+                
+                // Draw preview with current UV coordinates
+                ImGui::Image((void*)(intptr_t)sprite.Texture->GetRendererID(), 
+                           previewSize,
+                           ImVec2(sprite.TexCoordMin.x, 1.0f - sprite.TexCoordMin.y),  // Flip Y for OpenGL
+                           ImVec2(sprite.TexCoordMax.x, 1.0f - sprite.TexCoordMax.y));
+                
+                if (ImGui::IsItemHovered())
+                {
+                    ImGui::BeginTooltip();
+                    ImGui::Text("This is the current frame being displayed");
+                    ImGui::Text("UV Min: (%.3f, %.3f)", sprite.TexCoordMin.x, sprite.TexCoordMin.y);
+                    ImGui::Text("UV Max: (%.3f, %.3f)", sprite.TexCoordMax.x, sprite.TexCoordMax.y);
+                    ImGui::Separator();
+                    
+                    // Show larger preview on hover
+                    ImVec2 largePreviewSize(256, 256);
+                    if (texAspect > 1.0f)
+                        largePreviewSize.y = largePreviewSize.x / texAspect;
+                    else
+                        largePreviewSize.x = largePreviewSize.y * texAspect;
+                    
+                    ImGui::Image((void*)(intptr_t)sprite.Texture->GetRendererID(), 
+                               largePreviewSize,
+                               ImVec2(sprite.TexCoordMin.x, 1.0f - sprite.TexCoordMin.y),
+                               ImVec2(sprite.TexCoordMax.x, 1.0f - sprite.TexCoordMax.y));
+                    ImGui::EndTooltip();
+                }
+            }
+            else
+            {
+                ImGui::TextDisabled("⚠ No texture - UV preview unavailable");
+            }
+
+            ImGui::Spacing();
+
+            // UV Coordinates display with copy button
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL_WIDE);
+            ImGui::Text("UV Min");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-80);
+            if (DrawVec2Control("##UVMin", sprite.TexCoordMin, 0.0f, Inspector::COLUMN_WIDTH_LABEL_WIDE))
+            {
+                // Clamp to [0, 1] range
+                sprite.TexCoordMin.x = glm::clamp(sprite.TexCoordMin.x, 0.0f, 1.0f);
+                sprite.TexCoordMin.y = glm::clamp(sprite.TexCoordMin.y, 0.0f, 1.0f);
+            }
+            ImGui::PopItemWidth();
+            
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Copy##UVMin"))
+            {
+                std::string uvText = std::to_string(sprite.TexCoordMin.x) + ", " + std::to_string(sprite.TexCoordMin.y);
+                ImGui::SetClipboardText(uvText.c_str());
+                ConsolePanel::Log("Copied UV Min: " + uvText, LogLevel::Info);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Copy UV Min to clipboard");
+            
+            ImGui::NextColumn();
+
+            ImGui::Text("UV Max");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-80);
+            if (DrawVec2Control("##UVMax", sprite.TexCoordMax, 1.0f, Inspector::COLUMN_WIDTH_LABEL_WIDE))
+            {
+                // Clamp to [0, 1] range
+                sprite.TexCoordMax.x = glm::clamp(sprite.TexCoordMax.x, 0.0f, 1.0f);
+                sprite.TexCoordMax.y = glm::clamp(sprite.TexCoordMax.y, 0.0f, 1.0f);
+            }
+            ImGui::PopItemWidth();
+            
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Copy##UVMax"))
+            {
+                std::string uvText = std::to_string(sprite.TexCoordMax.x) + ", " + std::to_string(sprite.TexCoordMax.y);
+                ImGui::SetClipboardText(uvText.c_str());
+                ConsolePanel::Log("Copied UV Max: " + uvText, LogLevel::Info);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Copy UV Max to clipboard");
+            
+            ImGui::Columns(1);
+
+            // UV Presets
+            ImGui::Indent();
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
+            ImGui::Text("Quick Presets:");
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Full Texture"))
+            {
+                sprite.TexCoordMin = glm::vec2(0.0f, 0.0f);
+                sprite.TexCoordMax = glm::vec2(1.0f, 1.0f);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Reset to full texture (0,0 to 1,1)");
+            
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Left Half"))
+            {
+                sprite.TexCoordMin = glm::vec2(0.0f, 0.0f);
+                sprite.TexCoordMax = glm::vec2(0.5f, 1.0f);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Show left half of texture");
+            
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Right Half"))
+            {
+                sprite.TexCoordMin = glm::vec2(0.5f, 0.0f);
+                sprite.TexCoordMax = glm::vec2(1.0f, 1.0f);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Show right half of texture");
+            
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Top Half"))
+            {
+                sprite.TexCoordMin = glm::vec2(0.0f, 0.5f);
+                sprite.TexCoordMax = glm::vec2(1.0f, 1.0f);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Show top half of texture");
+            
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Bottom Half"))
+            {
+                sprite.TexCoordMin = glm::vec2(0.0f, 0.0f);
+                sprite.TexCoordMax = glm::vec2(1.0f, 0.5f);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Show bottom half of texture");
+            
+            ImGui::PopStyleVar();
+            ImGui::Unindent();
+
+            ImGui::Spacing();
+
+            // Pixel coordinates (derived from UV + texture size)
+            if (sprite.Texture)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+                ImGui::Text("📐 Pixel Coordinates:");
+                
+                float texWidth = (float)sprite.Texture->GetWidth();
+                float texHeight = (float)sprite.Texture->GetHeight();
+                
+                glm::vec2 pixelMin = sprite.TexCoordMin * glm::vec2(texWidth, texHeight);
+                glm::vec2 pixelMax = sprite.TexCoordMax * glm::vec2(texWidth, texHeight);
+                
+                ImGui::BulletText("Min: (%.0f, %.0f) px", pixelMin.x, pixelMin.y);
+                ImGui::BulletText("Max: (%.0f, %.0f) px", pixelMax.x, pixelMax.y);
+                ImGui::BulletText("Size: %.0f x %.0f px", 
+                                std::abs(pixelMax.x - pixelMin.x), 
+                                std::abs(pixelMax.y - pixelMin.y));
+                ImGui::PopStyleColor();
+            }
+
+            ImGui::Spacing();
+
+            // Info box
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.3f, 0.2f, 0.5f, 0.3f));
+            ImGui::BeginChild("UVInfo", ImVec2(0, 100), true);
+            ImGui::TextWrapped("💡 UV Coordinate Tips:");
+            ImGui::BulletText("UV coordinates map texture to sprite (0.0 to 1.0 range)");
+            ImGui::BulletText("AnimationSystem updates UVs automatically for animated sprites");
+            ImGui::BulletText("Lock UV to prevent animation updates (for debugging)");
+            ImGui::BulletText("Use Frame Preview to see current UV region visually");
+            ImGui::EndChild();
+            ImGui::PopStyleColor();
+
             ImGui::TreePop();
         }
 
@@ -1419,28 +1660,129 @@ namespace PillarEditor {
             ImGui::Separator();
             ImGui::Spacing();
 
-            // Current Clip Name
+            // Current Clip Name - Dropdown with available clips
             ImGui::Columns(2);
             ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL_WIDE);
             ImGui::Text("Current Clip");
             ImGui::NextColumn();
             
-            char clipNameBuffer[128];
-            strncpy(clipNameBuffer, anim.CurrentClipName.c_str(), sizeof(clipNameBuffer) - 1);
-            clipNameBuffer[sizeof(clipNameBuffer) - 1] = '\0';
+            // Get available clips from AnimationLibraryManager
+            auto& animLibManager = m_EditorLayer->GetAnimationLibraryManager();
+            const auto& availableClips = animLibManager.GetAllClipNames();
             
-            ImGui::PushItemWidth(-1);
-            if (ImGui::InputText("##ClipName", clipNameBuffer, sizeof(clipNameBuffer)))
+            // Dropdown with available clips
+            ImGui::PushItemWidth(-FLT_MIN - 60); // Leave space for Edit button
+            const char* currentClipName = anim.CurrentClipName.empty() ? "None" : anim.CurrentClipName.c_str();
+            if (ImGui::BeginCombo("##ClipName", currentClipName))
             {
-                anim.CurrentClipName = clipNameBuffer;
+                // None option
+                bool isSelected = anim.CurrentClipName.empty();
+                if (ImGui::Selectable("None", isSelected))
+                {
+                    anim.CurrentClipName = "";
+                }
+                if (isSelected)
+                    ImGui::SetItemDefaultFocus();
+                
+                // List all available clips
+                for (const auto& clipName : availableClips)
+                {
+                    isSelected = (anim.CurrentClipName == clipName);
+                    if (ImGui::Selectable(clipName.c_str(), isSelected))
+                    {
+                        anim.CurrentClipName = clipName;
+                        if (anim.Playing)
+                        {
+                            anim.Play(clipName); // Restart with new clip
+                        }
+                    }
+                    if (isSelected)
+                        ImGui::SetItemDefaultFocus();
+                    
+                    // Preview on hover
+                    if (ImGui::IsItemHovered())
+                    {
+                        auto* clip = animLibManager.GetClip(clipName);
+                        if (clip && clip->IsValid())
+                        {
+                            ImGui::BeginTooltip();
+                            ImGui::Text("📊 Clip Info:");
+                            ImGui::BulletText("Duration: %.2f seconds", clip->GetDuration());
+                            ImGui::BulletText("Frames: %d", clip->GetFrameCount());
+                            ImGui::BulletText("Events: %zu", clip->Events.size());
+                            ImGui::EndTooltip();
+                        }
+                    }
+                }
+                
+                ImGui::EndCombo();
+            }
+            if (ImGui::IsItemHovered() && !anim.CurrentClipName.empty())
+            {
+                auto* clip = animLibManager.GetClip(anim.CurrentClipName);
+                if (clip && clip->IsValid())
+                {
+                    ImGui::SetTooltip("Current clip: %s (%.2fs, %d frames)", 
+                        anim.CurrentClipName.c_str(), clip->GetDuration(), clip->GetFrameCount());
+                }
+            }
+            ImGui::PopItemWidth();
+            
+            // Edit Clip button
+            ImGui::SameLine();
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.5f, 0.8f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.6f, 0.9f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.4f, 0.7f, 1.0f));
+            bool hasClip = !anim.CurrentClipName.empty();
+            if (!hasClip)
+            {
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+            }
+            if (ImGui::Button("✏ Edit", ImVec2(55, 0)))
+            {
+                if (hasClip)
+                {
+                    // Open AnimationEditorPanel with selected clip
+                    m_EditorLayer->GetAnimationEditorPanel().OpenClip(anim.CurrentClipName);
+                    m_EditorLayer->GetAnimationEditorPanel().SetVisible(true);
+                }
+            }
+            if (!hasClip)
+            {
+                ImGui::PopStyleVar();
             }
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Enter animation clip name (e.g., 'Idle', 'Walk', 'Jump')");
-            ImGui::PopItemWidth();
+            {
+                if (hasClip)
+                    ImGui::SetTooltip("Open clip in Animation Editor");
+                else
+                    ImGui::SetTooltip("Select a clip to edit");
+            }
+            ImGui::PopStyleColor(3);
+            
             ImGui::Columns(1);
             
             ImGui::Spacing();
-            ImGui::TextDisabled("💡 Available clips are managed via Animation Manager panel");
+            if (availableClips.empty())
+            {
+                ImGui::TextColored(ImVec4(1.0f, 0.7f, 0.2f, 1.0f), "⚠ No animation clips found");
+                ImGui::TextDisabled("💡 Create clips in the Animation Editor panel");
+            }
+            else
+            {
+                ImGui::TextDisabled("💡 %zu clip(s) available", availableClips.size());
+            }
+            
+            // Refresh button to manually reload clips
+            if (ImGui::Button("🔄 Refresh Clips", ImVec2(-1, 0)))
+            {
+                animLibManager.ScanForClips("assets/animations/");
+                size_t loadedCount = animLibManager.LoadAllClips();
+                ConsolePanel::Log("Reloaded " + std::to_string(loadedCount) + " animation clips", LogLevel::Info);
+            }
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Scan for new .anim.json files and reload all clips\nUse this after creating new animations or editing JSON files manually");
+            
             ImGui::Spacing();
 
             // === PLAYBACK STATUS ===
@@ -1576,6 +1918,231 @@ namespace PillarEditor {
             }
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Reset to first frame");
+
+            // === EDIT MODE PREVIEW ===
+            // Only show in edit mode (not play mode)
+            if (m_EditorLayer && m_EditorLayer->GetEditorState() == EditorState::Edit)
+            {
+                ImGui::Spacing();
+                ImGui::Separator();
+                ImGui::Text("🎬 Edit Mode Preview");
+                ImGui::Separator();
+                ImGui::Spacing();
+                
+                ImGui::TextWrapped("Preview animation without entering play mode:");
+                ImGui::Spacing();
+                
+                // Frame-by-frame controls
+                if (ImGui::Button("◄◄ First", ImVec2(75, 25)))
+                {
+                    anim.FrameIndex = 0;
+                    anim.PlaybackTime = 0.0f;
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Jump to first frame");
+                
+                ImGui::SameLine();
+                if (ImGui::Button("◄ Prev", ImVec2(75, 25)))
+                {
+                    // Get clip to check frame count
+                    auto* clip = m_EditorLayer->GetAnimationSystem()->GetClip(anim.CurrentClipName);
+                    if (clip && clip->IsValid())
+                    {
+                        anim.FrameIndex--;
+                        if (anim.FrameIndex < 0)
+                            anim.FrameIndex = clip->GetFrameCount() - 1;
+                        anim.PlaybackTime = 0.0f;
+                        
+                        // Update sprite immediately
+                        m_EditorLayer->GetAnimationSystem()->UpdateInEditMode(
+                            static_cast<entt::entity>(entity), 0.0f);
+                    }
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Previous frame");
+                
+                ImGui::SameLine();
+                if (ImGui::Button("Next ►", ImVec2(75, 25)))
+                {
+                    // Get clip to check frame count
+                    auto* clip = m_EditorLayer->GetAnimationSystem()->GetClip(anim.CurrentClipName);
+                    if (clip && clip->IsValid())
+                    {
+                        anim.FrameIndex++;
+                        if (anim.FrameIndex >= clip->GetFrameCount())
+                            anim.FrameIndex = 0;
+                        anim.PlaybackTime = 0.0f;
+                        
+                        // Update sprite immediately
+                        m_EditorLayer->GetAnimationSystem()->UpdateInEditMode(
+                            static_cast<entt::entity>(entity), 0.0f);
+                    }
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Next frame");
+                
+                ImGui::SameLine();
+                if (ImGui::Button("Last ►►", ImVec2(75, 25)))
+                {
+                    auto* clip = m_EditorLayer->GetAnimationSystem()->GetClip(anim.CurrentClipName);
+                    if (clip && clip->IsValid())
+                    {
+                        anim.FrameIndex = clip->GetFrameCount() - 1;
+                        anim.PlaybackTime = 0.0f;
+                        
+                        // Update sprite immediately
+                        m_EditorLayer->GetAnimationSystem()->UpdateInEditMode(
+                            static_cast<entt::entity>(entity), 0.0f);
+                    }
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Jump to last frame");
+                
+                ImGui::Spacing();
+
+                // === EDIT MODE PLAYBACK ===
+                // Track playback state per entity (static to persist across frames)
+                static std::unordered_map<uint64_t, bool> s_EditModePlayback;
+                static std::unordered_map<uint64_t, float> s_EditModeTimer;
+                
+                uint64_t entityID = (uint64_t)entity.GetComponent<Pillar::UUIDComponent>().UUID;
+                bool& editModePlayback = s_EditModePlayback[entityID];
+                float& editModeTimer = s_EditModeTimer[entityID];
+                
+                ImGui::Separator();
+                ImGui::Text("▶ Edit Mode Playback:");
+                ImGui::Spacing();
+                
+                // Play/Pause button for edit mode
+                if (editModePlayback)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.7f, 0.3f, 0.3f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0.4f, 0.4f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.2f, 0.2f, 1.0f));
+                    if (ImGui::Button("⏸ Pause Preview", ImVec2(150, 30)))
+                    {
+                        editModePlayback = false;
+                    }
+                    ImGui::PopStyleColor(3);
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Pause animation playback in edit mode");
+                }
+                else
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.4f, 0.8f, 0.4f, 1.0f));
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.2f, 0.6f, 0.2f, 1.0f));
+                    if (ImGui::Button("▶ Play Preview", ImVec2(150, 30)))
+                    {
+                        editModePlayback = true;
+                        editModeTimer = 0.0f;
+                    }
+                    ImGui::PopStyleColor(3);
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Play animation in edit mode (without entering play mode)");
+                }
+                
+                ImGui::SameLine();
+                if (ImGui::Button("⏹ Stop", ImVec2(80, 30)))
+                {
+                    editModePlayback = false;
+                    editModeTimer = 0.0f;
+                    anim.FrameIndex = 0;
+                    anim.PlaybackTime = 0.0f;
+                    
+                    // Update sprite immediately
+                    m_EditorLayer->GetAnimationSystem()->UpdateInEditMode(
+                        static_cast<entt::entity>(entity), 0.0f);
+                }
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Stop preview and reset to first frame");
+                
+                // Update animation in edit mode if playback is enabled
+                if (editModePlayback)
+                {
+                    auto* clip = m_EditorLayer->GetAnimationSystem()->GetClip(anim.CurrentClipName);
+                    if (clip && clip->IsValid())
+                    {
+                        // Advance timer
+                        editModeTimer += m_EditorLayer->GetLastFrameTime() * anim.PlaybackSpeed * clip->PlaybackSpeed;
+                        
+                        // Check if we need to advance frame
+                        const auto& currentFrame = clip->Frames[anim.FrameIndex];
+                        if (editModeTimer >= currentFrame.Duration)
+                        {
+                            editModeTimer = 0.0f;
+                            anim.FrameIndex++;
+                            
+                            // Handle looping
+                            if (anim.FrameIndex >= clip->GetFrameCount())
+                            {
+                                if (clip->Loop)
+                                {
+                                    anim.FrameIndex = 0;
+                                }
+                                else
+                                {
+                                    anim.FrameIndex = clip->GetFrameCount() - 1;
+                                    editModePlayback = false;  // Stop at end
+                                }
+                            }
+                            
+                            anim.PlaybackTime = 0.0f;
+                        }
+                        
+                        // Update sprite
+                        m_EditorLayer->GetAnimationSystem()->UpdateInEditMode(
+                            static_cast<entt::entity>(entity), 0.0f);
+                    }
+                    else
+                    {
+                        editModePlayback = false;  // Stop if clip invalid
+                    }
+                    
+                    // Show playback indicator
+                    ImGui::Spacing();
+                    ImGui::TextColored(ImVec4(0.4f, 1.0f, 0.4f, 1.0f), "▶ Playing in Edit Mode...");
+                }
+                
+                ImGui::Spacing();
+                ImGui::Separator();
+                
+                // Timeline scrubber
+                auto* clip = m_EditorLayer->GetAnimationSystem()->GetClip(anim.CurrentClipName);
+                if (clip && clip->IsValid())
+                {
+                    int maxFrame = clip->GetFrameCount() - 1;
+                    int currentFrame = anim.FrameIndex;
+                    
+                    ImGui::Text("Frame Scrubber:");
+                    ImGui::PushItemWidth(-1);
+                    if (ImGui::SliderInt("##FrameScrubber", &currentFrame, 0, maxFrame, "Frame %d"))
+                    {
+                        anim.FrameIndex = currentFrame;
+                        anim.PlaybackTime = 0.0f;
+                        
+                        // Update sprite immediately
+                        m_EditorLayer->GetAnimationSystem()->UpdateInEditMode(
+                            static_cast<entt::entity>(entity), 0.0f);
+                    }
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip("Scrub through animation frames");
+                    ImGui::PopItemWidth();
+                    
+                    // Show frame info
+                    ImGui::Spacing();
+                    const auto& frame = clip->Frames[anim.FrameIndex];
+                    ImGui::TextDisabled("Frame %d/%d - Duration: %.3fs", 
+                        anim.FrameIndex + 1, clip->GetFrameCount(), frame.Duration);
+                }
+                else if (!anim.CurrentClipName.empty())
+                {
+                    ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), 
+                        "⚠ Clip not found: %s", anim.CurrentClipName.c_str());
+                }
+                
+                ImGui::Spacing();
+            }
 
             ImGui::Spacing();
             
