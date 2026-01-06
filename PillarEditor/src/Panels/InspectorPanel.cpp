@@ -1150,7 +1150,7 @@ namespace PillarEditor {
 
             ImGui::Spacing();
 
-            // === FLIP & Z-INDEX ===
+            // === FLIP & LAYER SYSTEM ===
             ImGui::Columns(2);
             ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
             
@@ -1161,28 +1161,115 @@ namespace PillarEditor {
             ImGui::Checkbox("Flip Y", &sprite.FlipY);
             ImGui::NextColumn();
 
-            ImGui::Text("Z-Index");
+            // === LAYER DROPDOWN ===
+            ImGui::Text("Layer");
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Draw order (higher = drawn on top)");
+                ImGui::SetTooltip("Named layer for organized Z-ordering");
             ImGui::NextColumn();
+            
+            auto& layerMgr = LayerManager::Get();
+            auto& layers = layerMgr.GetAllLayers();
+            
             ImGui::PushItemWidth(-1);
-            ImGui::DragFloat("##ZIndex", &sprite.ZIndex, Inspector::DRAG_SPEED_DEFAULT, -100.0f, 100.0f, "%.1f");
+            if (ImGui::BeginCombo("##Layer", sprite.Layer.c_str()))
+            {
+                for (const auto& layer : layers)
+                {
+                    bool selected = (sprite.Layer == layer.name);
+                    if (ImGui::Selectable(layer.name.c_str(), selected))
+                    {
+                        sprite.Layer = layer.name;
+                        
+                        // Update ZIndex based on layer's base Z-index
+                        sprite.ZIndex = layer.baseZIndex + (sprite.OrderInLayer * 0.01f);
+                        
+                        // Update visibility to match layer's visibility
+                        sprite.Visible = layer.visible;
+                    }
+                    if (selected)
+                        ImGui::SetItemDefaultFocus();
+                }
+                ImGui::EndCombo();
+            }
             ImGui::PopItemWidth();
+            ImGui::NextColumn();
+
+            // === ORDER IN LAYER ===
+            ImGui::Text("Order in Layer");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Fine control within layer\nHigher = drawn on top");
+            ImGui::NextColumn();
+            
+            ImGui::PushItemWidth(-80);
+            if (ImGui::DragInt("##OrderInLayer", &sprite.OrderInLayer, 1.0f, -100, 100))
+            {
+                // Update ZIndex based on layer's base Z-index
+                auto* layer = layerMgr.GetLayer(sprite.Layer);
+                if (layer)
+                {
+                    sprite.ZIndex = layer->baseZIndex + (sprite.OrderInLayer * 0.01f);
+                }
+            }
+            ImGui::PopItemWidth();
+            
+            ImGui::SameLine();
+            ImGui::TextDisabled("(?)");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Sprites within same layer are sorted by this value");
+            
+            ImGui::NextColumn();
+
+            // === COMPUTED Z-INDEX (READ-ONLY) ===
+            ImGui::Text("Final Z-Index");
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Computed from layer base + order\n(This value is used for rendering)");
+            ImGui::NextColumn();
+            
+            float finalZ = sprite.GetFinalZIndex();
+            auto* currentLayer = layerMgr.GetLayer(sprite.Layer);
+            if (currentLayer)
+            {
+                finalZ = currentLayer->baseZIndex + (sprite.OrderInLayer * 0.01f);
+            }
+            
+            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
+            ImGui::Text("%.2f", finalZ);
+            ImGui::PopStyleColor();
             
             ImGui::Columns(1);
 
-            // Z-Index presets
+            // Layer quick-select presets (optional, can be removed if layer dropdown is sufficient)
             ImGui::Indent();
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-            ImGui::Text("Layers:");
+            ImGui::Text("Quick Select:");
             ImGui::SameLine();
-            if (ImGui::SmallButton("Background (-10)")) { sprite.ZIndex = -10.0f; }
+            if (ImGui::SmallButton("Background"))
+            {
+                sprite.Layer = "Background";
+                auto* layer = layerMgr.GetLayer("Background");
+                if (layer) sprite.ZIndex = layer->baseZIndex + (sprite.OrderInLayer * 0.01f);
+            }
             ImGui::SameLine();
-            if (ImGui::SmallButton("Default (0)")) { sprite.ZIndex = 0.0f; }
+            if (ImGui::SmallButton("Default"))
+            {
+                sprite.Layer = "Default";
+                auto* layer = layerMgr.GetLayer("Default");
+                if (layer) sprite.ZIndex = layer->baseZIndex + (sprite.OrderInLayer * 0.01f);
+            }
             ImGui::SameLine();
-            if (ImGui::SmallButton("Foreground (10)")) { sprite.ZIndex = 10.0f; }
+            if (ImGui::SmallButton("Player"))
+            {
+                sprite.Layer = "Player";
+                auto* layer = layerMgr.GetLayer("Player");
+                if (layer) sprite.ZIndex = layer->baseZIndex + (sprite.OrderInLayer * 0.01f);
+            }
             ImGui::SameLine();
-            if (ImGui::SmallButton("UI (50)")) { sprite.ZIndex = 50.0f; }
+            if (ImGui::SmallButton("UI Foreground"))
+            {
+                sprite.Layer = "UI Foreground";
+                auto* layer = layerMgr.GetLayer("UI Foreground");
+                if (layer) sprite.ZIndex = layer->baseZIndex + (sprite.OrderInLayer * 0.01f);
+            }
             ImGui::PopStyleVar();
             ImGui::Unindent();
 
@@ -2838,7 +2925,15 @@ namespace PillarEditor {
             {
                 if (ImGui::Selectable("Sprite"))
                 {
-                    entity.AddComponent<Pillar::SpriteComponent>();
+                    auto& sprite = entity.AddComponent<Pillar::SpriteComponent>();
+                    // Initialize visibility from Default layer
+                    auto& layerMgr = LayerManager::Get();
+                    auto* defaultLayer = layerMgr.GetLayer("Default");
+                    if (defaultLayer)
+                    {
+                        sprite.Visible = defaultLayer->visible;
+                        sprite.ZIndex = defaultLayer->baseZIndex;
+                    }
                     ImGui::CloseCurrentPopup();
                 }
             }

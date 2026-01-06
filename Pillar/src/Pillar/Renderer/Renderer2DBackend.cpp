@@ -183,8 +183,18 @@ namespace Pillar {
     void Renderer2DBackend::DrawSprite(const TransformComponent& transform, const SpriteComponent& sprite)
     {
         glm::vec3 position(transform.Position, sprite.ZIndex);
-        glm::vec2 size = sprite.Size * transform.Scale;
+        glm::vec2 size = sprite.Size * glm::vec2(transform.Scale.x, transform.Scale.y);
         bool hasTexture = sprite.Texture != nullptr;
+        
+        // Debug: Log UV coordinates for entities with locked UVs
+        if (hasTexture && sprite.LockUV)
+        {
+            PIL_CORE_INFO("🎨 DrawSprite (LockUV=true) - Pos({}, {}) Size({}, {}) UV: ({}, {}) to ({}, {})", 
+                          position.x, position.y,
+                          size.x, size.y,
+                          sprite.TexCoordMin.x, sprite.TexCoordMin.y,
+                          sprite.TexCoordMax.x, sprite.TexCoordMax.y);
+        }
 
         if (transform.Rotation != 0.0f)
         {

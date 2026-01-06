@@ -43,6 +43,7 @@ namespace PillarEditor {
         m_TemplateLibraryPanel = std::make_unique<TemplateLibraryPanel>();
         m_AnimationManagerPanel = std::make_unique<AnimationManagerPanel>();
         m_SpriteSheetEditorPanel = std::make_unique<SpriteSheetEditorPanel>();
+        m_LayerEditorPanel = std::make_unique<LayerEditorPanel>();
 
         // Initialize all game systems (order matters - some systems depend on others)
         m_AnimationSystem = std::make_unique<Pillar::AnimationSystem>();
@@ -483,6 +484,9 @@ namespace PillarEditor {
 
         if (m_SpriteSheetEditorPanel->IsVisible())
             m_SpriteSheetEditorPanel->OnImGuiRender();
+
+        if (m_LayerEditorPanel)
+            m_LayerEditorPanel->OnImGuiRender();
 
         // Draw stats panel
         DrawStatsPanel();
@@ -1348,7 +1352,9 @@ namespace PillarEditor {
         m_HierarchyPanel->SetContext(m_ActiveScene, &m_SelectionContext);
         m_InspectorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
         m_ViewportPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+        m_SpriteSheetEditorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
         m_TemplateLibraryPanel->SetScene(m_ActiveScene);
+        m_LayerEditorPanel->SetScene(m_ActiveScene);
         
         // Set animation system
         m_AnimationSystem->OnAttach(m_ActiveScene.get());
@@ -1397,7 +1403,9 @@ namespace PillarEditor {
             m_HierarchyPanel->SetContext(m_ActiveScene, &m_SelectionContext);
             m_InspectorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
             m_ViewportPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+            m_SpriteSheetEditorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
             m_TemplateLibraryPanel->SetScene(m_ActiveScene);
+            m_LayerEditorPanel->SetScene(m_ActiveScene);
             
             // Set animation system
             m_AnimationSystem->OnAttach(m_ActiveScene.get());
@@ -1602,6 +1610,8 @@ namespace PillarEditor {
         m_HierarchyPanel->SetContext(m_ActiveScene, &m_SelectionContext);
         m_InspectorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
         m_ViewportPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+        m_SpriteSheetEditorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+        m_LayerEditorPanel->SetScene(m_ActiveScene);
 
         m_SelectionContext.ClearSelection();
         

@@ -8,6 +8,9 @@ add_executable(PillarEditor
     src/EditorCamera.cpp
     src/EditorSettings.cpp
     src/TemplateManager.cpp
+    src/SpriteSheetMetadata.cpp
+    src/TexturePackerImporter.cpp
+    src/AsepriteImporter.cpp
     src/Panels/SceneHierarchyPanel.cpp
     src/Panels/InspectorPanel.cpp
     src/Panels/ViewportPanel.cpp
@@ -16,6 +19,7 @@ add_executable(PillarEditor
     src/Panels/TemplateLibraryPanel.cpp
     src/Panels/AnimationManagerPanel.cpp
     src/Panels/SpriteSheetEditorPanel.cpp
+    src/Panels/LayerEditorPanel.cpp
     src/Utils/FileDialog.cpp
 )
 
@@ -33,7 +37,7 @@ set_target_properties(PillarEditor PROPERTIES
 )
 
 # Link to Pillar engine (gets all dependencies transitively)
-target_link_libraries(PillarEditor PRIVATE Pillar imguizmo)
+target_link_libraries(PillarEditor PRIVATE Pillar imguizmo nlohmann_json::nlohmann_json)
 
 # Include directories
 target_include_directories(PillarEditor PRIVATE

@@ -197,13 +197,33 @@ namespace PillarEditor {
             // Render all entities with TransformComponent
             auto view = m_Scene->GetRegistry().view<Pillar::TagComponent, Pillar::TransformComponent>();
             
-            for (auto entity : view)
+            // Sort entities by Z-index for proper layering
+            std::vector<entt::entity> sortedEntities(view.begin(), view.end());
+            std::sort(sortedEntities.begin(), sortedEntities.end(),
+                [this](entt::entity a, entt::entity b) {
+                    auto* spriteA = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(a);
+                    auto* spriteB = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(b);
+                    
+                    // Entities without sprites go first (lower Z)
+                    if (!spriteA && spriteB) return true;
+                    if (spriteA && !spriteB) return false;
+                    if (!spriteA && !spriteB) return false; // Keep original order
+                    
+                    // Sort by Z-index (use final Z-index from layer system)
+                    return spriteA->GetFinalZIndex() < spriteB->GetFinalZIndex();
+                });
+            
+            for (auto entity : sortedEntities)
             {
-                auto& tag = view.get<Pillar::TagComponent>(entity);
-                auto& transform = view.get<Pillar::TransformComponent>(entity);
+                auto& tag = m_Scene->GetRegistry().get<Pillar::TagComponent>(entity);
+                auto& transform = m_Scene->GetRegistry().get<Pillar::TransformComponent>(entity);
 
                 // Check if entity has a SpriteComponent
                 auto* spriteComp = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(entity);
+                
+                // Skip invisible sprites (respects layer visibility)
+                if (spriteComp && !spriteComp->Visible)
+                    continue;
                 
                 // Determine color and size
                 glm::vec4 color;
@@ -233,19 +253,26 @@ namespace PillarEditor {
                 // Draw entity (with rotation if needed)
                 if (spriteComp && spriteComp->Texture)
                 {
-                    // Draw textured sprite
+                    // Draw textured sprite with UV coordinates and flip flags
+                    // Use vec3 position with sprite's Z-index for depth sorting
+                    glm::vec3 position3D(transform.Position.x, transform.Position.y, spriteComp->ZIndex);
+                    
                     if (std::abs(transform.Rotation) > 0.001f)
                     {
                         Pillar::Renderer2DBackend::DrawRotatedQuad(
-                            transform.Position, size, transform.Rotation,
-                            color, spriteComp->Texture
+                            position3D, size, transform.Rotation,
+                            color, spriteComp->Texture,
+                            spriteComp->TexCoordMin, spriteComp->TexCoordMax,
+                            spriteComp->FlipX, spriteComp->FlipY
                         );
                     }
                     else
                     {
                         Pillar::Renderer2DBackend::DrawQuad(
-                            transform.Position, size,
-                            color, spriteComp->Texture
+                            position3D, size,
+                            color, spriteComp->Texture,
+                            spriteComp->TexCoordMin, spriteComp->TexCoordMax,
+                            spriteComp->FlipX, spriteComp->FlipY
                         );
                     }
                 }

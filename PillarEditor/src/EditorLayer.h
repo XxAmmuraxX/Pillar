@@ -23,6 +23,7 @@
 #include "Panels/TemplateLibraryPanel.h"
 #include "Panels/AnimationManagerPanel.h"
 #include "Panels/SpriteSheetEditorPanel.h"
+#include "Panels/LayerEditorPanel.h"
 #include "TemplateManager.h"
 #include <memory>
 #include <string>
@@ -101,6 +102,7 @@ namespace PillarEditor {
         std::unique_ptr<TemplateLibraryPanel> m_TemplateLibraryPanel;
         std::unique_ptr<AnimationManagerPanel> m_AnimationManagerPanel;
         std::unique_ptr<SpriteSheetEditorPanel> m_SpriteSheetEditorPanel;
+        std::unique_ptr<LayerEditorPanel> m_LayerEditorPanel;
 
         // Template system
         TemplateManager m_TemplateManager;

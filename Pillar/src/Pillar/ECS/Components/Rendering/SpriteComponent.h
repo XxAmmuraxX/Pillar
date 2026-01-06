@@ -31,9 +31,17 @@ namespace Pillar {
 		glm::vec2 Size = { 1.0f, 1.0f };
 		glm::vec2 TexCoordMin = { 0.0f, 0.0f };
 		glm::vec2 TexCoordMax = { 1.0f, 1.0f };
+		// When true, AnimationSystem will not overwrite UVs
+		bool LockUV = false;
 		float ZIndex = 0.0f;
 		bool FlipX = false;  // Flip sprite horizontally
 		bool FlipY = false;  // Flip sprite vertically
+		bool Visible = true; // Visibility flag (controlled by layer visibility)
+
+		// === LAYER SYSTEM ===
+		// New: Named layer system replaces raw ZIndex manipulation
+		std::string Layer = "Default";  // Layer name (e.g., "Background", "Player", "UI")
+		int OrderInLayer = 0;           // Fine control within layer (-100 to 100)
 
 		SpriteComponent() = default;
 		SpriteComponent(const SpriteComponent&) = default;
@@ -69,6 +77,20 @@ namespace Pillar {
 		void SetLayer(SpriteLayer layer)
 		{
 			ZIndex = static_cast<float>(layer);
+		}
+
+		/**
+		 * @brief Get final Z-index value for rendering
+		 * 
+		 * In the editor, ZIndex is kept in sync with the layer's baseZIndex + OrderInLayer offset.
+		 * This method simply returns the cached ZIndex value.
+		 * Returns: ZIndex (which already includes layer base + order offset)
+		 */
+		float GetFinalZIndex() const
+		{
+			// Return the cached ZIndex value (already computed in editor)
+			// Editor updates this via RefreshAllSprites() or when layer changes
+			return ZIndex;
 		}
 
 		// === PIXELS-PER-UNIT HELPERS ===

@@ -3,8 +3,56 @@
 #include <string>
 #include <vector>
 #include <glm/glm.hpp>
+#include <nlohmann/json.hpp>
 
 namespace PillarEditor {
+
+    /**
+     * @brief Manages sprite layers for organized Z-ordering
+     * 
+     * Provides a structured layer system for sprites, replacing raw Z-index values
+     * with named layers and order-in-layer for better organization and clarity.
+     */
+    class LayerManager
+    {
+    public:
+        struct Layer {
+            std::string name;
+            float baseZIndex;
+            bool visible = true;
+            bool locked = false;
+            glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f); // Editor color
+        };
+
+        // Singleton access
+        static LayerManager& Get();
+
+        // Layer management
+        void AddLayer(const std::string& name, float zIndex);
+        void RemoveLayer(const std::string& name);
+        Layer* GetLayer(const std::string& name);
+        const Layer* GetLayer(const std::string& name) const;
+        std::vector<Layer>& GetAllLayers() { return m_Layers; }
+        const std::vector<Layer>& GetAllLayers() const { return m_Layers; }
+        
+        bool HasLayer(const std::string& name) const;
+        void RenameLayer(const std::string& oldName, const std::string& newName);
+        void MoveLayer(size_t fromIndex, size_t toIndex);
+
+        // Serialization
+        void SaveToJSON(nlohmann::json& j) const;
+        void LoadFromJSON(const nlohmann::json& j);
+
+    private:
+        LayerManager() { InitializeDefaultLayers(); }
+        ~LayerManager() = default;
+        LayerManager(const LayerManager&) = delete;
+        LayerManager& operator=(const LayerManager&) = delete;
+
+        void InitializeDefaultLayers();
+
+        std::vector<Layer> m_Layers;
+    };
 
     /**
      * @brief Manages editor settings and preferences

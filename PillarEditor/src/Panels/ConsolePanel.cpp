@@ -88,7 +88,18 @@ namespace PillarEditor {
             if (shouldShow)
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, color);
-                ImGui::TextUnformatted(msg.Message.c_str());
+                // Use Selectable to allow clicking and copying
+                ImGui::Selectable(msg.Message.c_str(), false);
+                
+                // Add context menu for copying
+                if (ImGui::BeginPopupContextItem())
+                {
+                    if (ImGui::MenuItem("Copy"))
+                    {
+                        ImGui::SetClipboardText(msg.Message.c_str());
+                    }
+                    ImGui::EndPopup();
+                }
                 ImGui::PopStyleColor();
             }
         }
