@@ -21,7 +21,6 @@
 #include "Panels/ContentBrowserPanel.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/TemplateLibraryPanel.h"
-#include "Panels/AnimationManagerPanel.h"
 #include "Panels/AnimationEditorPanel.h"
 #include "Panels/SpriteSheetEditorPanel.h"
 #include "Panels/LayerEditorPanel.h"
@@ -71,6 +70,7 @@ namespace PillarEditor {
         // Setup modern, sleek ImGui theme with enhanced colors, spacing, and typography
         void SetupImGuiStyle();
         void SetupDockspace();
+        void ResetDockspaceLayout();
         void CreateDefaultEntities();
 
         bool OnKeyPressed(Pillar::KeyPressedEvent& e);
@@ -106,7 +106,6 @@ namespace PillarEditor {
         std::unique_ptr<ContentBrowserPanel> m_ContentBrowserPanel;
         std::unique_ptr<ConsolePanel> m_ConsolePanel;
         std::unique_ptr<TemplateLibraryPanel> m_TemplateLibraryPanel;
-        std::unique_ptr<AnimationManagerPanel> m_AnimationManagerPanel;
         std::unique_ptr<AnimationEditorPanel> m_AnimationEditorPanel;
         std::unique_ptr<SpriteSheetEditorPanel> m_SpriteSheetEditorPanel;
         std::unique_ptr<LayerEditorPanel> m_LayerEditorPanel;
@@ -133,6 +132,7 @@ namespace PillarEditor {
 
         // UI state
         bool m_ShowPreferences = false;
+        bool m_LayoutInitialized = false;
 
         // Auto-save state
         float m_AutoSaveTimer = 0.0f;

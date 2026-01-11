@@ -819,9 +819,9 @@ namespace PillarEditor {
                 
                 ImGui::PushID((int)i);
                 
-                // Thumbnail button
-                ImVec2 uvMin = ImVec2(frame.UVMin.x, 1.0f - frame.UVMax.y);
-                ImVec2 uvMax = ImVec2(frame.UVMax.x, 1.0f - frame.UVMin.y);
+                // Thumbnail button (flip V coordinate for OpenGL)
+                ImVec2 uvMin = ImVec2(frame.UVMin.x, frame.UVMax.y);
+                ImVec2 uvMax = ImVec2(frame.UVMax.x, frame.UVMin.y);
                 
                 bool isHovered = ((int)i == m_HoveredFrameIndex);
                 ImVec4 tintColor = isHovered ? ImVec4(1, 1, 0, 1) : ImVec4(1, 1, 1, 1);

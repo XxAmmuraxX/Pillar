@@ -142,6 +142,7 @@ namespace PillarEditor {
 	// ============================================================================
 
 	AnimationEditorPanel::AnimationEditorPanel()
+		: m_Visible(true)  // Visible by default
 	{
 		PIL_CORE_INFO("AnimationEditorPanel created");
 	}
@@ -181,22 +182,11 @@ namespace PillarEditor {
 			
 			ImGui::Separator();
 			
-			// Main content area with splitter
+			// Main content area - horizontal split
 			ImGui::BeginChild("MainContent", ImVec2(0, 0), false);
 			{
-				// Left sidebar and right content
-				ImGui::Columns(2, "AnimEditorColumns", true);
-				
-				// First time setup column widths
-				static bool columnsInitialized = false;
-				if (!columnsInitialized)
-				{
-					ImGui::SetColumnWidth(0, m_LeftPanelWidth);
-					columnsInitialized = true;
-				}
-				
-				// LEFT PANEL - Properties & Library
-				ImGui::BeginChild("LeftPanel", ImVec2(0, 0), true);
+				// LEFT PANEL - Properties & Library (fixed width)
+				ImGui::BeginChild("LeftPanel", ImVec2(m_LeftPanelWidth, 0), true);
 				{
 					RenderClipProperties();
 					ImGui::Separator();
@@ -204,9 +194,9 @@ namespace PillarEditor {
 				}
 				ImGui::EndChild();
 				
-				ImGui::NextColumn();
+				ImGui::SameLine();
 				
-				// RIGHT PANEL - Timeline & Preview
+				// RIGHT PANEL - Timeline & Preview (takes remaining space)
 				ImGui::BeginChild("RightPanel", ImVec2(0, 0), false);
 				{
 					// Timeline section
@@ -239,8 +229,6 @@ namespace PillarEditor {
 					ImGui::EndChild();
 				}
 				ImGui::EndChild();
-				
-				ImGui::Columns(1);
 			}
 			ImGui::EndChild();
 		}
@@ -528,6 +516,7 @@ namespace PillarEditor {
 	{
 		ImGui::Text("Clip Properties");
 		ImGui::Separator();
+		ImGui::Spacing();
 
 		if (!m_HasClipLoaded)
 		{
@@ -535,14 +524,19 @@ namespace PillarEditor {
 			return;
 		}
 
+		ImGui::PushItemWidth(-1); // Full width for inputs
+
 		// Clip name
+		ImGui::Text("Name");
 		char nameBuf[256];
 		strncpy_s(nameBuf, m_CurrentClip.Name.c_str(), sizeof(nameBuf) - 1);
-		if (ImGui::InputText("Name", nameBuf, sizeof(nameBuf)))
+		if (ImGui::InputText("##ClipName", nameBuf, sizeof(nameBuf)))
 		{
 			m_CurrentClip.Name = nameBuf;
 			MarkModified();
 		}
+
+		ImGui::Spacing();
 
 		// Loop setting
 		if (ImGui::Checkbox("Loop", &m_CurrentClip.Loop))
@@ -550,17 +544,39 @@ namespace PillarEditor {
 			MarkModified();
 		}
 
+		ImGui::Spacing();
+
 		// Playback speed
-		if (ImGui::SliderFloat("Speed", &m_CurrentClip.PlaybackSpeed, 0.1f, 5.0f, "%.2f"))
+		ImGui::Text("Playback Speed");
+		if (ImGui::SliderFloat("##Speed", &m_CurrentClip.PlaybackSpeed, 0.1f, 5.0f, "%.2fx"))
 		{
 			MarkModified();
 		}
 
 		// Stats
 		ImGui::Spacing();
-		ImGui::Text("Frames: %d", m_CurrentClip.GetFrameCount());
-		ImGui::Text("Duration: %.2fs", m_CurrentClip.GetDuration());
-		ImGui::Text("Events: %d", (int)m_CurrentClip.Events.size());
+		ImGui::Separator();
+		ImGui::Text("Statistics");
+		ImGui::Separator();
+		ImGui::Spacing();
+		
+		ImGui::Columns(2, "ClipStats", false);
+		ImGui::Text("Frames");
+		ImGui::NextColumn();
+		ImGui::Text("%d", m_CurrentClip.GetFrameCount());
+		ImGui::NextColumn();
+		
+		ImGui::Text("Duration");
+		ImGui::NextColumn();
+		ImGui::Text("%.2fs", m_CurrentClip.GetDuration());
+		ImGui::NextColumn();
+		
+		ImGui::Text("Events");
+		ImGui::NextColumn();
+		ImGui::Text("%d", (int)m_CurrentClip.Events.size());
+		ImGui::Columns(1);
+
+		ImGui::PopItemWidth();
 	}
 
 	void AnimationEditorPanel::RenderClipLibrary()
@@ -780,12 +796,12 @@ namespace PillarEditor {
 		cursorPos.y += (availSize.y - imageSize.y) * 0.5f;
 		ImGui::SetCursorPos(cursorPos);
 
-		// Draw image with UV coordinates
+		// Draw image with UV coordinates (flip V coordinate for OpenGL)
 		ImGui::Image(
 			(void*)(intptr_t)m_PreviewTexture->GetRendererID(),
 			imageSize,
-			ImVec2(frame.UVMin.x, frame.UVMin.y),
-			ImVec2(frame.UVMax.x, frame.UVMax.y)
+			ImVec2(frame.UVMin.x, frame.UVMax.y),
+			ImVec2(frame.UVMax.x, frame.UVMin.y)
 		);
 	}
 
@@ -1156,23 +1172,29 @@ namespace PillarEditor {
 		ImGui::Separator();
 		ImGui::Text("Frame Properties");
 		ImGui::Separator();
+		ImGui::Spacing();
 
 		if (m_SelectedFrameIndex < 0 || m_SelectedFrameIndex >= m_CurrentClip.Frames.size())
 			return;
 
 		auto& frame = m_CurrentClip.Frames[m_SelectedFrameIndex];
 
-		ImGui::Text("Frame Index: %d", m_SelectedFrameIndex);
+	float availWidth = ImGui::GetContentRegionAvail().x;
+	ImGui::PushItemWidth(availWidth);
 
-		// Duration slider
-		float duration = frame.Duration;
-		if (ImGui::SliderFloat("Duration (s)", &duration, 0.01f, 2.0f, "%.3f"))
+	ImGui::Text("Frame Index: %d", m_SelectedFrameIndex);
+
+	// Duration slider
+	float duration = frame.Duration;
+	ImGui::Text("Duration");
+	ImGui::SetNextItemWidth(availWidth - 200.0f); // Leave room for quick buttons
+	if (ImGui::SliderFloat("##FrameDuration", &duration, 0.01f, 2.0f, "%.3f s"))
 		{
 			frame.Duration = duration;
 			MarkModified();
 		}
 
-		// Quick duration buttons
+		// Quick duration buttons on same line
 		ImGui::SameLine();
 		if (ImGui::SmallButton("0.05s"))
 		{
@@ -1192,19 +1214,37 @@ namespace PillarEditor {
 			MarkModified();
 		}
 
-		// Texture path (read-only for now)
-		ImGui::Text("Texture: %s", frame.TexturePath.c_str());
+		ImGui::Spacing();
 
-		// UV coordinates (read-only for now)
-		ImGui::Text("UV Min: (%.3f, %.3f)", frame.UVMin.x, frame.UVMin.y);
-		ImGui::Text("UV Max: (%.3f, %.3f)", frame.UVMax.x, frame.UVMax.y);
+		// Texture path (read-only for now)
+		ImGui::Text("Texture");
+		ImGui::TextWrapped("%s", frame.TexturePath.c_str());
+
+		ImGui::Spacing();
+
+		// UV coordinates (read-only for now) - formatted in columns
+		ImGui::Columns(2, "UVCoords", false);
+		ImGui::Text("UV Min");
+		ImGui::NextColumn();
+		ImGui::Text("(%.3f, %.3f)", frame.UVMin.x, frame.UVMin.y);
+		ImGui::NextColumn();
+		
+		ImGui::Text("UV Max");
+		ImGui::NextColumn();
+		ImGui::Text("(%.3f, %.3f)", frame.UVMax.x, frame.UVMax.y);
+		ImGui::Columns(1);
 
 		// Frame actions
 		ImGui::Spacing();
-		if (ImGui::Button("Duplicate Frame"))
+		ImGui::Separator();
+		ImGui::Spacing();
+		
+		if (ImGui::Button("Duplicate Frame", ImVec2(availWidth, 0)))
 		{
 			DuplicateFrame(m_SelectedFrameIndex);
 		}
+
+		ImGui::PopItemWidth();
 	}
 
 	// ============================================================================

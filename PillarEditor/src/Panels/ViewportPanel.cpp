@@ -826,38 +826,31 @@ namespace PillarEditor {
 
     void ViewportPanel::DrawGizmoToolbar()
     {
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 0));
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 4.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 2.0f);
-        
-        // Background for toolbar
-        ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.1f, 0.1f, 0.1f, 0.8f));
-        ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.3f, 0.3f, 0.8f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 6));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(6, 4));
 
-        ImGui::Begin("##gizmotoolbar", nullptr, 
-            ImGuiWindowFlags_NoDecoration | 
-            ImGuiWindowFlags_NoScrollbar | 
-            ImGuiWindowFlags_NoScrollWithMouse |
-            ImGuiWindowFlags_AlwaysAutoResize);
+        ImGuiWindowFlags toolbarFlags = ImGuiWindowFlags_NoScrollbar | 
+                                        ImGuiWindowFlags_NoScrollWithMouse;
 
-        float buttonSize = 32.0f;
+        ImGui::Begin("Transform Tools", nullptr, toolbarFlags);
+
+        float buttonWidth = 90.0f;
+        float buttonHeight = 28.0f;
         
         // None/Select button (Q)
         {
             bool selected = m_GizmoMode == GizmoMode::None;
             if (selected)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
-            else
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
             
-            if (ImGui::Button("Q##SelectMode", ImVec2(buttonSize, buttonSize)))
+            if (ImGui::Button("Select (Q)", ImVec2(buttonWidth, buttonHeight)))
                 m_GizmoMode = GizmoMode::None;
             
-            ImGui::PopStyleColor();
+            if (selected)
+                ImGui::PopStyleColor();
                 
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Select Mode (Q)\nNo gizmo, selection only");
+                ImGui::SetTooltip("Select Mode (Q)\nClick to select entities");
         }
         
         ImGui::SameLine();
@@ -867,13 +860,12 @@ namespace PillarEditor {
             bool selected = m_GizmoMode == GizmoMode::Translate;
             if (selected)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
-            else
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
             
-            if (ImGui::Button("W##TranslateMode", ImVec2(buttonSize, buttonSize)))
+            if (ImGui::Button("Move (W)", ImVec2(buttonWidth, buttonHeight)))
                 m_GizmoMode = GizmoMode::Translate;
             
-            ImGui::PopStyleColor();
+            if (selected)
+                ImGui::PopStyleColor();
                 
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Translate Mode (W)\nMove entity position");
@@ -886,13 +878,12 @@ namespace PillarEditor {
             bool selected = m_GizmoMode == GizmoMode::Rotate;
             if (selected)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
-            else
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
             
-            if (ImGui::Button("E##RotateMode", ImVec2(buttonSize, buttonSize)))
+            if (ImGui::Button("Rotate (E)", ImVec2(buttonWidth, buttonHeight)))
                 m_GizmoMode = GizmoMode::Rotate;
             
-            ImGui::PopStyleColor();
+            if (selected)
+                ImGui::PopStyleColor();
                 
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Rotate Mode (E)\nRotate entity");
@@ -905,79 +896,19 @@ namespace PillarEditor {
             bool selected = m_GizmoMode == GizmoMode::Scale;
             if (selected)
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
-            else
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
             
-            if (ImGui::Button("R##ScaleMode", ImVec2(buttonSize, buttonSize)))
+            if (ImGui::Button("Scale (R)", ImVec2(buttonWidth, buttonHeight)))
                 m_GizmoMode = GizmoMode::Scale;
             
-            ImGui::PopStyleColor();
+            if (selected)
+                ImGui::PopStyleColor();
                 
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Scale Mode (R)\nResize entity");
-        }
-        
-        // Separator
-        ImGui::SameLine();
-        ImGui::Dummy(ImVec2(8, buttonSize));
-        ImGui::SameLine();
-        
-        // Show Labels toggle
-        {
-            if (m_ShowEntityLabels)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
-            else
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
-            
-            if (ImGui::Button("L##ShowLabels", ImVec2(buttonSize, buttonSize)))
-                m_ShowEntityLabels = !m_ShowEntityLabels;
-            
-            ImGui::PopStyleColor();
-                
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Toggle Entity Labels (L)\nShow/hide entity names");
-        }
-
-        ImGui::SameLine();
-
-        // Show Colliders toggle
-        {
-            if (m_ShowColliderGizmos)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.5f, 0.8f, 1.0f));
-            else
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
-            
-            if (ImGui::Button("C##ShowColliders", ImVec2(buttonSize, buttonSize)))
-                m_ShowColliderGizmos = !m_ShowColliderGizmos;
-            
-            ImGui::PopStyleColor();
-                
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Toggle Collider Gizmos (C)\nShow/hide physics colliders");
-        }
-
-        ImGui::SameLine();
-
-        // Show Rigidbodies toggle
-        {
-            if (m_ShowRigidbodyGizmos)
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.7f, 0.3f, 1.0f));
-            else
-                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
-            
-            if (ImGui::Button("X##ShowRigidbodies", ImVec2(buttonSize, buttonSize)))
-                m_ShowRigidbodyGizmos = !m_ShowRigidbodyGizmos;
-            
-            ImGui::PopStyleColor();
-                
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Toggle Rigidbody Gizmos (X)\nShow body types, velocity vectors, center of mass");
+                ImGui::SetTooltip("Scale Mode (R)\\nResize entity");
         }
 
         ImGui::End();
-        
-        ImGui::PopStyleColor(2);
-        ImGui::PopStyleVar(4);
+        ImGui::PopStyleVar(2);
     }
 
     void ViewportPanel::DrawEntityLabels()
