@@ -25,6 +25,8 @@ namespace PillarEditor {
         void DrawSpriteComponent(Pillar::Entity entity);
         void DrawCameraComponent(Pillar::Entity entity);
         void DrawAnimationComponent(Pillar::Entity entity);
+        void DrawLight2DComponent(Pillar::Entity entity);
+        void DrawShadowCaster2DComponent(Pillar::Entity entity);
         void DrawVelocityComponent(Pillar::Entity entity);
         void DrawRigidbodyComponent(Pillar::Entity entity);
         void DrawColliderComponent(Pillar::Entity entity);

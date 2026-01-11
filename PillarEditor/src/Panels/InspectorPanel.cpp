@@ -12,6 +12,8 @@
 #include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
 #include "Pillar/ECS/Components/Rendering/CameraComponent.h"
 #include "Pillar/ECS/Components/Rendering/AnimationComponent.h"
+#include "Pillar/ECS/Components/Rendering/Light2DComponent.h"
+#include "Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h"
 #include "Pillar/ECS/Components/Physics/VelocityComponent.h"
 #include "Pillar/ECS/Components/Physics/RigidbodyComponent.h"
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
@@ -19,6 +21,7 @@
 #include "Pillar/ECS/Components/Gameplay/XPGemComponent.h"
 #include <imgui.h>
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/constants.hpp>
 #include <cstring>
 #include <filesystem>
 #include <algorithm>
@@ -155,6 +158,18 @@ namespace PillarEditor {
         if (entity.HasComponent<Pillar::CameraComponent>())
         {
             DrawCameraComponent(entity);
+        }
+
+        // Light 2D Component
+        if (entity.HasComponent<Pillar::Light2DComponent>())
+        {
+            DrawLight2DComponent(entity);
+        }
+
+        // Shadow Caster 2D Component
+        if (entity.HasComponent<Pillar::ShadowCaster2DComponent>())
+        {
+            DrawShadowCaster2DComponent(entity);
         }
 
         // Animation Component
@@ -3582,8 +3597,366 @@ namespace PillarEditor {
                 }
             }
 
+            ImGui::Separator();
+            ImGui::TextDisabled("Lighting:");
+
+            if (!entity.HasComponent<Pillar::Light2DComponent>())
+            {
+                if (ImGui::Selectable("Light 2D"))
+                {
+                    entity.AddComponent<Pillar::Light2DComponent>();
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
+            if (!entity.HasComponent<Pillar::ShadowCaster2DComponent>())
+            {
+                if (ImGui::Selectable("Shadow Caster 2D"))
+                {
+                    auto& caster = entity.AddComponent<Pillar::ShadowCaster2DComponent>();
+                    caster.Points = {
+                        { -0.5f, -0.5f },
+                        {  0.5f, -0.5f },
+                        {  0.5f,  0.5f },
+                        { -0.5f,  0.5f }
+                    };
+                    ImGui::CloseCurrentPopup();
+                }
+            }
+
             ImGui::EndPopup();
         }
+    }
+
+    void InspectorPanel::DrawLight2DComponent(Pillar::Entity entity)
+    {
+        if (!entity.HasComponent<Pillar::Light2DComponent>())
+            return;
+
+        ImGui::PushID("Light2DComponent");
+
+        bool open = DrawComponentHeader<Pillar::Light2DComponent>("Light 2D", entity);
+        if (!open && !entity.HasComponent<Pillar::Light2DComponent>())
+            return;
+
+        if (open)
+        {
+            auto& light = entity.GetComponent<Pillar::Light2DComponent>();
+
+            auto DrawLayerMaskHelper = [](const char* popupId, uint32_t& mask)
+            {
+                float fullWidth = ImGui::CalcItemWidth();
+                float buttonWidth = 28.0f;
+                float inputWidth = std::max(1.0f, fullWidth - buttonWidth - 6.0f);
+
+                ImGui::SetNextItemWidth(inputWidth);
+                ImGui::InputScalar("##Mask", ImGuiDataType_U32, &mask, nullptr, nullptr, "%08X", ImGuiInputTextFlags_CharsHexadecimal);
+                ImGui::SameLine();
+                if (ImGui::SmallButton("..."))
+                    ImGui::OpenPopup(popupId);
+
+                if (ImGui::BeginPopup(popupId))
+                {
+                    if (ImGui::SmallButton("All")) mask = 0xFFFFFFFFu;
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("None")) mask = 0u;
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Invert")) mask = ~mask;
+
+                    ImGui::Separator();
+
+                    ImGui::Columns(4, nullptr, false);
+                    for (uint32_t bit = 0; bit < 32; ++bit)
+                    {
+                        ImGui::PushID(static_cast<int>(bit));
+                        bool enabled = (mask & (1u << bit)) != 0u;
+                        if (ImGui::Checkbox("##L", &enabled))
+                        {
+                            if (enabled) mask |= (1u << bit);
+                            else mask &= ~(1u << bit);
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text("%u", bit);
+                        ImGui::NextColumn();
+                        ImGui::PopID();
+                    }
+                    ImGui::Columns(1);
+
+                    ImGui::EndPopup();
+                }
+            };
+
+            // Type
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Type");
+            ImGui::NextColumn();
+            const char* typeNames[] = { "Point", "Spot" };
+            int currentType = static_cast<int>(light.Type);
+            ImGui::PushItemWidth(-1);
+            if (ImGui::Combo("##LightType", &currentType, typeNames, IM_ARRAYSIZE(typeNames)))
+                light.Type = static_cast<Pillar::Light2DType>(currentType);
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Color
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Color");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::ColorEdit3("##LightColor", &light.Color.x, ImGuiColorEditFlags_Float);
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Intensity
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Intensity");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##LightIntensity", &light.Intensity, 0.05f, 0.0f, 10.0f, "%.2f");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            // Radius
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Radius");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::DragFloat("##LightRadius", &light.Radius, 0.1f, 0.1f, 100.0f, "%.2f");
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            if (light.Type == Pillar::Light2DType::Spot)
+            {
+                float innerDeg = glm::degrees(light.InnerAngleRadians);
+                float outerDeg = glm::degrees(light.OuterAngleRadians);
+
+                ImGui::Columns(2);
+                ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+                ImGui::Text("Inner Angle");
+                ImGui::NextColumn();
+                ImGui::PushItemWidth(-1);
+                if (ImGui::DragFloat("##InnerAngle", &innerDeg, 0.5f, 1.0f, 89.0f, "%.1f\xC2\xB0"))
+                {
+                    light.InnerAngleRadians = glm::radians(innerDeg);
+                    if (light.InnerAngleRadians > light.OuterAngleRadians)
+                        light.OuterAngleRadians = light.InnerAngleRadians;
+                }
+                ImGui::PopItemWidth();
+                ImGui::Columns(1);
+
+                ImGui::Columns(2);
+                ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+                ImGui::Text("Outer Angle");
+                ImGui::NextColumn();
+                ImGui::PushItemWidth(-1);
+                if (ImGui::DragFloat("##OuterAngle", &outerDeg, 0.5f, 1.0f, 90.0f, "%.1f\xC2\xB0"))
+                {
+                    light.OuterAngleRadians = glm::radians(outerDeg);
+                    if (light.OuterAngleRadians < light.InnerAngleRadians)
+                        light.InnerAngleRadians = light.OuterAngleRadians;
+                }
+                ImGui::PopItemWidth();
+                ImGui::Columns(1);
+            }
+
+            // Shadows
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Cast Shadows");
+            ImGui::NextColumn();
+            ImGui::Checkbox("##CastShadows", &light.CastShadows);
+            ImGui::Columns(1);
+
+            if (light.CastShadows)
+            {
+                ImGui::Columns(2);
+                ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+                ImGui::Text("Shadow Strength");
+                ImGui::NextColumn();
+                ImGui::PushItemWidth(-1);
+                ImGui::SliderFloat("##ShadowStrength", &light.ShadowStrength, 0.0f, 1.0f, "%.2f");
+                ImGui::PopItemWidth();
+                ImGui::Columns(1);
+            }
+
+            // Layer Mask
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Layer Mask");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::PushID("LightLayerMask");
+            DrawLayerMaskHelper("LightLayerMaskPopup", light.LayerMask);
+            ImGui::PopID();
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+        }
+
+        if (open)
+            ImGui::TreePop();
+
+        ImGui::PopID();
+    }
+
+    void InspectorPanel::DrawShadowCaster2DComponent(Pillar::Entity entity)
+    {
+        if (!entity.HasComponent<Pillar::ShadowCaster2DComponent>())
+            return;
+
+        ImGui::PushID("ShadowCaster2DComponent");
+
+        bool open = DrawComponentHeader<Pillar::ShadowCaster2DComponent>("Shadow Caster 2D", entity);
+        if (!open && !entity.HasComponent<Pillar::ShadowCaster2DComponent>())
+            return;
+
+        if (open)
+        {
+            auto& caster = entity.GetComponent<Pillar::ShadowCaster2DComponent>();
+
+            auto DrawLayerMaskHelper = [](const char* popupId, uint32_t& mask)
+            {
+                float fullWidth = ImGui::CalcItemWidth();
+                float buttonWidth = 28.0f;
+                float inputWidth = std::max(1.0f, fullWidth - buttonWidth - 6.0f);
+
+                ImGui::SetNextItemWidth(inputWidth);
+                ImGui::InputScalar("##Mask", ImGuiDataType_U32, &mask, nullptr, nullptr, "%08X", ImGuiInputTextFlags_CharsHexadecimal);
+                ImGui::SameLine();
+                if (ImGui::SmallButton("..."))
+                    ImGui::OpenPopup(popupId);
+
+                if (ImGui::BeginPopup(popupId))
+                {
+                    if (ImGui::SmallButton("All")) mask = 0xFFFFFFFFu;
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("None")) mask = 0u;
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton("Invert")) mask = ~mask;
+
+                    ImGui::Separator();
+
+                    ImGui::Columns(4, nullptr, false);
+                    for (uint32_t bit = 0; bit < 32; ++bit)
+                    {
+                        ImGui::PushID(static_cast<int>(bit));
+                        bool enabled = (mask & (1u << bit)) != 0u;
+                        if (ImGui::Checkbox("##L", &enabled))
+                        {
+                            if (enabled) mask |= (1u << bit);
+                            else mask &= ~(1u << bit);
+                        }
+                        ImGui::SameLine();
+                        ImGui::Text("%u", bit);
+                        ImGui::NextColumn();
+                        ImGui::PopID();
+                    }
+                    ImGui::Columns(1);
+
+                    ImGui::EndPopup();
+                }
+            };
+
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Closed");
+            ImGui::NextColumn();
+            ImGui::Checkbox("##Closed", &caster.Closed);
+            ImGui::Columns(1);
+
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Two Sided");
+            ImGui::NextColumn();
+            ImGui::Checkbox("##TwoSided", &caster.TwoSided);
+            ImGui::Columns(1);
+
+            ImGui::Columns(2);
+            ImGui::SetColumnWidth(0, Inspector::COLUMN_WIDTH_LABEL);
+            ImGui::Text("Layer Mask");
+            ImGui::NextColumn();
+            ImGui::PushItemWidth(-1);
+            ImGui::PushID("CasterLayerMask");
+            DrawLayerMaskHelper("CasterLayerMaskPopup", caster.LayerMask);
+            ImGui::PopID();
+            ImGui::PopItemWidth();
+            ImGui::Columns(1);
+
+            ImGui::Separator();
+            ImGui::Text("Points (%zu)", caster.Points.size());
+
+            int removeIndex = -1;
+            for (size_t i = 0; i < caster.Points.size(); i++)
+            {
+                ImGui::PushID(static_cast<int>(i));
+
+                ImGui::Text("%zu", i);
+                ImGui::SameLine();
+
+                ImGui::PushItemWidth(80);
+                ImGui::DragFloat("##X", &caster.Points[i].x, 0.01f, -100.0f, 100.0f, "%.2f");
+                ImGui::SameLine();
+                ImGui::DragFloat("##Y", &caster.Points[i].y, 0.01f, -100.0f, 100.0f, "%.2f");
+                ImGui::PopItemWidth();
+
+                ImGui::SameLine();
+                if (ImGui::SmallButton("X"))
+                    removeIndex = static_cast<int>(i);
+
+                ImGui::PopID();
+            }
+
+            if (removeIndex >= 0 && caster.Points.size() > 2)
+                caster.Points.erase(caster.Points.begin() + removeIndex);
+
+            if (ImGui::Button("+ Add Point"))
+            {
+                glm::vec2 newPoint = caster.Points.empty() ? glm::vec2(0.0f) : (caster.Points.back() + glm::vec2(0.5f, 0.0f));
+                caster.Points.push_back(newPoint);
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button("Reset to Box"))
+            {
+                caster.Points = {
+                    { -0.5f, -0.5f },
+                    {  0.5f, -0.5f },
+                    {  0.5f,  0.5f },
+                    { -0.5f,  0.5f }
+                };
+            }
+
+            if (entity.HasComponent<Pillar::ColliderComponent>())
+            {
+                ImGui::SameLine();
+                if (ImGui::Button("From Collider"))
+                {
+                    auto& collider = entity.GetComponent<Pillar::ColliderComponent>();
+                    if (collider.Type == Pillar::ColliderType::Box)
+                    {
+                        glm::vec2 h = collider.HalfExtents;
+                        caster.Points = {
+                            { -h.x, -h.y },
+                            {  h.x, -h.y },
+                            {  h.x,  h.y },
+                            { -h.x,  h.y }
+                        };
+                    }
+                    else if (collider.Type == Pillar::ColliderType::Polygon)
+                    {
+                        caster.Points = collider.Vertices;
+                    }
+                }
+            }
+        }
+
+        if (open)
+            ImGui::TreePop();
+
+        ImGui::PopID();
     }
 
     void InspectorPanel::DrawBulletComponent(Pillar::Entity entity)
@@ -4026,6 +4399,8 @@ namespace PillarEditor {
     template bool InspectorPanel::DrawComponentHeader<Pillar::VelocityComponent>(const char*, Pillar::Entity, bool);
     template bool InspectorPanel::DrawComponentHeader<Pillar::RigidbodyComponent>(const char*, Pillar::Entity, bool);
     template bool InspectorPanel::DrawComponentHeader<Pillar::ColliderComponent>(const char*, Pillar::Entity, bool);
+    template bool InspectorPanel::DrawComponentHeader<Pillar::Light2DComponent>(const char*, Pillar::Entity, bool);
+    template bool InspectorPanel::DrawComponentHeader<Pillar::ShadowCaster2DComponent>(const char*, Pillar::Entity, bool);
     template bool InspectorPanel::DrawComponentHeader<Pillar::BulletComponent>(const char*, Pillar::Entity, bool);
     template bool InspectorPanel::DrawComponentHeader<Pillar::XPGemComponent>(const char*, Pillar::Entity, bool);
     template bool InspectorPanel::DrawComponentHeader<Pillar::HierarchyComponent>(const char*, Pillar::Entity, bool);

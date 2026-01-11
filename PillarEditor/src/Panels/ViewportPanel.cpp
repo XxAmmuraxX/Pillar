@@ -3,6 +3,7 @@
 #include "../EditorLayer.h"
 #include "../Commands/TransformCommand.h"
 #include "../EditorConstants.h"
+#include "../EditorSettings.h"
 #include "ConsolePanel.h"
 #include "Pillar/Renderer/Renderer.h"
 #include "Pillar/Renderer/Renderer2DBackend.h"
@@ -11,6 +12,8 @@
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Physics/ColliderComponent.h"
 #include "Pillar/ECS/Components/Physics/RigidbodyComponent.h"
+#include "Pillar/ECS/Components/Rendering/Light2DComponent.h"
+#include "Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h"
 #include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
 #include "Pillar/ECS/Components/Rendering/CameraComponent.h"
 #include "Pillar/Events/MouseEvent.h"
@@ -43,6 +46,12 @@ namespace PillarEditor {
         m_EditorCamera.SetViewportSize(1280.0f, 720.0f);
         m_EditorCamera.SetZoomLevel(5.0f);  // Start zoomed out to see more of the scene
         m_EditorCamera.SetPosition({ 0.0f, 0.0f, 0.0f });
+
+        // Initialize lighting preview settings from editor defaults
+        auto& editorSettings = EditorSettings::Get();
+        m_LightingSettings.AmbientColor = editorSettings.DefaultAmbientColor;
+        m_LightingSettings.AmbientIntensity = editorSettings.DefaultAmbientIntensity;
+        m_LightingSettings.EnableShadows = editorSettings.DefaultShadowsEnabled;
     }
 
     void ViewportPanel::OnUpdate(float deltaTime)
@@ -145,8 +154,237 @@ namespace PillarEditor {
         if (!m_Framebuffer)
             return;
 
+        // Determine which camera to use based on editor state
+        bool useGameCamera = m_EditorLayer &&
+            m_EditorLayer->GetEditorState() == PillarEditor::EditorState::Play;
+
+        Pillar::OrthographicCamera* activeCamera = &m_EditorCamera.GetCamera();
+
+        // Try to find primary game camera if in play mode
+        if (useGameCamera && m_Scene)
+        {
+            auto cameraView = m_Scene->GetRegistry().view<Pillar::CameraComponent, Pillar::TransformComponent>();
+            for (auto entity : cameraView)
+            {
+                auto& camera = cameraView.get<Pillar::CameraComponent>(entity);
+                if (camera.Primary)
+                {
+                    auto& transform = cameraView.get<Pillar::TransformComponent>(entity);
+                    float aspectRatio = m_ViewportSize.x / m_ViewportSize.y;
+
+                    // Update game camera projection based on camera component
+                    float orthoLeft = -camera.OrthographicSize * aspectRatio * 0.5f;
+                    float orthoRight = camera.OrthographicSize * aspectRatio * 0.5f;
+                    float orthoBottom = -camera.OrthographicSize * 0.5f;
+                    float orthoTop = camera.OrthographicSize * 0.5f;
+                    m_GameCamera.SetProjection(orthoLeft, orthoRight, orthoBottom, orthoTop);
+
+                    // Update game camera transform
+                    m_GameCamera.SetPosition(glm::vec3(transform.Position, 0.0f));
+                    m_GameCamera.SetRotation(transform.Rotation);
+
+                    activeCamera = &m_GameCamera;
+                    break;
+                }
+            }
+        }
+
+        if (m_EnableLitPreview && m_Scene)
+            RenderSceneLit(*activeCamera);
+        else
+            RenderSceneUnlit(*activeCamera);
+    }
+
+    void ViewportPanel::RenderSceneLit(Pillar::OrthographicCamera& activeCamera)
+    {
+        bool isThesisMenu = m_EditorLayer &&
+            m_EditorLayer->GetEditorState() == PillarEditor::EditorState::ThesisMenu;
+
+        // Use Lighting2D pipeline and composite into the editor framebuffer.
+        Pillar::Lighting2D::BeginScene(activeCamera, m_Framebuffer, m_LightingSettings);
+
+        // Draw grid first (will be lit)
+        if (!isThesisMenu)
+            DrawGrid();
+
+        // Render all entities with TransformComponent
+        auto view = m_Scene->GetRegistry().view<Pillar::TagComponent, Pillar::TransformComponent>();
+
+        // Sort entities by Z-index for proper layering
+        std::vector<entt::entity> sortedEntities(view.begin(), view.end());
+        std::sort(sortedEntities.begin(), sortedEntities.end(),
+            [this](entt::entity a, entt::entity b) {
+                auto* spriteA = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(a);
+                auto* spriteB = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(b);
+
+                // Entities without sprites go first (lower Z)
+                if (!spriteA && spriteB) return true;
+                if (spriteA && !spriteB) return false;
+                if (!spriteA && !spriteB) return false; // Keep original order
+
+                // Sort by Z-index (use final Z-index from layer system)
+                return spriteA->GetFinalZIndex() < spriteB->GetFinalZIndex();
+            });
+
+        for (auto entity : sortedEntities)
+        {
+            auto& tag = m_Scene->GetRegistry().get<Pillar::TagComponent>(entity);
+            auto& transform = m_Scene->GetRegistry().get<Pillar::TransformComponent>(entity);
+
+            // Check if entity has a SpriteComponent
+            auto* spriteComp = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(entity);
+
+            // Skip invisible sprites (respects layer visibility)
+            if (spriteComp && !spriteComp->Visible)
+                continue;
+
+            // Determine color and size
+            glm::vec4 color;
+            glm::vec2 size;
+
+            if (spriteComp)
+            {
+                // Use sprite component data
+                color = spriteComp->Color;
+                size = spriteComp->Size * transform.Scale;
+            }
+            else
+            {
+                // Fallback to colored quad based on entity type
+                color = GetEntityColor(tag.Tag);
+                size = GetEntitySize(tag.Tag, transform.Scale);
+            }
+
+            // Check if entity is selected
+            bool isSelected = false;
+            if (m_SelectionContext)
+            {
+                Pillar::Entity e(entity, m_Scene.get());
+                isSelected = m_SelectionContext->IsSelected(e);
+            }
+
+            // Draw entity (with rotation if needed)
+            if (spriteComp && spriteComp->Texture)
+            {
+                // Draw textured sprite with UV coordinates and flip flags
+                // Use vec3 position with sprite's Z-index for depth sorting
+                glm::vec3 position3D(transform.Position.x, transform.Position.y, spriteComp->ZIndex);
+
+                if (std::abs(transform.Rotation) > 0.001f)
+                {
+                    Pillar::Renderer2DBackend::DrawRotatedQuad(
+                        position3D, size, transform.Rotation,
+                        color, spriteComp->Texture,
+                        spriteComp->TexCoordMin, spriteComp->TexCoordMax,
+                        spriteComp->FlipX, spriteComp->FlipY
+                    );
+                }
+                else
+                {
+                    Pillar::Renderer2DBackend::DrawQuad(
+                        position3D, size,
+                        color, spriteComp->Texture,
+                        spriteComp->TexCoordMin, spriteComp->TexCoordMax,
+                        spriteComp->FlipX, spriteComp->FlipY
+                    );
+                }
+            }
+            else
+            {
+                // Draw colored quad
+                if (std::abs(transform.Rotation) > 0.001f)
+                    Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
+                else
+                    Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
+            }
+
+        }
+
+        // Submit lights from scene
+        {
+            auto lightView = m_Scene->GetRegistry().view<Pillar::TransformComponent, Pillar::Light2DComponent>();
+            for (auto entity : lightView)
+            {
+                auto& transform = lightView.get<Pillar::TransformComponent>(entity);
+                auto& light = lightView.get<Pillar::Light2DComponent>(entity);
+
+                Pillar::Light2DSubmit submit;
+                submit.Type = light.Type;
+                submit.Position = transform.Position;
+                submit.Direction = Pillar::Transform2D::Forward(transform.Rotation);
+                submit.Color = light.Color;
+                submit.Intensity = light.Intensity;
+                submit.Radius = light.Radius;
+                submit.InnerAngleRadians = light.InnerAngleRadians;
+                submit.OuterAngleRadians = light.OuterAngleRadians;
+                submit.CastShadows = light.CastShadows;
+                submit.ShadowStrength = light.ShadowStrength;
+                submit.LayerMask = light.LayerMask;
+
+                Pillar::Lighting2D::SubmitLight(submit);
+            }
+        }
+
+        // Submit shadow casters from scene
+        {
+            auto casterView = m_Scene->GetRegistry().view<Pillar::TransformComponent, Pillar::ShadowCaster2DComponent>();
+            for (auto entity : casterView)
+            {
+                auto& transform = casterView.get<Pillar::TransformComponent>(entity);
+                auto& caster = casterView.get<Pillar::ShadowCaster2DComponent>(entity);
+
+                if (caster.Points.size() < 2)
+                    continue;
+
+                Pillar::ShadowCaster2DSubmit submit;
+                submit.Closed = caster.Closed;
+                submit.TwoSided = caster.TwoSided;
+                submit.LayerMask = caster.LayerMask;
+                submit.WorldPoints.reserve(caster.Points.size());
+
+                for (const auto& local : caster.Points)
+                    submit.WorldPoints.push_back(transform.TransformPoint(local));
+
+                Pillar::Lighting2D::SubmitShadowCaster(submit);
+            }
+        }
+
+        Pillar::Lighting2D::EndScene();
+
+        // Draw editor overlays ON TOP (after composite, directly to framebuffer)
+        if (!isThesisMenu)
+        {
+            m_Framebuffer->Bind();
+            Pillar::RenderCommand::SetViewport(0, 0, m_Framebuffer->GetSpecification().Width, m_Framebuffer->GetSpecification().Height);
+            auto overlayState = Pillar::Renderer2DBackend::ScopedRenderState::SpritePass(false, true);
+            Pillar::Renderer2DBackend::BeginScene(activeCamera);
+
+            DrawSelectionOutlines();
+            if (m_ShowColliderGizmos)
+                DrawColliderGizmos();
+            if (m_ShowRigidbodyGizmos)
+                DrawRigidbodyGizmos();
+
+            // Draw light gizmos last so they stay on top
+            if (m_ShowLightGizmos)
+            {
+                DrawShadowCasterGizmos();
+                DrawLightGizmos(activeCamera);
+            }
+
+            Pillar::Renderer2DBackend::EndScene();
+            m_Framebuffer->Unbind();
+        }
+    }
+
+    void ViewportPanel::RenderSceneUnlit(Pillar::OrthographicCamera& activeCamera)
+    {
+        bool isThesisMenu = m_EditorLayer &&
+            m_EditorLayer->GetEditorState() == PillarEditor::EditorState::ThesisMenu;
+
         // Bind framebuffer and render scene
         m_Framebuffer->Bind();
+        Pillar::RenderCommand::SetViewport(0, 0, m_Framebuffer->GetSpecification().Width, m_Framebuffer->GetSpecification().Height);
 
         // Dark gray background for editor viewport
         Pillar::RenderCommand::SetClearColor({ Viewport::BACKGROUND_COLOR.x, Viewport::BACKGROUND_COLOR.y, Viewport::BACKGROUND_COLOR.z, Viewport::BACKGROUND_COLOR.w });
@@ -154,95 +392,54 @@ namespace PillarEditor {
 
         if (m_Scene)
         {
-            // Determine which camera to use based on editor state
-            bool useGameCamera = m_EditorLayer && 
-                                m_EditorLayer->GetEditorState() == PillarEditor::EditorState::Play;
-            
-            Pillar::OrthographicCamera* activeCamera = &m_EditorCamera.GetCamera();
-            
-            // Try to find primary game camera if in play mode
-            if (useGameCamera)
-            {
-                auto cameraView = m_Scene->GetRegistry().view<Pillar::CameraComponent, Pillar::TransformComponent>();
-                for (auto entity : cameraView)
-                {
-                    auto& camera = cameraView.get<Pillar::CameraComponent>(entity);
-                    if (camera.Primary)
-                    {
-                        auto& transform = cameraView.get<Pillar::TransformComponent>(entity);
-                        float aspectRatio = m_ViewportSize.x / m_ViewportSize.y;
-                        
-                        // Update game camera projection based on camera component
-                        float orthoLeft = -camera.OrthographicSize * aspectRatio * 0.5f;
-                        float orthoRight = camera.OrthographicSize * aspectRatio * 0.5f;
-                        float orthoBottom = -camera.OrthographicSize * 0.5f;
-                        float orthoTop = camera.OrthographicSize * 0.5f;
-                        m_GameCamera.SetProjection(orthoLeft, orthoRight, orthoBottom, orthoTop);
-                        
-                        // Update game camera transform
-                        m_GameCamera.SetPosition(glm::vec3(transform.Position, 0.0f));
-                        m_GameCamera.SetRotation(transform.Rotation);
-                        
-                        activeCamera = &m_GameCamera;
-                        break;
-                    }
-                }
-            }
-            
-            Pillar::Renderer2DBackend::BeginScene(*activeCamera);
+            Pillar::Renderer2DBackend::BeginScene(activeCamera);
 
             // Draw grid first (will be behind entities)
-            DrawGrid();
+            if (!isThesisMenu)
+                DrawGrid();
 
             // Render all entities with TransformComponent
             auto view = m_Scene->GetRegistry().view<Pillar::TagComponent, Pillar::TransformComponent>();
-            
+
             // Sort entities by Z-index for proper layering
             std::vector<entt::entity> sortedEntities(view.begin(), view.end());
             std::sort(sortedEntities.begin(), sortedEntities.end(),
                 [this](entt::entity a, entt::entity b) {
                     auto* spriteA = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(a);
                     auto* spriteB = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(b);
-                    
+
                     // Entities without sprites go first (lower Z)
                     if (!spriteA && spriteB) return true;
                     if (spriteA && !spriteB) return false;
                     if (!spriteA && !spriteB) return false; // Keep original order
-                    
+
                     // Sort by Z-index (use final Z-index from layer system)
                     return spriteA->GetFinalZIndex() < spriteB->GetFinalZIndex();
                 });
-            
+
             for (auto entity : sortedEntities)
             {
                 auto& tag = m_Scene->GetRegistry().get<Pillar::TagComponent>(entity);
                 auto& transform = m_Scene->GetRegistry().get<Pillar::TransformComponent>(entity);
 
-                // Check if entity has a SpriteComponent
                 auto* spriteComp = m_Scene->GetRegistry().try_get<Pillar::SpriteComponent>(entity);
-                
-                // Skip invisible sprites (respects layer visibility)
                 if (spriteComp && !spriteComp->Visible)
                     continue;
-                
-                // Determine color and size
+
                 glm::vec4 color;
                 glm::vec2 size;
-                
+
                 if (spriteComp)
                 {
-                    // Use sprite component data
                     color = spriteComp->Color;
                     size = spriteComp->Size * transform.Scale;
                 }
                 else
                 {
-                    // Fallback to colored quad based on entity type
                     color = GetEntityColor(tag.Tag);
                     size = GetEntitySize(tag.Tag, transform.Scale);
                 }
 
-                // Check if entity is selected
                 bool isSelected = false;
                 if (m_SelectionContext)
                 {
@@ -250,13 +447,10 @@ namespace PillarEditor {
                     isSelected = m_SelectionContext->IsSelected(e);
                 }
 
-                // Draw entity (with rotation if needed)
                 if (spriteComp && spriteComp->Texture)
                 {
-                    // Draw textured sprite with UV coordinates and flip flags
-                    // Use vec3 position with sprite's Z-index for depth sorting
                     glm::vec3 position3D(transform.Position.x, transform.Position.y, spriteComp->ZIndex);
-                    
+
                     if (std::abs(transform.Rotation) > 0.001f)
                     {
                         Pillar::Renderer2DBackend::DrawRotatedQuad(
@@ -278,122 +472,325 @@ namespace PillarEditor {
                 }
                 else
                 {
-                    // Draw colored quad
                     if (std::abs(transform.Rotation) > 0.001f)
-                    {
                         Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
-                    }
                     else
-                    {
                         Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
-                    }
-                }
-
-                // Draw selection highlight (on top of entity with thicker outline)
-                if (isSelected)
-                {
-                    // Draw a thick border by drawing 4 rectangles around the entity
-                    glm::vec4 outlineColor = { Viewport::SELECTION_COLOR.x, Viewport::SELECTION_COLOR.y, Viewport::SELECTION_COLOR.z, Viewport::SELECTION_COLOR.w };  // Bright orange
-                    float borderThickness = 0.08f;
-                    float rotation = transform.Rotation;
-                    
-                    // Calculate rotated offset vectors
-                    float cosR = std::cos(rotation);
-                    float sinR = std::sin(rotation);
-                    
-                    // For rotated entities, we need to offset in the entity's local space
-                    if (std::abs(rotation) > 0.001f)
-                    {
-                        // Calculate half extents
-                        float halfWidth = size.x / 2.0f;
-                        float halfHeight = size.y / 2.0f;
-                        float offset = borderThickness / 2.0f;
-                        
-                        // Top border - offset in local Y direction
-                        glm::vec2 topOffset = glm::vec2(-sinR * (halfHeight + offset), cosR * (halfHeight + offset));
-                        Pillar::Renderer2DBackend::DrawRotatedQuad(
-                            transform.Position + topOffset,
-                            glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
-                            rotation, outlineColor
-                        );
-                        
-                        // Bottom border - offset in local -Y direction
-                        glm::vec2 bottomOffset = glm::vec2(sinR * (halfHeight + offset), -cosR * (halfHeight + offset));
-                        Pillar::Renderer2DBackend::DrawRotatedQuad(
-                            transform.Position + bottomOffset,
-                            glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
-                            rotation, outlineColor
-                        );
-                        
-                        // Left border - offset in local -X direction
-                        glm::vec2 leftOffset = glm::vec2(-cosR * (halfWidth + offset), -sinR * (halfWidth + offset));
-                        Pillar::Renderer2DBackend::DrawRotatedQuad(
-                            transform.Position + leftOffset,
-                            glm::vec2(borderThickness, size.y),
-                            rotation, outlineColor
-                        );
-                        
-                        // Right border - offset in local X direction
-                        glm::vec2 rightOffset = glm::vec2(cosR * (halfWidth + offset), sinR * (halfWidth + offset));
-                        Pillar::Renderer2DBackend::DrawRotatedQuad(
-                            transform.Position + rightOffset,
-                            glm::vec2(borderThickness, size.y),
-                            rotation, outlineColor
-                        );
-                    }
-                    else
-                    {
-                        // Non-rotated borders (faster)
-                        // Top border
-                        Pillar::Renderer2DBackend::DrawQuad(
-                            glm::vec2(transform.Position.x, transform.Position.y + size.y / 2.0f + borderThickness / 2.0f),
-                            glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
-                            outlineColor
-                        );
-                        
-                        // Bottom border
-                        Pillar::Renderer2DBackend::DrawQuad(
-                            glm::vec2(transform.Position.x, transform.Position.y - size.y / 2.0f - borderThickness / 2.0f),
-                            glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
-                            outlineColor
-                        );
-                        
-                        // Left border
-                        Pillar::Renderer2DBackend::DrawQuad(
-                            glm::vec2(transform.Position.x - size.x / 2.0f - borderThickness / 2.0f, transform.Position.y),
-                            glm::vec2(borderThickness, size.y),
-                            outlineColor
-                        );
-                        
-                        // Right border
-                        Pillar::Renderer2DBackend::DrawQuad(
-                            glm::vec2(transform.Position.x + size.x / 2.0f + borderThickness / 2.0f, transform.Position.y),
-                            glm::vec2(borderThickness, size.y),
-                            outlineColor
-                        );
-                    }
                 }
             }
-
-            // Draw collider gizmos (if enabled)
-            if (m_ShowColliderGizmos)
-                DrawColliderGizmos();
-
-            // Draw rigidbody gizmos (if enabled)
-            if (m_ShowRigidbodyGizmos)
-                DrawRigidbodyGizmos();
-
             Pillar::Renderer2DBackend::EndScene();
+
+            // Unlit overlay pass (selection outlines + gizmos should always be full brightness and on top)
+            if (!isThesisMenu)
+            {
+                auto overlayState = Pillar::Renderer2DBackend::ScopedRenderState::SpritePass(false, true);
+                Pillar::Renderer2DBackend::BeginScene(activeCamera);
+
+                DrawSelectionOutlines();
+                if (m_ShowColliderGizmos)
+                    DrawColliderGizmos();
+                if (m_ShowRigidbodyGizmos)
+                    DrawRigidbodyGizmos();
+
+                // Draw light gizmos last so they stay on top
+                if (m_ShowLightGizmos)
+                {
+                    DrawShadowCasterGizmos();
+                    DrawLightGizmos(activeCamera);
+                }
+
+                Pillar::Renderer2DBackend::EndScene();
+            }
         }
         else
         {
-            // No scene - just show empty viewport with hint
+            auto overlayState = Pillar::Renderer2DBackend::ScopedRenderState::SpritePass(false, true);
             Pillar::Renderer2DBackend::BeginScene(m_EditorCamera.GetCamera());
-            DrawGrid();
+            if (!isThesisMenu)
+            {
+                DrawGrid();
+                if (m_ShowLightGizmos)
+                {
+                    DrawShadowCasterGizmos();
+                    DrawLightGizmos(activeCamera);
+                }
+            }
             Pillar::Renderer2DBackend::EndScene();
         }
 
         m_Framebuffer->Unbind();
+    }
+
+    void ViewportPanel::DrawSelectionOutlines()
+    {
+        if (!m_Scene || !m_SelectionContext || !m_SelectionContext->HasSelection())
+            return;
+
+        glm::vec4 outlineColor = { Viewport::SELECTION_COLOR.x, Viewport::SELECTION_COLOR.y, Viewport::SELECTION_COLOR.z, Viewport::SELECTION_COLOR.w };
+        constexpr float borderThickness = 0.08f;
+
+        const auto& selection = m_SelectionContext->GetSelection();
+        for (const auto& selected : selection)
+        {
+            if (!selected)
+                continue;
+
+            if (!selected.HasComponent<Pillar::TransformComponent>() || !selected.HasComponent<Pillar::TagComponent>())
+                continue;
+
+            const auto& transform = selected.GetComponent<Pillar::TransformComponent>();
+            const auto& tag = selected.GetComponent<Pillar::TagComponent>();
+
+            auto* spriteComp = selected.TryGetComponent<Pillar::SpriteComponent>();
+            if (spriteComp && !spriteComp->Visible)
+                continue;
+
+            glm::vec2 size;
+            if (spriteComp)
+                size = spriteComp->Size * transform.Scale;
+            else
+                size = GetEntitySize(tag.Tag, transform.Scale);
+
+            float rotation = transform.Rotation;
+            float cosR = std::cos(rotation);
+            float sinR = std::sin(rotation);
+
+            if (std::abs(rotation) > 0.001f)
+            {
+                float halfWidth = size.x / 2.0f;
+                float halfHeight = size.y / 2.0f;
+                float offset = borderThickness / 2.0f;
+
+                glm::vec2 topOffset = glm::vec2(-sinR * (halfHeight + offset), cosR * (halfHeight + offset));
+                Pillar::Renderer2DBackend::DrawRotatedQuad(
+                    transform.Position + topOffset,
+                    glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                    rotation, outlineColor
+                );
+
+                glm::vec2 bottomOffset = glm::vec2(sinR * (halfHeight + offset), -cosR * (halfHeight + offset));
+                Pillar::Renderer2DBackend::DrawRotatedQuad(
+                    transform.Position + bottomOffset,
+                    glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                    rotation, outlineColor
+                );
+
+                glm::vec2 leftOffset = glm::vec2(-cosR * (halfWidth + offset), -sinR * (halfWidth + offset));
+                Pillar::Renderer2DBackend::DrawRotatedQuad(
+                    transform.Position + leftOffset,
+                    glm::vec2(borderThickness, size.y),
+                    rotation, outlineColor
+                );
+
+                glm::vec2 rightOffset = glm::vec2(cosR * (halfWidth + offset), sinR * (halfWidth + offset));
+                Pillar::Renderer2DBackend::DrawRotatedQuad(
+                    transform.Position + rightOffset,
+                    glm::vec2(borderThickness, size.y),
+                    rotation, outlineColor
+                );
+            }
+            else
+            {
+                Pillar::Renderer2DBackend::DrawQuad(
+                    glm::vec2(transform.Position.x, transform.Position.y + size.y / 2.0f + borderThickness / 2.0f),
+                    glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                    outlineColor
+                );
+
+                Pillar::Renderer2DBackend::DrawQuad(
+                    glm::vec2(transform.Position.x, transform.Position.y - size.y / 2.0f - borderThickness / 2.0f),
+                    glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
+                    outlineColor
+                );
+
+                Pillar::Renderer2DBackend::DrawQuad(
+                    glm::vec2(transform.Position.x - size.x / 2.0f - borderThickness / 2.0f, transform.Position.y),
+                    glm::vec2(borderThickness, size.y),
+                    outlineColor
+                );
+
+                Pillar::Renderer2DBackend::DrawQuad(
+                    glm::vec2(transform.Position.x + size.x / 2.0f + borderThickness / 2.0f, transform.Position.y),
+                    glm::vec2(borderThickness, size.y),
+                    outlineColor
+                );
+            }
+        }
+    }
+
+    void ViewportPanel::DrawLightGizmos(Pillar::OrthographicCamera& activeCamera)
+    {
+        (void)activeCamera;
+        if (!m_Scene)
+            return;
+
+        // NOTE: OrthographicCamera clips to z in [-200, 200]. Keep gizmos inside the frustum.
+        constexpr float kGizmoZ = 199.0f;
+
+        auto view = m_Scene->GetRegistry().view<Pillar::TransformComponent, Pillar::Light2DComponent>();
+        for (auto entity : view)
+        {
+            auto& transform = view.get<Pillar::TransformComponent>(entity);
+            auto& light = view.get<Pillar::Light2DComponent>(entity);
+
+            glm::vec2 pos = transform.Position;
+            glm::vec3 pos3(pos, kGizmoZ);
+
+            Pillar::Entity e(entity, m_Scene.get());
+            bool isSelected = m_SelectionContext && m_SelectionContext->IsSelected(e);
+
+            glm::vec4 gizmoColor = isSelected
+                ? glm::vec4(1.0f, 1.0f, 0.0f, 0.8f)
+                : glm::vec4(light.Color, 0.55f);
+
+            // Small icon/marker always
+            Pillar::Renderer2DBackend::DrawQuad(glm::vec3(pos, kGizmoZ), { 0.14f, 0.14f }, glm::vec4(1.0f, 0.9f, 0.3f, 1.0f));
+
+            if (!isSelected)
+            {
+                // Unselected: compact icon so viewport stays readable
+                if (light.Type == Pillar::Light2DType::Point)
+                {
+                    Pillar::Renderer2DBackend::DrawCircle(pos3, 0.35f, gizmoColor, 24, 2.0f);
+                }
+                else if (light.Type == Pillar::Light2DType::Spot)
+                {
+                    float baseAngle = transform.Rotation;
+                    glm::vec3 dir = glm::vec3(std::cos(baseAngle), std::sin(baseAngle), 0.0f);
+                    glm::vec3 tip = pos3 + dir * 0.55f;
+                    Pillar::Renderer2DBackend::DrawLine(pos3, tip, gizmoColor, 2.5f);
+                }
+
+                continue;
+            }
+
+            // Selected: full gizmo
+            if (light.Type == Pillar::Light2DType::Point)
+            {
+                Pillar::Renderer2DBackend::DrawCircle(pos3, light.Radius, gizmoColor, 48, 2.0f);
+            }
+            else if (light.Type == Pillar::Light2DType::Spot)
+            {
+                float baseAngle = transform.Rotation;
+                float outer = light.OuterAngleRadians;
+
+                float a0 = baseAngle - outer;
+                float a1 = baseAngle + outer;
+
+                glm::vec3 leftOuter = pos3 + glm::vec3(std::cos(a0), std::sin(a0), 0.0f) * light.Radius;
+                glm::vec3 rightOuter = pos3 + glm::vec3(std::cos(a1), std::sin(a1), 0.0f) * light.Radius;
+
+                Pillar::Renderer2DBackend::DrawLine(pos3, leftOuter, gizmoColor, 2.0f);
+                Pillar::Renderer2DBackend::DrawLine(pos3, rightOuter, gizmoColor, 2.0f);
+
+                DrawArc(pos3, light.Radius, a0, a1, gizmoColor, 24, 2.0f);
+
+                // Direction arrow
+                glm::vec3 dir = glm::vec3(std::cos(baseAngle), std::sin(baseAngle), 0.0f);
+                glm::vec3 arrowTip = pos3 + dir * (light.Radius * 0.7f);
+                Pillar::Renderer2DBackend::DrawLine(pos3, arrowTip, glm::vec4(1.0f, 1.0f, 1.0f, 0.8f), 3.0f);
+            }
+        }
+    }
+
+    void ViewportPanel::DrawShadowCasterGizmos()
+    {
+        if (!m_Scene)
+            return;
+
+        // Keep inside OrthographicCamera frustum (near/far is [-200, 200]).
+        constexpr float kGizmoZ = 198.0f;
+        glm::vec4 baseColor(0.75f, 0.25f, 1.0f, 0.95f);
+        glm::vec4 selectedColor(1.0f, 1.0f, 1.0f, 0.95f);
+
+        auto casterView = m_Scene->GetRegistry().view<Pillar::TransformComponent, Pillar::ShadowCaster2DComponent>();
+        for (auto entity : casterView)
+        {
+            auto& transform = casterView.get<Pillar::TransformComponent>(entity);
+            auto& caster = casterView.get<Pillar::ShadowCaster2DComponent>(entity);
+
+            if (caster.Points.size() < 2)
+                continue;
+
+            Pillar::Entity e(entity, m_Scene.get());
+            bool isSelected = m_SelectionContext && m_SelectionContext->IsSelected(e);
+
+            glm::vec4 color = isSelected ? selectedColor : baseColor;
+            float thickness = isSelected ? 3.0f : 2.0f;
+
+            const size_t count = caster.Points.size();
+            for (size_t i = 0; i + 1 < count; i++)
+            {
+                glm::vec2 a2 = transform.TransformPoint(caster.Points[i]);
+                glm::vec2 b2 = transform.TransformPoint(caster.Points[i + 1]);
+                Pillar::Renderer2DBackend::DrawLine(glm::vec3(a2, kGizmoZ), glm::vec3(b2, kGizmoZ), color, thickness);
+            }
+
+            if (caster.Closed && count >= 3)
+            {
+                glm::vec2 a2 = transform.TransformPoint(caster.Points[count - 1]);
+                glm::vec2 b2 = transform.TransformPoint(caster.Points[0]);
+                Pillar::Renderer2DBackend::DrawLine(glm::vec3(a2, kGizmoZ), glm::vec3(b2, kGizmoZ), color, thickness);
+            }
+        }
+    }
+
+    void ViewportPanel::DrawArc(const glm::vec3& center, float radius, float startAngleRadians, float endAngleRadians, const glm::vec4& color, int segments, float thickness)
+    {
+        if (segments < 2)
+            segments = 2;
+
+        float start = startAngleRadians;
+        float end = endAngleRadians;
+
+        // Ensure consistent direction
+        if (end < start)
+            std::swap(start, end);
+
+        float step = (end - start) / (float)segments;
+        glm::vec3 prev = center + glm::vec3(std::cos(start), std::sin(start), 0.0f) * radius;
+        for (int i = 1; i <= segments; i++)
+        {
+            float a = start + step * (float)i;
+            glm::vec3 p = center + glm::vec3(std::cos(a), std::sin(a), 0.0f) * radius;
+            Pillar::Renderer2DBackend::DrawLine(prev, p, color, thickness);
+            prev = p;
+        }
+    }
+
+    void ViewportPanel::DrawLightingSettingsPanel()
+    {
+        if (!m_ShowLightingSettings)
+            return;
+
+        bool open = m_ShowLightingSettings;
+        if (!ImGui::Begin("Lighting Settings", &open))
+        {
+            ImGui::End();
+            m_ShowLightingSettings = open;
+            return;
+        }
+
+        ImGui::Text("Global Ambient");
+        ImGui::Separator();
+
+        ImGui::ColorEdit3("Color", &m_LightingSettings.AmbientColor.x);
+        ImGui::SliderFloat("Intensity", &m_LightingSettings.AmbientIntensity, 0.0f, 1.0f, "%.2f");
+
+        ImGui::Separator();
+        ImGui::Checkbox("Enable Shadows", &m_LightingSettings.EnableShadows);
+
+        ImGui::Separator();
+        if (ImGui::Button("Reset to Defaults"))
+        {
+            auto& editorSettings = EditorSettings::Get();
+            m_LightingSettings.AmbientColor = editorSettings.DefaultAmbientColor;
+            m_LightingSettings.AmbientIntensity = editorSettings.DefaultAmbientIntensity;
+            m_LightingSettings.EnableShadows = editorSettings.DefaultShadowsEnabled;
+        }
+
+        ImGui::End();
+        m_ShowLightingSettings = open;
     }
 
     void ViewportPanel::DrawGrid()
@@ -546,6 +943,8 @@ namespace PillarEditor {
 
         ImGui::End();
         ImGui::PopStyleVar();
+
+        DrawLightingSettingsPanel();
     }
 
     void ViewportPanel::ResetCamera()
@@ -905,6 +1304,60 @@ namespace PillarEditor {
                 
             if (ImGui::IsItemHovered())
                 ImGui::SetTooltip("Scale Mode (R)\\nResize entity");
+        }
+
+        // Separator
+        ImGui::SameLine();
+        ImGui::Dummy(ImVec2(8, buttonSize));
+        ImGui::SameLine();
+
+        // Lighting toggle
+        {
+            if (m_EnableLitPreview)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.6f, 0.3f, 1.0f));
+            else
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+
+            if (ImGui::Button(m_EnableLitPreview ? "\xF0\x9F\x92\xA1 Lit##LitToggle" : "\xF0\x9F\x92\xA1 Unlit##LitToggle", ImVec2(buttonSize * 2.2f, buttonSize)))
+                m_EnableLitPreview = !m_EnableLitPreview;
+
+            ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Toggle lit scene preview");
+        }
+
+        ImGui::SameLine();
+
+        // Light gizmos toggle
+        {
+            if (m_ShowLightGizmos)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.5f, 0.6f, 1.0f));
+            else
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+
+            if (ImGui::Button("\xF0\x9F\x94\xA6##LightGizmos", ImVec2(buttonSize, buttonSize)))
+                m_ShowLightGizmos = !m_ShowLightGizmos;
+
+            ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Toggle light gizmos");
+        }
+
+        ImGui::SameLine();
+
+        // Lighting settings panel
+        {
+            if (m_ShowLightingSettings)
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.35f, 0.35f, 0.35f, 0.9f));
+            else
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.9f));
+
+            if (ImGui::Button("\xE2\x9A\x99##LightingSettings", ImVec2(buttonSize, buttonSize)))
+                m_ShowLightingSettings = !m_ShowLightingSettings;
+
+            ImGui::PopStyleColor();
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("Lighting settings (ambient + shadows)");
         }
 
         ImGui::End();

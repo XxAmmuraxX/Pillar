@@ -7,6 +7,11 @@
 #include "Pillar/ECS/SceneSerializer.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
+#include "Pillar/ECS/Components/Physics/RigidbodyComponent.h"
+#include "Pillar/ECS/Components/Physics/ColliderComponent.h"
+#include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
+#include "Pillar/ECS/Components/Rendering/Light2DComponent.h"
+#include "Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h"
 #include "Pillar/Renderer/RenderCommand.h"
 #include "Pillar/Input.h"
 #include "Pillar/KeyCodes.h"
@@ -14,6 +19,8 @@
 #include <imgui_internal.h>
 #include <ImGuizmo.h>
 #include <filesystem>
+#include <random>
+#include <cmath>
 
 namespace PillarEditor {
 
@@ -55,6 +62,7 @@ namespace PillarEditor {
         m_AudioSystem = std::make_unique<Pillar::AudioSystem>();
         m_ParticleSystem = std::make_unique<Pillar::ParticleSystem>();
         m_ParticleEmitterSystem = std::make_unique<Pillar::ParticleEmitterSystem>();
+        m_Lighting2DSystem = std::make_unique<Pillar::Lighting2DSystem>();
 
         // Initialize template panel
         m_TemplateLibraryPanel->SetTemplateManager(&m_TemplateManager);
@@ -74,6 +82,14 @@ namespace PillarEditor {
         NewScene();
         CreateDefaultEntities();
 
+
+        // Preserve the initial editor scene, then switch into thesis start menu.
+        m_StartupEditorScene = m_ActiveScene;
+        m_StartupEditorScenePath = m_CurrentScenePath;
+
+        CreateThesisMenuScene();
+        m_EditorState = EditorState::ThesisMenu;
+      
         ConsolePanel::Log("========================================", LogLevel::Info);
         ConsolePanel::Log("Pillar Engine - 2D Game Engine", LogLevel::Info);
         ConsolePanel::Log("========================================", LogLevel::Info);
@@ -81,6 +97,7 @@ namespace PillarEditor {
         ConsolePanel::Log("Authors: Chika Libuku, Omar Akkawi, Ayse Sila Solak", LogLevel::Info);
         ConsolePanel::Log("Supervisor: Dr hab. inz. Jerzy Balicki, prof. PW", LogLevel::Info);
         ConsolePanel::Log("========================================", LogLevel::Info);
+
         ConsolePanel::Log("Pillar Editor initialized", LogLevel::Info);
         ConsolePanel::Log("Controls:", LogLevel::Info);
         ConsolePanel::Log("  - Middle Mouse: Pan viewport", LogLevel::Trace);
@@ -100,6 +117,9 @@ namespace PillarEditor {
     void EditorLayer::OnUpdate(float deltaTime)
     {
         m_LastFrameTime = deltaTime;
+
+        if (m_EditorState == EditorState::ThesisMenu)
+            m_ThesisMenuTime += deltaTime;
 
         // Validate selection to remove any invalid/deleted entities
         m_SelectionContext.ValidateSelection();
@@ -158,6 +178,62 @@ namespace PillarEditor {
             m_ActiveScene->OnUpdate(deltaTime);
         }
 
+        // Update thesis menu background simulation (physics + simple light motion)
+        if (m_EditorState == EditorState::ThesisMenu && m_ActiveScene)
+        {
+            if (m_PhysicsSystem)
+                m_PhysicsSystem->OnUpdate(deltaTime);
+
+            if (m_PhysicsSyncSystem)
+                m_PhysicsSyncSystem->OnUpdate(deltaTime);
+
+            // Apply initial lateral velocities once bodies exist
+            if (!m_ThesisMenuAppliedInitialVelocities)
+            {
+                auto rbView = m_ActiveScene->GetRegistry().view<Pillar::TagComponent, Pillar::RigidbodyComponent>();
+                bool allBodiesReady = true;
+                for (auto entity : rbView)
+                {
+                    auto& rb = rbView.get<Pillar::RigidbodyComponent>(entity);
+                    if (!rb.Body)
+                    {
+                        allBodiesReady = false;
+                        break;
+                    }
+                }
+
+                if (allBodiesReady)
+                {
+                    auto rbView2 = m_ActiveScene->GetRegistry().view<Pillar::TagComponent, Pillar::RigidbodyComponent>();
+                    for (auto entity : rbView2)
+                    {
+                        auto& tag = rbView2.get<Pillar::TagComponent>(entity);
+                        auto& rb = rbView2.get<Pillar::RigidbodyComponent>(entity);
+                        if (!rb.Body)
+                            continue;
+
+                        if (tag.Tag.find("ThesisDynamic") != std::string::npos)
+                        {
+                            // Give them a stronger initial kick so the background feels more active.
+                            int lastDigit = -1;
+                            char lastChar = tag.Tag.empty() ? '\0' : tag.Tag.back();
+                            if (lastChar >= '0' && lastChar <= '9')
+                                lastDigit = static_cast<int>(lastChar - '0');
+
+                            bool isBox = (lastDigit >= 0) ? ((lastDigit % 2) == 0) : ((lastChar % 2) == 0);
+                            float speedX = isBox ? 10.0f : 7.0f;
+                            float speedY = isBox ? 4.0f : 2.5f;
+                            float vx = isBox ? speedX : -speedX;
+
+                            rb.Body->SetLinearVelocity(b2Vec2(vx, speedY));
+                            rb.Body->SetAngularVelocity(isBox ? 4.0f : -2.5f);
+                        }
+                    }
+                    m_ThesisMenuAppliedInitialVelocities = true;
+                }
+            }
+        }
+
         // Auto-save logic (only in edit mode)
         if (m_EditorState == EditorState::Edit && !m_CurrentScenePath.empty())
         {
@@ -191,18 +267,34 @@ namespace PillarEditor {
         fontConfig.OversampleH = 2;
         fontConfig.OversampleV = 1;
         fontConfig.PixelSnapH = true;
+
+        // Include Latin Extended-A so Polish/Turkish diacritics render correctly.
+        // ImGui's default ranges don't include many of these glyphs.
+        ImVector<ImWchar> glyphRanges;
+        {
+            ImFontGlyphRangesBuilder builder;
+            builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+            builder.AddText(
+                u8"ĄąĆćĘęŁłŃńÓóŚśŹźŻż"  // Polish
+                u8"ŞşĞğİıÖöÜü"        // Turkish
+			);
+            builder.BuildRanges(&glyphRanges);
+        }
         
         // Attempt to load common system fonts (Windows paths)
         // Try Segoe UI (Windows 10/11 default) - clean, modern, professional
-        ImFont* mainFont = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf", 16.0f, &fontConfig);
+        ImFont* mainFont = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/segoeui.ttf", 16.0f, &fontConfig, glyphRanges.Data);
         
         // If Segoe UI isn't found, try Consolas for a monospace alternative
         if (!mainFont)
-            mainFont = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/consola.ttf", 15.0f, &fontConfig);
+            mainFont = io.Fonts->AddFontFromFileTTF("C:/Windows/Fonts/consola.ttf", 15.0f, &fontConfig, glyphRanges.Data);
         
         // If no custom fonts loaded, ensure default font is built
         if (io.Fonts->Fonts.empty())
             io.Fonts->AddFontDefault();
+
+        if (mainFont)
+            io.FontDefault = mainFont;
         
         io.FontGlobalScale = 1.0f;
 
@@ -465,6 +557,12 @@ namespace PillarEditor {
 
     void EditorLayer::OnImGuiRender()
     {
+        if (m_EditorState == EditorState::ThesisMenu)
+        {
+            DrawThesisMenu();
+            return;
+        }
+
         // ImGuizmo needs this to be called every frame
         ImGuizmo::BeginFrame();
 
@@ -573,8 +671,10 @@ namespace PillarEditor {
 
     void EditorLayer::OnEvent(Pillar::Event& event)
     {
-        // Always pass scroll events to viewport if it's hovered (for zoom)
-        m_ViewportPanel->OnEvent(event);
+        // In thesis menu we still want the viewport to keep its camera state stable,
+        // but we don't rely on hover checks so this is effectively a no-op.
+        if (m_ViewportPanel)
+            m_ViewportPanel->OnEvent(event);
 
         // Handle keyboard shortcuts
         Pillar::EventDispatcher dispatcher(event);
@@ -598,6 +698,21 @@ namespace PillarEditor {
                        Pillar::Input::IsKeyPressed(PIL_KEY_RIGHT_CONTROL);
         bool shift = Pillar::Input::IsKeyPressed(PIL_KEY_LEFT_SHIFT) || 
                      Pillar::Input::IsKeyPressed(PIL_KEY_RIGHT_SHIFT);
+
+        if (m_EditorState == EditorState::ThesisMenu)
+        {
+            switch (e.GetKeyCode())
+            {
+                case PIL_KEY_ENTER:
+                case PIL_KEY_SPACE:
+                    EnterEditorFromThesisMenu();
+                    return true;
+                case PIL_KEY_ESCAPE:
+                    ExitApplicationFromMenu();
+                    return true;
+            }
+            return false;
+        }
 
         switch (e.GetKeyCode())
         {
@@ -1447,6 +1562,337 @@ namespace PillarEditor {
         ConsolePanel::Log("Created new scene", LogLevel::Info);
     }
 
+    void EditorLayer::SetActiveScene(const std::shared_ptr<Pillar::Scene>& scene, bool resetCamera)
+    {
+        m_ActiveScene = scene;
+
+        m_HierarchyPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+        m_InspectorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+        m_ViewportPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+        m_SpriteSheetEditorPanel->SetContext(m_ActiveScene, &m_SelectionContext);
+        m_TemplateLibraryPanel->SetScene(m_ActiveScene);
+        m_LayerEditorPanel->SetScene(m_ActiveScene);
+
+        if (resetCamera)
+            m_ViewportPanel->ResetCamera();
+    }
+
+    void EditorLayer::CreateThesisMenuScene()
+    {
+        m_ThesisMenuScene = std::make_shared<Pillar::Scene>("Thesis Menu");
+
+        // Switch active scene to the thesis background
+        SetActiveScene(m_ThesisMenuScene, true);
+        m_CurrentScenePath.clear();
+        m_SelectionContext.ClearSelection();
+        m_ThesisMenuTime = 0.0f;
+        m_ThesisMenuAppliedInitialVelocities = false;
+
+        // Force lit preview for the background scene
+        if (m_ViewportPanel)
+            m_ViewportPanel->SetLitPreviewEnabled(true);
+
+        // Ensure editor gizmos are not active during the splash screen.
+        if (m_ViewportPanel)
+            m_ViewportPanel->SetGizmoMode(PillarEditor::GizmoMode::None);
+
+        // Detach the editor-scene animation system while we are in the menu.
+        if (m_AnimationSystem)
+            m_AnimationSystem->OnDetach();
+
+        // Scene geometry
+        {
+            auto bg = m_ActiveScene->CreateEntity("Backdrop");
+            auto& t = bg.GetComponent<Pillar::TransformComponent>();
+            t.Position = { 0.0f, 0.0f };
+            t.Scale = { 40.0f, 24.0f };
+
+            auto& s = bg.AddComponent<Pillar::SpriteComponent>();
+            s.Color = { 0.08f, 0.09f, 0.11f, 1.0f };
+            s.Size = { 40.0f, 24.0f };
+            s.ZIndex = -20.0f;
+        }
+
+        // Ground
+        {
+            auto ground = m_ActiveScene->CreateEntity("Ground");
+            auto& transform = ground.GetComponent<Pillar::TransformComponent>();
+            transform.Position = { 0.0f, -6.0f };
+            transform.Scale = { 1.0f, 1.0f };
+
+            auto& sprite = ground.AddComponent<Pillar::SpriteComponent>();
+            sprite.Color = { 0.14f, 0.14f, 0.16f, 1.0f };
+            sprite.Size = { 28.0f, 1.5f };
+            sprite.ZIndex = -5.0f;
+
+            auto& rb = ground.AddComponent<Pillar::RigidbodyComponent>(b2_staticBody);
+            rb.FixedRotation = true;
+            auto collider = Pillar::ColliderComponent::Box({ 14.0f, 0.75f });
+            collider.Friction = 0.9f;
+            collider.Restitution = 0.1f;
+            ground.AddComponent<Pillar::ColliderComponent>(collider);
+
+            Pillar::ShadowCaster2DComponent caster;
+            caster.Points = {
+                { -14.0f, -0.75f },
+                {  14.0f, -0.75f },
+                {  14.0f,  0.75f },
+                { -14.0f,  0.75f }
+            };
+            ground.AddComponent<Pillar::ShadowCaster2DComponent>(caster);
+        }
+
+        // A few platforms (shadow casters)
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                auto platform = m_ActiveScene->CreateEntity("Platform");
+                auto& t = platform.GetComponent<Pillar::TransformComponent>();
+                t.Position = { -8.0f + i * 8.0f, -1.5f + i * 1.5f };
+                t.Scale = { 1.0f, 1.0f };
+
+                auto& s = platform.AddComponent<Pillar::SpriteComponent>();
+                s.Color = { 0.18f, 0.18f, 0.20f, 1.0f };
+                s.Size = { 7.0f, 0.8f };
+                s.ZIndex = -4.0f;
+
+                auto& rb = platform.AddComponent<Pillar::RigidbodyComponent>(b2_staticBody);
+                rb.FixedRotation = true;
+                auto collider = Pillar::ColliderComponent::Box({ 3.5f, 0.4f });
+                collider.Friction = 0.8f;
+                collider.Restitution = 0.05f;
+                platform.AddComponent<Pillar::ColliderComponent>(collider);
+
+                Pillar::ShadowCaster2DComponent caster;
+                caster.Points = {
+                    { -3.5f, -0.4f },
+                    {  3.5f, -0.4f },
+                    {  3.5f,  0.4f },
+                    { -3.5f,  0.4f }
+                };
+                platform.AddComponent<Pillar::ShadowCaster2DComponent>(caster);
+            }
+        }
+
+        // Dynamic objects
+        {
+            std::mt19937 rng(1337u);
+            std::uniform_real_distribution<float> distX(-9.0f, 9.0f);
+            std::uniform_real_distribution<float> distY(1.0f, 7.0f);
+
+            for (int i = 0; i < 10; i++)
+            {
+                auto e = m_ActiveScene->CreateEntity("ThesisDynamic_" + std::to_string(i));
+                auto& t = e.GetComponent<Pillar::TransformComponent>();
+                t.Position = { distX(rng), distY(rng) };
+                t.Scale = { 1.0f, 1.0f };
+
+                auto& s = e.AddComponent<Pillar::SpriteComponent>();
+                s.Size = { 1.0f, 1.0f };
+                s.Color = { 0.35f + 0.05f * (i % 4), 0.35f, 0.45f + 0.04f * (i % 3), 1.0f };
+                s.ZIndex = -3.0f;
+
+                auto& rb = e.AddComponent<Pillar::RigidbodyComponent>(b2_dynamicBody);
+                rb.GravityScale = 1.0f;
+                rb.LinearDamping = 0.015f;
+                rb.AngularDamping = 0.01f;
+
+                Pillar::ColliderComponent c;
+                if (i % 2 == 0)
+                {
+                    c = Pillar::ColliderComponent::Box({ 0.6f, 0.6f });
+                    s.Size = { 1.2f, 1.2f };
+
+                    Pillar::ShadowCaster2DComponent caster;
+                    caster.Points = {
+                        { -0.6f, -0.6f },
+                        {  0.6f, -0.6f },
+                        {  0.6f,  0.6f },
+                        { -0.6f,  0.6f }
+                    };
+                    e.AddComponent<Pillar::ShadowCaster2DComponent>(caster);
+                }
+                else
+                {
+                    c = Pillar::ColliderComponent::Circle(0.55f);
+                    s.Size = { 1.1f, 1.1f };
+                }
+                c.Density = 1.0f;
+                if (i % 2 == 0)
+                {
+                    // Boxes: more lively motion
+                    c.Friction = 0.15f;
+                    c.Restitution = 0.70f;
+                }
+                else
+                {
+                    // Circles: slightly calmer
+                    c.Friction = 0.25f;
+                    c.Restitution = 0.75f;
+                }
+                e.AddComponent<Pillar::ColliderComponent>(c);
+            }
+        }
+
+        // Lights
+        {
+            auto light = m_ActiveScene->CreateEntity("ThesisLight");
+            auto& t = light.GetComponent<Pillar::TransformComponent>();
+            t.Position = { 5.0f, 3.0f };
+            t.Scale = { 1.0f, 1.0f };
+
+            auto& l = light.AddComponent<Pillar::Light2DComponent>();
+            l.Type = Pillar::Light2DType::Point;
+            l.Color = { 0.55f, 0.75f, 1.0f };
+            l.Intensity = 1.7f;
+            l.Radius = 13.0f;
+            l.CastShadows = true;
+            l.ShadowStrength = 0.9f;
+        }
+
+        {
+            auto warm = m_ActiveScene->CreateEntity("WarmLight");
+            auto& t = warm.GetComponent<Pillar::TransformComponent>();
+            t.Position = { -7.0f, 1.0f };
+
+            auto& l = warm.AddComponent<Pillar::Light2DComponent>();
+            l.Type = Pillar::Light2DType::Point;
+            l.Color = { 1.0f, 0.75f, 0.45f };
+            l.Intensity = 1.2f;
+            l.Radius = 10.0f;
+            l.CastShadows = true;
+            l.ShadowStrength = 0.8f;
+        }
+
+        // Attach systems to the new active scene so physics can create bodies
+        if (m_PhysicsSystem)
+            m_PhysicsSystem->OnAttach(m_ActiveScene.get());
+        if (m_PhysicsSyncSystem)
+            m_PhysicsSyncSystem->OnAttach(m_ActiveScene.get());
+    }
+
+    void EditorLayer::EnterEditorFromThesisMenu()
+    {
+        // Detach menu-attached systems
+        if (m_PhysicsSystem)
+            m_PhysicsSystem->OnDetach();
+        if (m_PhysicsSyncSystem)
+            m_PhysicsSyncSystem->OnDetach();
+
+        // Restore the preserved startup editor scene
+        if (m_StartupEditorScene)
+        {
+            m_CurrentScenePath = m_StartupEditorScenePath;
+            SetActiveScene(m_StartupEditorScene, true);
+
+            // Ensure edit-mode animation wiring is correct
+            if (m_AnimationSystem)
+            {
+                m_AnimationSystem->OnAttach(m_ActiveScene.get());
+                m_ActiveScene->SetAnimationSystem(m_AnimationSystem.get());
+                m_AnimationManagerPanel->SetAnimationSystem(m_AnimationSystem.get());
+            }
+        }
+
+        // Turn off lit preview by default for editing (user can enable it)
+        if (m_ViewportPanel)
+            m_ViewportPanel->SetLitPreviewEnabled(false);
+
+        m_EditorState = EditorState::Edit;
+        ConsolePanel::Log("Entered editor", LogLevel::Info);
+    }
+
+    void EditorLayer::ExitApplicationFromMenu()
+    {
+        Pillar::Application::Get().Close();
+    }
+
+    void EditorLayer::DrawThesisMenu()
+    {
+        // Fullscreen background: viewport framebuffer
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->Pos);
+        ImGui::SetNextWindowSize(viewport->Size);
+        ImGui::SetNextWindowViewport(viewport->ID);
+
+        ImGuiWindowFlags bgFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("##ThesisMenuBackground", nullptr, bgFlags);
+
+        uint32_t texID = m_ViewportPanel ? m_ViewportPanel->GetFramebufferTextureID() : 0;
+        if (texID != 0)
+        {
+            ImVec2 size = viewport->Size;
+            ImGui::Image((ImTextureID)(uint64_t)texID, size, ImVec2(0, 1), ImVec2(1, 0));
+        }
+
+        ImGui::End();
+        ImGui::PopStyleVar();
+
+        // Centered overlay
+        const float overlayWidth = 760.0f;
+        const float overlayHeight = 320.0f;
+        ImVec2 center = ImVec2(viewport->Pos.x + viewport->Size.x * 0.5f, viewport->Pos.y + viewport->Size.y * 0.5f);
+
+        ImGui::SetNextWindowPos(ImVec2(center.x - overlayWidth * 0.5f, center.y - overlayHeight * 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(overlayWidth, overlayHeight));
+        ImGui::SetNextWindowBgAlpha(0.78f);
+
+        ImGuiWindowFlags overlayFlags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
+
+        ImGui::Begin("##ThesisMenuOverlay", nullptr, overlayFlags);
+
+        // Bigger typography for the thesis splash.
+        ImGui::SetWindowFontScale(1.25f);
+
+        ImGui::PushTextWrapPos(ImGui::GetCursorPosX() + overlayWidth - 40.0f);
+        ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f);
+
+        ImGui::SetWindowFontScale(1.55f);
+        ImGui::Text("Design and implementation of a 2D game engine for shooter games");
+        ImGui::SetWindowFontScale(1.25f);
+        ImGui::Separator();
+        ImGui::Spacing();
+        ImGui::Text("Authors:");
+        ImGui::BulletText("Chika Libuku");
+        ImGui::BulletText("Omar Akkawi");
+        ImGui::BulletText(u8"Ayse Sila Solak");
+
+        ImGui::Spacing();
+        ImGui::Text("Supervisor:");
+        ImGui::BulletText(u8"Dr hab. inz. Jerzy Balicki, prof. PW");
+
+        ImGui::PopTextWrapPos();
+
+        ImGui::SetCursorPosY(overlayHeight - 70.0f);
+        ImGui::Separator();
+
+        float buttonWidth = 180.0f;
+        float totalButtons = buttonWidth * 2.0f + 16.0f;
+        float startX = (overlayWidth - totalButtons) * 0.5f;
+        ImGui::SetCursorPosX(startX);
+
+        if (ImGui::Button("Enter Editor", ImVec2(buttonWidth, 0.0f)))
+            EnterEditorFromThesisMenu();
+
+        ImGui::SameLine();
+        if (ImGui::Button("Exit", ImVec2(buttonWidth, 0.0f)))
+            ExitApplicationFromMenu();
+
+        ImGui::SetCursorPosY(overlayHeight - 28.0f);
+        ImGui::SetCursorPosX(12.0f);
+        ImGui::TextDisabled("Tip: Press Enter to start, Esc to exit");
+
+        // Reset to default for any subsequent ImGui windows.
+        ImGui::SetWindowFontScale(1.0f);
+
+        ImGui::End();
+    }
+
     void EditorLayer::OpenScene()
     {
         // Open file dialog
@@ -1629,6 +2075,8 @@ namespace PillarEditor {
             m_BulletCollisionSystem->OnAttach(m_ActiveScene.get());
         if (m_XPCollectionSystem)
             m_XPCollectionSystem->OnAttach(m_ActiveScene.get());
+        if (m_Lighting2DSystem)
+            m_Lighting2DSystem->OnAttach(m_ActiveScene.get());
         
         // Start runtime
         m_ActiveScene->OnRuntimeStart();
@@ -1671,6 +2119,8 @@ namespace PillarEditor {
             m_BulletCollisionSystem->OnDetach();
         if (m_XPCollectionSystem)
             m_XPCollectionSystem->OnDetach();
+        if (m_Lighting2DSystem)
+            m_Lighting2DSystem->OnDetach();
         
         // Stop runtime
         m_ActiveScene->OnRuntimeStop();

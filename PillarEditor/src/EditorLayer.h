@@ -12,6 +12,7 @@
 #include "Pillar/ECS/Systems/ParticleEmitterSystem.h"
 #include "Pillar/ECS/Systems/BulletCollisionSystem.h"
 #include "Pillar/ECS/Systems/XPCollectionSystem.h"
+#include "Pillar/ECS/Systems/Lighting2DSystem.h"
 #include "Pillar/Events/KeyEvent.h"
 #include "SelectionContext.h"
 #include "Commands/CommandHistory.h"
@@ -33,7 +34,8 @@ namespace PillarEditor {
 
     enum class EditorState
     {
-        Edit = 0,
+        ThesisMenu = 0,
+        Edit,
         Play,
         Pause
     };
@@ -56,6 +58,12 @@ namespace PillarEditor {
         void OpenScene(const std::string& filepath);
         void SaveScene();
         void SaveSceneAs();
+
+        void CreateThesisMenuScene();
+        void EnterEditorFromThesisMenu();
+        void ExitApplicationFromMenu();
+        void DrawThesisMenu();
+        void SetActiveScene(const std::shared_ptr<Pillar::Scene>& scene, bool resetCamera);
 
         void OnPlay();
         void OnPause();
@@ -92,8 +100,15 @@ namespace PillarEditor {
         std::shared_ptr<Pillar::Scene> m_EditorScene;    // Backup for edit mode
         std::string m_CurrentScenePath;
 
+        // Thesis start menu
+        std::shared_ptr<Pillar::Scene> m_ThesisMenuScene;
+        std::shared_ptr<Pillar::Scene> m_StartupEditorScene;
+        std::string m_StartupEditorScenePath;
+        float m_ThesisMenuTime = 0.0f;
+        bool m_ThesisMenuAppliedInitialVelocities = false;
+
         // Editor state
-        EditorState m_EditorState = EditorState::Edit;
+        EditorState m_EditorState = EditorState::ThesisMenu;
         SelectionContext m_SelectionContext;
 
         // Command history for undo/redo
@@ -126,6 +141,7 @@ namespace PillarEditor {
         std::unique_ptr<Pillar::ParticleEmitterSystem> m_ParticleEmitterSystem;
         std::unique_ptr<Pillar::BulletCollisionSystem> m_BulletCollisionSystem;
         std::unique_ptr<Pillar::XPCollectionSystem> m_XPCollectionSystem;
+        std::unique_ptr<Pillar::Lighting2DSystem> m_Lighting2DSystem;
 
         // Stats
         float m_LastFrameTime = 0.0f;
