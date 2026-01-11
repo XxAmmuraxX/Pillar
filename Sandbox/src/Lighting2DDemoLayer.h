@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/Lighting2D.h"
 
 #include <imgui.h>
@@ -165,17 +165,17 @@ private:
 	void DrawSceneSprites()
 	{
 		// Background gradient-ish (two quads)
-		Pillar::Renderer2DBackend::DrawQuad({ 0.0f, 0.0f, -0.5f }, { 32.0f, 18.0f }, { 0.18f, 0.20f, 0.28f, 1.0f });
-		Pillar::Renderer2DBackend::DrawQuad({ 0.0f, -1.5f, -0.49f }, { 32.0f, 12.0f }, { 0.10f, 0.10f, 0.14f, 1.0f });
+		Pillar::Renderer2D::DrawQuad({ 0.0f, 0.0f, -0.5f }, { 32.0f, 18.0f }, { 0.18f, 0.20f, 0.28f, 1.0f });
+		Pillar::Renderer2D::DrawQuad({ 0.0f, -1.5f, -0.49f }, { 32.0f, 12.0f }, { 0.10f, 0.10f, 0.14f, 1.0f });
 
 		for (const auto& wall : m_Walls)
 		{
 			glm::vec2 size = wall.HalfSize * 2.0f;
-			Pillar::Renderer2DBackend::DrawRotatedQuad({ wall.Center.x, wall.Center.y, 0.0f }, size, wall.Rotation, wall.Color);
+			Pillar::Renderer2D::DrawRotatedQuad({ wall.Center.x, wall.Center.y, 0.0f }, size, wall.Rotation, wall.Color);
 		}
 
 		// Small "torch" marker
-		Pillar::Renderer2DBackend::DrawQuad({ m_Light.Position.x, m_Light.Position.y, 0.05f }, { 0.25f, 0.25f }, { 1.0f, 0.75f, 0.25f, 1.0f });
+		Pillar::Renderer2D::DrawQuad({ m_Light.Position.x, m_Light.Position.y, 0.05f }, { 0.25f, 0.25f }, { 1.0f, 0.75f, 0.25f, 1.0f });
 	}
 
 	void SubmitShadowCasters()

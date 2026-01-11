@@ -5,7 +5,7 @@
 #include "Pillar/ECS/Systems/ParticleSystem.h"
 #include "Pillar/ECS/Systems/ParticleEmitterSystem.h"
 #include "Pillar/ECS/Systems/VelocityIntegrationSystem.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Gameplay/ParticleComponent.h"
 #include "Pillar/ECS/Components/Gameplay/ParticleEmitterComponent.h"
@@ -89,13 +89,13 @@ public:
 		Pillar::Renderer::SetClearColor({ 0.05f, 0.05f, 0.1f, 1.0f });
 		Pillar::Renderer::Clear();
 
-		Pillar::Renderer2DBackend::ResetStats();
-		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2D::ResetStats();
+		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 
 		// Render all sprites (particles)
 		m_SpriteRenderSystem->OnUpdate(dt);
 
-		Pillar::Renderer2DBackend::EndScene();
+		Pillar::Renderer2D::EndScene();
 	}
 
 	void OnEvent(Pillar::Event& event) override
@@ -142,8 +142,8 @@ public:
 
 		// Renderer statistics
 		ImGui::Text("Renderer:");
-		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2DBackend::GetDrawCallCount());
-		ImGui::Text("  Quads: %u", Pillar::Renderer2DBackend::GetQuadCount());
+		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2D::GetDrawCallCount());
+		ImGui::Text("  Quads: %u", Pillar::Renderer2D::GetQuadCount());
 
 		ImGui::Separator();
 

@@ -1790,7 +1790,6 @@ namespace PillarEditor {
             {
                 m_AnimationSystem->OnAttach(m_ActiveScene.get());
                 m_ActiveScene->SetAnimationSystem(m_AnimationSystem.get());
-                m_AnimationManagerPanel->SetAnimationSystem(m_AnimationSystem.get());
             }
         }
 

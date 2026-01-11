@@ -33,7 +33,7 @@ add_library(Pillar STATIC
     # Renderer
     src/Pillar/Renderer/RenderAPI.cpp
     src/Pillar/Renderer/Renderer.cpp
-    src/Pillar/Renderer/Renderer2DBackend.cpp
+    src/Pillar/Renderer/Renderer2D.cpp
     src/Pillar/Renderer/RenderCommand.cpp
     src/Pillar/Renderer/Shader.cpp
     src/Pillar/Renderer/Buffer.cpp

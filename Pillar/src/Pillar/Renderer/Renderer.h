@@ -22,8 +22,6 @@ namespace Pillar {
         static void SetClearColor(const glm::vec4& color);
         static void Clear();
         static void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
-        
-        static void Submit(const std::shared_ptr<Shader>& shader, const std::shared_ptr<VertexArray>& vertexArray);
 
         inline static RendererAPI GetAPI() { return RenderAPI::GetAPI(); }
 

@@ -6,7 +6,7 @@
 #include "../EditorSettings.h"
 #include "ConsolePanel.h"
 #include "Pillar/Renderer/Renderer.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/RenderCommand.h"
 #include "Pillar/ECS/Components/Core/TagComponent.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
@@ -272,7 +272,7 @@ namespace PillarEditor {
 
                 if (std::abs(transform.Rotation) > 0.001f)
                 {
-                    Pillar::Renderer2DBackend::DrawRotatedQuad(
+                    Pillar::Renderer2D::DrawRotatedQuad(
                         position3D, size, transform.Rotation,
                         color, spriteComp->Texture,
                         spriteComp->TexCoordMin, spriteComp->TexCoordMax,
@@ -281,7 +281,7 @@ namespace PillarEditor {
                 }
                 else
                 {
-                    Pillar::Renderer2DBackend::DrawQuad(
+                    Pillar::Renderer2D::DrawQuad(
                         position3D, size,
                         color, spriteComp->Texture,
                         spriteComp->TexCoordMin, spriteComp->TexCoordMax,
@@ -293,9 +293,9 @@ namespace PillarEditor {
             {
                 // Draw colored quad
                 if (std::abs(transform.Rotation) > 0.001f)
-                    Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
+                    Pillar::Renderer2D::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
                 else
-                    Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
+                    Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
             }
 
         }
@@ -356,8 +356,8 @@ namespace PillarEditor {
         {
             m_Framebuffer->Bind();
             Pillar::RenderCommand::SetViewport(0, 0, m_Framebuffer->GetSpecification().Width, m_Framebuffer->GetSpecification().Height);
-            auto overlayState = Pillar::Renderer2DBackend::ScopedRenderState::SpritePass(false, true);
-            Pillar::Renderer2DBackend::BeginScene(activeCamera);
+            auto overlayState = Pillar::Renderer2D::ScopedRenderState::SpritePass(false, true);
+            Pillar::Renderer2D::BeginScene(activeCamera);
 
             DrawSelectionOutlines();
             if (m_ShowColliderGizmos)
@@ -372,7 +372,7 @@ namespace PillarEditor {
                 DrawLightGizmos(activeCamera);
             }
 
-            Pillar::Renderer2DBackend::EndScene();
+            Pillar::Renderer2D::EndScene();
             m_Framebuffer->Unbind();
         }
     }
@@ -392,7 +392,7 @@ namespace PillarEditor {
 
         if (m_Scene)
         {
-            Pillar::Renderer2DBackend::BeginScene(activeCamera);
+            Pillar::Renderer2D::BeginScene(activeCamera);
 
             // Draw grid first (will be behind entities)
             if (!isThesisMenu)
@@ -453,7 +453,7 @@ namespace PillarEditor {
 
                     if (std::abs(transform.Rotation) > 0.001f)
                     {
-                        Pillar::Renderer2DBackend::DrawRotatedQuad(
+                        Pillar::Renderer2D::DrawRotatedQuad(
                             position3D, size, transform.Rotation,
                             color, spriteComp->Texture,
                             spriteComp->TexCoordMin, spriteComp->TexCoordMax,
@@ -462,7 +462,7 @@ namespace PillarEditor {
                     }
                     else
                     {
-                        Pillar::Renderer2DBackend::DrawQuad(
+                        Pillar::Renderer2D::DrawQuad(
                             position3D, size,
                             color, spriteComp->Texture,
                             spriteComp->TexCoordMin, spriteComp->TexCoordMax,
@@ -473,18 +473,18 @@ namespace PillarEditor {
                 else
                 {
                     if (std::abs(transform.Rotation) > 0.001f)
-                        Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
+                        Pillar::Renderer2D::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
                     else
-                        Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
+                        Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
                 }
             }
-            Pillar::Renderer2DBackend::EndScene();
+            Pillar::Renderer2D::EndScene();
 
             // Unlit overlay pass (selection outlines + gizmos should always be full brightness and on top)
             if (!isThesisMenu)
             {
-                auto overlayState = Pillar::Renderer2DBackend::ScopedRenderState::SpritePass(false, true);
-                Pillar::Renderer2DBackend::BeginScene(activeCamera);
+                auto overlayState = Pillar::Renderer2D::ScopedRenderState::SpritePass(false, true);
+                Pillar::Renderer2D::BeginScene(activeCamera);
 
                 DrawSelectionOutlines();
                 if (m_ShowColliderGizmos)
@@ -499,13 +499,13 @@ namespace PillarEditor {
                     DrawLightGizmos(activeCamera);
                 }
 
-                Pillar::Renderer2DBackend::EndScene();
+                Pillar::Renderer2D::EndScene();
             }
         }
         else
         {
-            auto overlayState = Pillar::Renderer2DBackend::ScopedRenderState::SpritePass(false, true);
-            Pillar::Renderer2DBackend::BeginScene(m_EditorCamera.GetCamera());
+            auto overlayState = Pillar::Renderer2D::ScopedRenderState::SpritePass(false, true);
+            Pillar::Renderer2D::BeginScene(m_EditorCamera.GetCamera());
             if (!isThesisMenu)
             {
                 DrawGrid();
@@ -515,7 +515,7 @@ namespace PillarEditor {
                     DrawLightGizmos(activeCamera);
                 }
             }
-            Pillar::Renderer2DBackend::EndScene();
+            Pillar::Renderer2D::EndScene();
         }
 
         m_Framebuffer->Unbind();
@@ -562,28 +562,28 @@ namespace PillarEditor {
                 float offset = borderThickness / 2.0f;
 
                 glm::vec2 topOffset = glm::vec2(-sinR * (halfHeight + offset), cosR * (halfHeight + offset));
-                Pillar::Renderer2DBackend::DrawRotatedQuad(
+                Pillar::Renderer2D::DrawRotatedQuad(
                     transform.Position + topOffset,
                     glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
                     rotation, outlineColor
                 );
 
                 glm::vec2 bottomOffset = glm::vec2(sinR * (halfHeight + offset), -cosR * (halfHeight + offset));
-                Pillar::Renderer2DBackend::DrawRotatedQuad(
+                Pillar::Renderer2D::DrawRotatedQuad(
                     transform.Position + bottomOffset,
                     glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
                     rotation, outlineColor
                 );
 
                 glm::vec2 leftOffset = glm::vec2(-cosR * (halfWidth + offset), -sinR * (halfWidth + offset));
-                Pillar::Renderer2DBackend::DrawRotatedQuad(
+                Pillar::Renderer2D::DrawRotatedQuad(
                     transform.Position + leftOffset,
                     glm::vec2(borderThickness, size.y),
                     rotation, outlineColor
                 );
 
                 glm::vec2 rightOffset = glm::vec2(cosR * (halfWidth + offset), sinR * (halfWidth + offset));
-                Pillar::Renderer2DBackend::DrawRotatedQuad(
+                Pillar::Renderer2D::DrawRotatedQuad(
                     transform.Position + rightOffset,
                     glm::vec2(borderThickness, size.y),
                     rotation, outlineColor
@@ -591,25 +591,25 @@ namespace PillarEditor {
             }
             else
             {
-                Pillar::Renderer2DBackend::DrawQuad(
+                Pillar::Renderer2D::DrawQuad(
                     glm::vec2(transform.Position.x, transform.Position.y + size.y / 2.0f + borderThickness / 2.0f),
                     glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
                     outlineColor
                 );
 
-                Pillar::Renderer2DBackend::DrawQuad(
+                Pillar::Renderer2D::DrawQuad(
                     glm::vec2(transform.Position.x, transform.Position.y - size.y / 2.0f - borderThickness / 2.0f),
                     glm::vec2(size.x + borderThickness * 2.0f, borderThickness),
                     outlineColor
                 );
 
-                Pillar::Renderer2DBackend::DrawQuad(
+                Pillar::Renderer2D::DrawQuad(
                     glm::vec2(transform.Position.x - size.x / 2.0f - borderThickness / 2.0f, transform.Position.y),
                     glm::vec2(borderThickness, size.y),
                     outlineColor
                 );
 
-                Pillar::Renderer2DBackend::DrawQuad(
+                Pillar::Renderer2D::DrawQuad(
                     glm::vec2(transform.Position.x + size.x / 2.0f + borderThickness / 2.0f, transform.Position.y),
                     glm::vec2(borderThickness, size.y),
                     outlineColor
@@ -644,21 +644,21 @@ namespace PillarEditor {
                 : glm::vec4(light.Color, 0.55f);
 
             // Small icon/marker always
-            Pillar::Renderer2DBackend::DrawQuad(glm::vec3(pos, kGizmoZ), { 0.14f, 0.14f }, glm::vec4(1.0f, 0.9f, 0.3f, 1.0f));
+            Pillar::Renderer2D::DrawQuad(glm::vec3(pos, kGizmoZ), { 0.14f, 0.14f }, glm::vec4(1.0f, 0.9f, 0.3f, 1.0f));
 
             if (!isSelected)
             {
                 // Unselected: compact icon so viewport stays readable
                 if (light.Type == Pillar::Light2DType::Point)
                 {
-                    Pillar::Renderer2DBackend::DrawCircle(pos3, 0.35f, gizmoColor, 24, 2.0f);
+                    Pillar::Renderer2D::DrawCircle(pos3, 0.35f, gizmoColor, 24, 2.0f);
                 }
                 else if (light.Type == Pillar::Light2DType::Spot)
                 {
                     float baseAngle = transform.Rotation;
                     glm::vec3 dir = glm::vec3(std::cos(baseAngle), std::sin(baseAngle), 0.0f);
                     glm::vec3 tip = pos3 + dir * 0.55f;
-                    Pillar::Renderer2DBackend::DrawLine(pos3, tip, gizmoColor, 2.5f);
+                    Pillar::Renderer2D::DrawLine(pos3, tip, gizmoColor, 2.5f);
                 }
 
                 continue;
@@ -667,7 +667,7 @@ namespace PillarEditor {
             // Selected: full gizmo
             if (light.Type == Pillar::Light2DType::Point)
             {
-                Pillar::Renderer2DBackend::DrawCircle(pos3, light.Radius, gizmoColor, 48, 2.0f);
+                Pillar::Renderer2D::DrawCircle(pos3, light.Radius, gizmoColor, 48, 2.0f);
             }
             else if (light.Type == Pillar::Light2DType::Spot)
             {
@@ -680,15 +680,15 @@ namespace PillarEditor {
                 glm::vec3 leftOuter = pos3 + glm::vec3(std::cos(a0), std::sin(a0), 0.0f) * light.Radius;
                 glm::vec3 rightOuter = pos3 + glm::vec3(std::cos(a1), std::sin(a1), 0.0f) * light.Radius;
 
-                Pillar::Renderer2DBackend::DrawLine(pos3, leftOuter, gizmoColor, 2.0f);
-                Pillar::Renderer2DBackend::DrawLine(pos3, rightOuter, gizmoColor, 2.0f);
+                Pillar::Renderer2D::DrawLine(pos3, leftOuter, gizmoColor, 2.0f);
+                Pillar::Renderer2D::DrawLine(pos3, rightOuter, gizmoColor, 2.0f);
 
                 DrawArc(pos3, light.Radius, a0, a1, gizmoColor, 24, 2.0f);
 
                 // Direction arrow
                 glm::vec3 dir = glm::vec3(std::cos(baseAngle), std::sin(baseAngle), 0.0f);
                 glm::vec3 arrowTip = pos3 + dir * (light.Radius * 0.7f);
-                Pillar::Renderer2DBackend::DrawLine(pos3, arrowTip, glm::vec4(1.0f, 1.0f, 1.0f, 0.8f), 3.0f);
+                Pillar::Renderer2D::DrawLine(pos3, arrowTip, glm::vec4(1.0f, 1.0f, 1.0f, 0.8f), 3.0f);
             }
         }
     }
@@ -723,14 +723,14 @@ namespace PillarEditor {
             {
                 glm::vec2 a2 = transform.TransformPoint(caster.Points[i]);
                 glm::vec2 b2 = transform.TransformPoint(caster.Points[i + 1]);
-                Pillar::Renderer2DBackend::DrawLine(glm::vec3(a2, kGizmoZ), glm::vec3(b2, kGizmoZ), color, thickness);
+                Pillar::Renderer2D::DrawLine(glm::vec3(a2, kGizmoZ), glm::vec3(b2, kGizmoZ), color, thickness);
             }
 
             if (caster.Closed && count >= 3)
             {
                 glm::vec2 a2 = transform.TransformPoint(caster.Points[count - 1]);
                 glm::vec2 b2 = transform.TransformPoint(caster.Points[0]);
-                Pillar::Renderer2DBackend::DrawLine(glm::vec3(a2, kGizmoZ), glm::vec3(b2, kGizmoZ), color, thickness);
+                Pillar::Renderer2D::DrawLine(glm::vec3(a2, kGizmoZ), glm::vec3(b2, kGizmoZ), color, thickness);
             }
         }
     }
@@ -753,7 +753,7 @@ namespace PillarEditor {
         {
             float a = start + step * (float)i;
             glm::vec3 p = center + glm::vec3(std::cos(a), std::sin(a), 0.0f) * radius;
-            Pillar::Renderer2DBackend::DrawLine(prev, p, color, thickness);
+            Pillar::Renderer2D::DrawLine(prev, p, color, thickness);
             prev = p;
         }
     }
@@ -820,7 +820,7 @@ namespace PillarEditor {
             bool isYAxis = std::abs(x) < 0.001f;
             glm::vec4 color = isYAxis ? axisColorY : gridColor;
             float thickness = isYAxis ? 0.04f : 0.015f;
-            Pillar::Renderer2DBackend::DrawQuad(
+            Pillar::Renderer2D::DrawQuad(
                 glm::vec2(x, camPos.y),
                 glm::vec2(thickness, gridExtent * 2.0f),
                 color
@@ -833,7 +833,7 @@ namespace PillarEditor {
             bool isXAxis = std::abs(y) < 0.001f;
             glm::vec4 color = isXAxis ? axisColorX : gridColor;
             float thickness = isXAxis ? 0.04f : 0.015f;
-            Pillar::Renderer2DBackend::DrawQuad(
+            Pillar::Renderer2D::DrawQuad(
                 glm::vec2(camPos.x, y),
                 glm::vec2(gridExtent * 2.0f, thickness),
                 color
@@ -1235,6 +1235,7 @@ namespace PillarEditor {
 
         float buttonWidth = 90.0f;
         float buttonHeight = 28.0f;
+        float buttonSize = 28.0f;
         
         // None/Select button (Q)
         {
@@ -1528,7 +1529,7 @@ namespace PillarEditor {
             {
             case Pillar::ColliderType::Circle:
             {
-                Pillar::Renderer2DBackend::DrawCircle(worldPos, collider.Radius, color, 32, 2.0f);
+                Pillar::Renderer2D::DrawCircle(worldPos, collider.Radius, color, 32, 2.0f);
                 break;
             }
 
@@ -1567,7 +1568,7 @@ namespace PillarEditor {
                         glm::vec2 start = worldPos + rotatedV1;
                         glm::vec2 end = worldPos + rotatedV2;
                         
-                        Pillar::Renderer2DBackend::DrawLine(start, end, color, 2.0f);
+                        Pillar::Renderer2D::DrawLine(start, end, color, 2.0f);
                     }
                 }
                 break;
@@ -1646,8 +1647,8 @@ namespace PillarEditor {
             if (rb.BodyType == b2_staticBody)
             {
                 // Static: Filled square (immovable)
-                Pillar::Renderer2DBackend::DrawCircle(transform.Position, indicatorSize * 1.2f, bgColor, 4, 0.0f);
-                Pillar::Renderer2DBackend::DrawCircle(transform.Position, indicatorSize, bodyColor, 4, 0.0f);
+                Pillar::Renderer2D::DrawCircle(transform.Position, indicatorSize * 1.2f, bgColor, 4, 0.0f);
+                Pillar::Renderer2D::DrawCircle(transform.Position, indicatorSize, bodyColor, 4, 0.0f);
             }
             else if (rb.BodyType == b2_kinematicBody)
             {
@@ -1659,22 +1660,22 @@ namespace PillarEditor {
                 glm::vec2 left = transform.Position + glm::vec2(-halfSize, 0.0f);
 
                 // Background
-                Pillar::Renderer2DBackend::DrawLine(top, right, bgColor, 4.0f);
-                Pillar::Renderer2DBackend::DrawLine(right, bottom, bgColor, 4.0f);
-                Pillar::Renderer2DBackend::DrawLine(bottom, left, bgColor, 4.0f);
-                Pillar::Renderer2DBackend::DrawLine(left, top, bgColor, 4.0f);
+                Pillar::Renderer2D::DrawLine(top, right, bgColor, 4.0f);
+                Pillar::Renderer2D::DrawLine(right, bottom, bgColor, 4.0f);
+                Pillar::Renderer2D::DrawLine(bottom, left, bgColor, 4.0f);
+                Pillar::Renderer2D::DrawLine(left, top, bgColor, 4.0f);
 
                 // Main shape
-                Pillar::Renderer2DBackend::DrawLine(top, right, bodyColor, 3.0f);
-                Pillar::Renderer2DBackend::DrawLine(right, bottom, bodyColor, 3.0f);
-                Pillar::Renderer2DBackend::DrawLine(bottom, left, bodyColor, 3.0f);
-                Pillar::Renderer2DBackend::DrawLine(left, top, bodyColor, 3.0f);
+                Pillar::Renderer2D::DrawLine(top, right, bodyColor, 3.0f);
+                Pillar::Renderer2D::DrawLine(right, bottom, bodyColor, 3.0f);
+                Pillar::Renderer2D::DrawLine(bottom, left, bodyColor, 3.0f);
+                Pillar::Renderer2D::DrawLine(left, top, bodyColor, 3.0f);
             }
             else // Dynamic
             {
                 // Dynamic: Filled circle (fully simulated)
-                Pillar::Renderer2DBackend::DrawCircle(transform.Position, indicatorSize * 1.3f, bgColor, 16, 0.0f);
-                Pillar::Renderer2DBackend::DrawCircle(transform.Position, indicatorSize, bodyColor, 16, 0.0f);
+                Pillar::Renderer2D::DrawCircle(transform.Position, indicatorSize * 1.3f, bgColor, 16, 0.0f);
+                Pillar::Renderer2D::DrawCircle(transform.Position, indicatorSize, bodyColor, 16, 0.0f);
             }
 
             // === VELOCITY VECTOR (Play Mode, Dynamic Bodies Only) ===
@@ -1705,10 +1706,10 @@ namespace PillarEditor {
 
                     // Draw background shadow for contrast
                     glm::vec4 shadowColor(0.0f, 0.0f, 0.0f, 0.7f);
-                    Pillar::Renderer2DBackend::DrawLine(transform.Position, arrowEnd, shadowColor, 4.0f);
+                    Pillar::Renderer2D::DrawLine(transform.Position, arrowEnd, shadowColor, 4.0f);
 
                     // Draw arrow shaft (thicker, more visible)
-                    Pillar::Renderer2DBackend::DrawLine(transform.Position, arrowEnd, velColor, 3.0f);
+                    Pillar::Renderer2D::DrawLine(transform.Position, arrowEnd, velColor, 3.0f);
 
                     // Draw filled arrowhead (triangle)
                     float arrowheadSize = 0.15f;
@@ -1718,14 +1719,14 @@ namespace PillarEditor {
                     glm::vec2 arrowRight = arrowBase - perpendicular * arrowheadSize * 0.6f;
 
                     // Shadow
-                    Pillar::Renderer2DBackend::DrawLine(arrowEnd, arrowLeft, shadowColor, 4.0f);
-                    Pillar::Renderer2DBackend::DrawLine(arrowEnd, arrowRight, shadowColor, 4.0f);
-                    Pillar::Renderer2DBackend::DrawLine(arrowLeft, arrowRight, shadowColor, 4.0f);
+                    Pillar::Renderer2D::DrawLine(arrowEnd, arrowLeft, shadowColor, 4.0f);
+                    Pillar::Renderer2D::DrawLine(arrowEnd, arrowRight, shadowColor, 4.0f);
+                    Pillar::Renderer2D::DrawLine(arrowLeft, arrowRight, shadowColor, 4.0f);
 
                     // Main arrowhead
-                    Pillar::Renderer2DBackend::DrawLine(arrowEnd, arrowLeft, velColor, 3.0f);
-                    Pillar::Renderer2DBackend::DrawLine(arrowEnd, arrowRight, velColor, 3.0f);
-                    Pillar::Renderer2DBackend::DrawLine(arrowLeft, arrowRight, velColor, 3.0f);
+                    Pillar::Renderer2D::DrawLine(arrowEnd, arrowLeft, velColor, 3.0f);
+                    Pillar::Renderer2D::DrawLine(arrowEnd, arrowRight, velColor, 3.0f);
+                    Pillar::Renderer2D::DrawLine(arrowLeft, arrowRight, velColor, 3.0f);
                 }
 
                 // === CENTER OF MASS INDICATOR ===
@@ -1736,9 +1737,9 @@ namespace PillarEditor {
                 glm::vec4 comColor(1.0f, 0.6f, 0.1f, 1.0f); // Bright Orange
 
                 // Dark background for contrast
-                Pillar::Renderer2DBackend::DrawCircle(comPos, comSize * 1.5f, glm::vec4(0.0f, 0.0f, 0.0f, 0.7f), 12, 0.0f);
+                Pillar::Renderer2D::DrawCircle(comPos, comSize * 1.5f, glm::vec4(0.0f, 0.0f, 0.0f, 0.7f), 12, 0.0f);
                 // Filled circle
-                Pillar::Renderer2DBackend::DrawCircle(comPos, comSize, comColor, 12, 0.0f);
+                Pillar::Renderer2D::DrawCircle(comPos, comSize, comColor, 12, 0.0f);
             }
         }
     }
@@ -1748,7 +1749,7 @@ namespace PillarEditor {
             // For axis-aligned boxes, use DrawRect for efficiency
             if (rotation == 0.0f)
             {
-                Pillar::Renderer2DBackend::DrawRect(position, size, color, 2.0f);
+                Pillar::Renderer2D::DrawRect(position, size, color, 2.0f);
                 return;
             }
 
@@ -1782,7 +1783,7 @@ namespace PillarEditor {
             for (int i = 0; i < 4; i++)
             {
                 int nextIdx = (i + 1) % 4;
-                Pillar::Renderer2DBackend::DrawLine(worldCorners[i], worldCorners[nextIdx], color, 2.0f);
+                Pillar::Renderer2D::DrawLine(worldCorners[i], worldCorners[nextIdx], color, 2.0f);
             }
         }
     }

@@ -63,7 +63,7 @@ namespace Pillar
 		static void Shutdown();
 
 		// Begins a lit 2D frame. This binds an internal scene-color framebuffer and
-		// calls Renderer2DBackend::BeginScene(camera) for you.
+	// calls Renderer2D::BeginScene(camera) for you.
 		static void BeginScene(const OrthographicCamera& camera,
 			uint32_t viewportWidth,
 			uint32_t viewportHeight,

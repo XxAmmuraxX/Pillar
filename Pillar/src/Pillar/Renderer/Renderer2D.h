@@ -22,12 +22,12 @@ namespace Pillar {
      * Accumulates quads into texture-based batches for optimal GPU performance.
      * 
      * Usage:
-     *   Renderer2DBackend::Init();
-     *   Renderer2DBackend::BeginScene(camera);
-     *   Renderer2DBackend::DrawQuad(...);
-     *   Renderer2DBackend::EndScene();
+     *   Renderer2D::Init();
+     *   Renderer2D::BeginScene(camera);
+     *   Renderer2D::DrawQuad(...);
+     *   Renderer2D::EndScene();
      */
-    class PIL_API Renderer2DBackend
+    class PIL_API Renderer2D
     {
     public:
         static void Init();

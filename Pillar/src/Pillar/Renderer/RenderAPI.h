@@ -25,6 +25,14 @@ namespace Pillar {
         virtual void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
         virtual void DrawIndexed(const VertexArray* vertexArray) = 0;
 
+        // State management methods
+        virtual bool GetDepthTest() const = 0;
+        virtual bool GetDepthWrite() const = 0;
+        virtual bool GetBlending() const = 0;
+        virtual void SetDepthTest(bool enable) = 0;
+        virtual void SetDepthWrite(bool enable) = 0;
+        virtual void SetBlending(bool enable) = 0;
+
         inline static RendererAPI GetAPI() { return s_API; }
 
     private:

@@ -3,7 +3,7 @@
 #include "Pillar/Logger.h"
 #include "Pillar/Renderer/Renderer.h"
 #include "Pillar/Audio/AudioEngine.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/Lighting2D.h"
 #include <chrono>
 #include "Pillar/Input.h"
@@ -28,7 +28,7 @@ namespace Pillar
 
 		// Initialize Renderer
 		Renderer::Init();
-		Renderer2DBackend::Init();  // Batch renderer
+		Renderer2D::Init();  // Batch renderer
 		Lighting2D::Init();
 
 		// Create and push ImGui layer as an overlay
@@ -40,7 +40,7 @@ namespace Pillar
 	{
 		// Ensure layers are detached and destroyed via LayerStack destructor
 		Lighting2D::Shutdown();
-		Renderer2DBackend::Shutdown();
+		Renderer2D::Shutdown();
 		Renderer::Shutdown();
 		AudioEngine::Shutdown();
 	}

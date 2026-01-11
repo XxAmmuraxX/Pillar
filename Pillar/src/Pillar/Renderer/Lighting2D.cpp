@@ -1,7 +1,7 @@
 #include "Pillar/Renderer/Lighting2D.h"
 
 #include "Pillar/Logger.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/Shader.h"
 #include "Pillar/Renderer/Lighting2DGeometry.h"
 
@@ -738,7 +738,7 @@ void main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-		Renderer2DBackend::BeginScene(camera);
+		Renderer2D::BeginScene(camera);
 		s_Data.InScene = true;
 	}
 
@@ -785,7 +785,7 @@ void main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-		Renderer2DBackend::BeginScene(camera);
+		Renderer2D::BeginScene(camera);
 		s_Data.InScene = true;
 	}
 
@@ -811,7 +811,7 @@ void main()
 	{
 		PIL_CORE_ASSERT(s_Data.InScene, "Lighting2D::EndScene called without BeginScene");
 
-		Renderer2DBackend::EndScene();
+		Renderer2D::EndScene();
 		s_Data.SceneColorFramebuffer->Unbind();
 
 		RenderLightAccumulation();

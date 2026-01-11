@@ -100,7 +100,7 @@ public:
 		Pillar::RenderCommand::Clear();
 
 		// Render scene
-		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 
 		if (m_Scene)
 		{
@@ -111,7 +111,7 @@ public:
 			}
 		}
 
-		Pillar::Renderer2DBackend::EndScene();
+		Pillar::Renderer2D::EndScene();
 	}
 
 	void OnEvent(Pillar::Event& event) override
@@ -167,8 +167,8 @@ public:
 
 		// Renderer statistics
 		ImGui::Text("Renderer:");
-		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2DBackend::GetStats().DrawCalls);
-		ImGui::Text("  Quads: %u", Pillar::Renderer2DBackend::GetStats().QuadCount);
+		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2D::GetStats().DrawCalls);
+		ImGui::Text("  Quads: %u", Pillar::Renderer2D::GetStats().QuadCount);
 
 		ImGui::End();
 	}

@@ -1,6 +1,6 @@
 #include "SpriteRenderSystem.h"
 #include "Pillar/ECS/Scene.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Logger.h"
 #include <algorithm>
 
@@ -62,7 +62,7 @@ namespace Pillar {
 				sprite.TexCoordMin.x, sprite.TexCoordMin.y,
 				sprite.TexCoordMax.x, sprite.TexCoordMax.y);
 		}
-		Renderer2DBackend::DrawSprite(transform, sprite);
+		Renderer2D::DrawSprite(transform, sprite);
 	}
 
 } // namespace Pillar

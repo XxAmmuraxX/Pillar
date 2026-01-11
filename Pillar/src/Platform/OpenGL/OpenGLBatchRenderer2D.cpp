@@ -163,14 +163,14 @@ namespace Pillar {
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, 
-                                        const glm::vec4& color, Texture2D* texture)
+                                        const glm::vec4& color, const Texture2D* texture)
     {
         DrawQuad(glm::vec3(position, 0.0f), size, color, texture, 
                 glm::vec2(0.0f), glm::vec2(1.0f), false, false);
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                           const glm::vec4& color, Texture2D* texture,
+                           const glm::vec4& color, const Texture2D* texture,
                            const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                            bool flipX, bool flipY)
     {
@@ -184,7 +184,7 @@ namespace Pillar {
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                           Texture2D* texture)
+                           const Texture2D* texture)
     {
         AddQuadToBatch(position, size, glm::vec4(1.0f), texture, glm::vec2(0.0f), glm::vec2(1.0f), 0.0f, false, false);
     }
@@ -197,7 +197,7 @@ namespace Pillar {
     }
 
     void OpenGLBatchRenderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
-                                               float rotation, const glm::vec4& color, Texture2D* texture)
+                                               float rotation, const glm::vec4& color, const Texture2D* texture)
     {
         AddQuadToBatch(glm::vec3(position, 0.0f), size, color, texture,
                       glm::vec2(0.0f), glm::vec2(1.0f), rotation, false, false);
@@ -210,7 +210,7 @@ namespace Pillar {
         }
 
         void OpenGLBatchRenderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
-                                                   float rotation, const glm::vec4& color, Texture2D* texture,
+                                                   float rotation, const glm::vec4& color, const Texture2D* texture,
                                                    const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                                                    bool flipX, bool flipY)
         {
@@ -287,7 +287,7 @@ namespace Pillar {
         StartBatch();
     }
 
-    uint32_t OpenGLBatchRenderer2D::GetOrAddTextureSlot(Texture2D* texture)
+    uint32_t OpenGLBatchRenderer2D::GetOrAddTextureSlot(const Texture2D* texture)
     {
         if (!texture)
             return 0;  // White texture
@@ -319,7 +319,7 @@ namespace Pillar {
     }
 
     void OpenGLBatchRenderer2D::AddQuadToBatch(const glm::vec3& position, const glm::vec2& size,
-                                              const glm::vec4& color, Texture2D* texture,
+                                              const glm::vec4& color, const Texture2D* texture,
                                               const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                                               float rotation, bool flipX, bool flipY)
     {

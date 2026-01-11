@@ -35,6 +35,37 @@ namespace Pillar {
             s_RenderAPI->DrawIndexed(&vertexArray);
         }
 
+        // State management
+        static bool GetDepthTest()
+        {
+            return s_RenderAPI->GetDepthTest();
+        }
+
+        static bool GetDepthWrite()
+        {
+            return s_RenderAPI->GetDepthWrite();
+        }
+
+        static bool GetBlending()
+        {
+            return s_RenderAPI->GetBlending();
+        }
+
+        static void SetDepthTest(bool enable)
+        {
+            s_RenderAPI->SetDepthTest(enable);
+        }
+
+        static void SetDepthWrite(bool enable)
+        {
+            s_RenderAPI->SetDepthWrite(enable);
+        }
+
+        static void SetBlending(bool enable)
+        {
+            s_RenderAPI->SetBlending(enable);
+        }
+
         static void SetAPI(RenderAPI* api) { s_RenderAPI = api; }
 
     private:

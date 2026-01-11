@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Systems/AnimationSystem.h"
@@ -78,7 +78,7 @@ public:
 		Pillar::Renderer::Clear();
 
 		// Begin scene
-		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 
 		// Render all animated entities
 		auto& registry = m_Scene->GetRegistry();
@@ -93,7 +93,7 @@ public:
 			if (sprite.Texture)
 			{
 			// Draw textured quad with UV coordinates from sprite
-			Pillar::Renderer2DBackend::DrawQuad(
+			Pillar::Renderer2D::DrawQuad(
 				glm::vec3(transform.Position, 0.0f),  // Convert vec2 to vec3
 				transform.Scale,
 				sprite.Color,
@@ -106,7 +106,7 @@ public:
 			}
 		}
 
-		Pillar::Renderer2DBackend::EndScene();
+		Pillar::Renderer2D::EndScene();
 	}
 	
 	void OnEvent(Pillar::Event& event) override

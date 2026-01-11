@@ -64,13 +64,4 @@ namespace Pillar {
         s_RenderAPI->SetViewport(x, y, width, height);
     }
 
-    void Renderer::Submit(const std::shared_ptr<Shader>& shader, const std::shared_ptr<VertexArray>& vertexArray)
-    {
-        shader->Bind();
-        shader->SetMat4("u_ViewProjection", s_SceneData->ViewProjectionMatrix);
-
-        vertexArray->Bind();
-        s_RenderAPI->DrawIndexed(vertexArray.get());
-    }
-
 }

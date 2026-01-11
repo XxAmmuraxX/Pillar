@@ -51,7 +51,7 @@ add_executable(PillarTests
     # Renderer Tests
     # ===================
     src/Renderer/CameraTests.cpp
-    src/Renderer/Renderer2DBackendTests.cpp
+    src/Renderer/Renderer2DTests.cpp
     src/Renderer/Lighting2DAPITests.cpp
     src/Renderer/Lighting2DGeometryTests.cpp
 
