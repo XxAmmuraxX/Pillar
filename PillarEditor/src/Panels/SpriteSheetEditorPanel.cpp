@@ -819,9 +819,9 @@ namespace PillarEditor {
                 
                 ImGui::PushID((int)i);
                 
-                // Thumbnail button
-                ImVec2 uvMin = ImVec2(frame.UVMin.x, 1.0f - frame.UVMax.y);
-                ImVec2 uvMax = ImVec2(frame.UVMax.x, 1.0f - frame.UVMin.y);
+                // Thumbnail button (flip V coordinate for OpenGL)
+                ImVec2 uvMin = ImVec2(frame.UVMin.x, frame.UVMax.y);
+                ImVec2 uvMax = ImVec2(frame.UVMax.x, frame.UVMin.y);
                 
                 bool isHovered = ((int)i == m_HoveredFrameIndex);
                 ImVec4 tintColor = isHovered ? ImVec4(1, 1, 0, 1) : ImVec4(1, 1, 1, 1);
@@ -946,32 +946,54 @@ namespace PillarEditor {
             return;
         }
         
-        // Create animation clip JSON
+        // Create animation clip JSON in AnimationLoader format
         try
         {
             nlohmann::json animJson;
-            animJson["name"] = "SpriteSheetAnimation";
-            animJson["texture"] = m_TexturePath;
-            animJson["frameCount"] = m_FrameLibrary.size();
-            animJson["frameDuration"] = 0.1f; // Default 100ms per frame
             
+            // Extract filename from path for animation name
+            std::filesystem::path texPath(m_TexturePath);
+            std::string animName = texPath.stem().string() + "_animation";
+            
+            // Animation metadata (matches AnimationLoader format)
+            animJson["name"] = animName;
+            animJson["loop"] = true;
+            animJson["playbackSpeed"] = 1.0f;
+            
+            // Frames array (per-frame format with texturePath and duration)
             nlohmann::json framesArray = nlohmann::json::array();
             for (const auto& frame : m_FrameLibrary)
             {
                 nlohmann::json frameJson;
-                frameJson["index"] = frame.Index;
-                frameJson["name"] = frame.Name;
+                frameJson["texturePath"] = m_TexturePath;  // Required by AnimationLoader
+                frameJson["duration"] = 0.1f;              // Per-frame duration (100ms default)
                 frameJson["uvMin"] = { frame.UVMin.x, frame.UVMin.y };
                 frameJson["uvMax"] = { frame.UVMax.x, frame.UVMax.y };
-                frameJson["gridPos"] = { frame.Column, frame.Row };
                 framesArray.push_back(frameJson);
             }
             animJson["frames"] = framesArray;
             
-            // Save to file
-            std::filesystem::path texPath(m_TexturePath);
-            std::string animPath = texPath.parent_path().string() + "/" + 
-                                  texPath.stem().string() + "_animation.anim.json";
+            // Events array (empty by default, can be edited later)
+            animJson["events"] = nlohmann::json::array();
+            
+            // Save to assets/animations/ directory (auto-create if needed)
+            std::filesystem::path animDir = "assets/animations";
+            if (!std::filesystem::exists(animDir))
+            {
+                std::filesystem::create_directories(animDir);
+                PIL_INFO("Created animations directory: {}", animDir.string());
+            }
+            
+            // Generate unique filename in animations folder
+            std::string animPath = (animDir / (animName + ".anim.json")).string();
+            
+            // Add number suffix if file already exists
+            int counter = 1;
+            while (std::filesystem::exists(animPath))
+            {
+                animPath = (animDir / (animName + "_" + std::to_string(counter) + ".anim.json")).string();
+                counter++;
+            }
             
             std::ofstream file(animPath);
             if (!file.is_open())
@@ -980,11 +1002,12 @@ namespace PillarEditor {
                 return;
             }
             
-            file << animJson.dump(4);
+            file << animJson.dump(2);  // 2-space indent for consistency with AnimationLoader
             file.close();
             
-            ConsolePanel::Log("Exported " + std::to_string(m_FrameLibrary.size()) + 
-                            " frames to: " + animPath, LogLevel::Info);
+            ConsolePanel::Log("Exported animation clip '" + animName + "' with " + 
+                            std::to_string(m_FrameLibrary.size()) + " frames to: " + animPath, LogLevel::Info);
+            ConsolePanel::Log("Animation format is compatible with AnimationSystem", LogLevel::Info);
         }
         catch (const std::exception& e)
         {

@@ -302,9 +302,10 @@ namespace PillarEditor {
         // Draw button
         if (thumbnail)
         {
-            // Draw image thumbnail
+            // Draw image thumbnail (flip V coordinate for OpenGL)
             ImGui::ImageButton(filenameString.c_str(), (ImTextureID)(uint64_t)thumbnail->GetRendererID(), 
-                              ImVec2(m_ThumbnailSize, m_ThumbnailSize));
+                              ImVec2(m_ThumbnailSize, m_ThumbnailSize),
+                              ImVec2(0, 1), ImVec2(1, 0));
         }
         else
         {

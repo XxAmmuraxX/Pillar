@@ -22,10 +22,11 @@
 #include "Panels/ContentBrowserPanel.h"
 #include "Panels/ConsolePanel.h"
 #include "Panels/TemplateLibraryPanel.h"
-#include "Panels/AnimationManagerPanel.h"
+#include "Panels/AnimationEditorPanel.h"
 #include "Panels/SpriteSheetEditorPanel.h"
 #include "Panels/LayerEditorPanel.h"
 #include "TemplateManager.h"
+#include "Utils/AnimationLibraryManager.h"
 #include <memory>
 #include <string>
 
@@ -77,6 +78,7 @@ namespace PillarEditor {
         // Setup modern, sleek ImGui theme with enhanced colors, spacing, and typography
         void SetupImGuiStyle();
         void SetupDockspace();
+        void ResetDockspaceLayout();
         void CreateDefaultEntities();
 
         bool OnKeyPressed(Pillar::KeyPressedEvent& e);
@@ -87,6 +89,10 @@ namespace PillarEditor {
         std::shared_ptr<Pillar::Scene> GetActiveScene() { return m_ActiveScene; }
         EditorState GetEditorState() const { return m_EditorState; }
         TemplateManager& GetTemplateManager() { return m_TemplateManager; }
+        AnimationLibraryManager& GetAnimationLibraryManager() { return m_AnimationLibraryManager; }
+        AnimationEditorPanel& GetAnimationEditorPanel() { return *m_AnimationEditorPanel; }
+        Pillar::AnimationSystem* GetAnimationSystem() { return m_AnimationSystem.get(); }
+        float GetLastFrameTime() const { return m_LastFrameTime; }
 
     private:
         // Scene management
@@ -115,12 +121,15 @@ namespace PillarEditor {
         std::unique_ptr<ContentBrowserPanel> m_ContentBrowserPanel;
         std::unique_ptr<ConsolePanel> m_ConsolePanel;
         std::unique_ptr<TemplateLibraryPanel> m_TemplateLibraryPanel;
-        std::unique_ptr<AnimationManagerPanel> m_AnimationManagerPanel;
+        std::unique_ptr<AnimationEditorPanel> m_AnimationEditorPanel;
         std::unique_ptr<SpriteSheetEditorPanel> m_SpriteSheetEditorPanel;
         std::unique_ptr<LayerEditorPanel> m_LayerEditorPanel;
 
         // Template system
         TemplateManager m_TemplateManager;
+
+        // Animation library manager
+        AnimationLibraryManager m_AnimationLibraryManager;
 
         // Game systems (updated during play mode)
         std::unique_ptr<Pillar::AnimationSystem> m_AnimationSystem;
@@ -139,6 +148,7 @@ namespace PillarEditor {
 
         // UI state
         bool m_ShowPreferences = false;
+        bool m_LayoutInitialized = false;
 
         // Auto-save state
         float m_AutoSaveTimer = 0.0f;

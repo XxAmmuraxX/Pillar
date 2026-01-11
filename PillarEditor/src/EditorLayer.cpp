@@ -48,9 +48,9 @@ namespace PillarEditor {
         m_ContentBrowserPanel = std::make_unique<ContentBrowserPanel>();
         m_ConsolePanel = std::make_unique<ConsolePanel>();
         m_TemplateLibraryPanel = std::make_unique<TemplateLibraryPanel>();
-        m_AnimationManagerPanel = std::make_unique<AnimationManagerPanel>();
         m_SpriteSheetEditorPanel = std::make_unique<SpriteSheetEditorPanel>();
         m_LayerEditorPanel = std::make_unique<LayerEditorPanel>();
+        m_AnimationEditorPanel = std::make_unique<AnimationEditorPanel>();
 
         // Initialize all game systems (order matters - some systems depend on others)
         m_AnimationSystem = std::make_unique<Pillar::AnimationSystem>();
@@ -72,9 +72,16 @@ namespace PillarEditor {
             SetSceneModified(true);
         });
 
+        // Initialize animation library manager
+        m_AnimationLibraryManager.Initialize(m_AnimationSystem.get());
+
+        // Initialize animation editor panel
+        m_AnimationEditorPanel->Initialize(m_AnimationSystem.get(), &m_AnimationLibraryManager);
+
         // Create a default scene with some entities for demonstration
         NewScene();
         CreateDefaultEntities();
+
 
         // Preserve the initial editor scene, then switch into thesis start menu.
         m_StartupEditorScene = m_ActiveScene;
@@ -82,6 +89,14 @@ namespace PillarEditor {
 
         CreateThesisMenuScene();
         m_EditorState = EditorState::ThesisMenu;
+      
+        ConsolePanel::Log("========================================", LogLevel::Info);
+        ConsolePanel::Log("Pillar Engine - 2D Game Engine", LogLevel::Info);
+        ConsolePanel::Log("========================================", LogLevel::Info);
+        ConsolePanel::Log("Thesis: Design and implementation of a 2D game engine for shooter games", LogLevel::Info);
+        ConsolePanel::Log("Authors: Chika Libuku, Omar Akkawi, Ayse Sila Solak", LogLevel::Info);
+        ConsolePanel::Log("Supervisor: Dr hab. inz. Jerzy Balicki, prof. PW", LogLevel::Info);
+        ConsolePanel::Log("========================================", LogLevel::Info);
 
         ConsolePanel::Log("Pillar Editor initialized", LogLevel::Info);
         ConsolePanel::Log("Controls:", LogLevel::Info);
@@ -109,8 +124,15 @@ namespace PillarEditor {
         // Validate selection to remove any invalid/deleted entities
         m_SelectionContext.ValidateSelection();
 
+        // Update animation library manager for file watching (hot-reload)
+        m_AnimationLibraryManager.Update();
+
         // Always update viewport panel - it handles its own hover checks internally
         m_ViewportPanel->OnUpdate(deltaTime);
+
+        // Update animation editor panel preview
+        if (m_AnimationEditorPanel)
+            m_AnimationEditorPanel->Update(deltaTime);
 
         // Update scene in play mode
         if (m_EditorState == EditorState::Play)
@@ -432,33 +454,77 @@ namespace PillarEditor {
     {
         ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
         
-        // Check if dockspace already has a layout
-        if (ImGui::DockBuilderGetNode(dockspace_id) == nullptr)
-        {
-            // Clear any previous layout
-            ImGui::DockBuilderRemoveNode(dockspace_id);
-            ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
-            
-            // Get main viewport size
-            ImGuiViewport* viewport = ImGui::GetMainViewport();
-            ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
+        // Always reset the layout to ensure it's properly configured
+        // This ensures panels are docked even on first launch
+        ImGui::DockBuilderRemoveNode(dockspace_id); // Clear existing layout
+        ImGui::DockBuilderAddNode(dockspace_id, ImGuiDockNodeFlags_DockSpace);
+        
+        // Get main viewport size
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
 
-            // Split the dockspace
-            ImGuiID dock_main_id = dockspace_id;
-            ImGuiID dock_left_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, 0.2f, nullptr, &dock_main_id);
-            ImGuiID dock_right_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.25f, nullptr, &dock_main_id);
-            ImGuiID dock_bottom_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.25f, nullptr, &dock_main_id);
+        // Build the default layout
+        // Goal: Large central viewport with panels around it
+        // Layout:
+        //   [Hierarchy - 18%] [Viewport - ~54%] [Inspector - 28%]
+        //                     [Content/Console - 30%]
+        
+        ImGuiID dock_main_id = dockspace_id;
+        
+        // 1. Split off LEFT side (Scene Hierarchy) - 18% of total width
+        ImGuiID dock_left_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Left, 0.18f, nullptr, &dock_main_id);
+        
+        // 2. Split off RIGHT side (Inspector) - 28% of remaining width (~23% of total)
+        ImGuiID dock_right_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.28f, nullptr, &dock_main_id);
+        
+        // 3. Split off BOTTOM (Content Browser + Console) - 30% of remaining height
+        ImGuiID dock_bottom_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Down, 0.30f, nullptr, &dock_main_id);
+        
+        // 4. Create tabs in bottom area for Content Browser and Console
+        ImGuiID dock_bottom_left_id = dock_bottom_id;
+        ImGuiID dock_bottom_right_id = ImGui::DockBuilderSplitNode(dock_bottom_id, ImGuiDir_Right, 0.50f, nullptr, &dock_bottom_left_id);
 
-            // Dock windows to their respective areas
-            ImGui::DockBuilderDockWindow("Scene Hierarchy", dock_left_id);
-            ImGui::DockBuilderDockWindow("Inspector", dock_right_id);
-            ImGui::DockBuilderDockWindow("Stats", dock_right_id);
-            ImGui::DockBuilderDockWindow("Viewport", dock_main_id);
-            ImGui::DockBuilderDockWindow("Content Browser", dock_bottom_id);
-            ImGui::DockBuilderDockWindow("Console", dock_bottom_id);
+        // Dock windows to their respective areas
+        ImGui::DockBuilderDockWindow("Scene Hierarchy", dock_left_id);
+        
+        ImGui::DockBuilderDockWindow("Inspector", dock_right_id);
+        ImGui::DockBuilderDockWindow("Stats", dock_right_id); // Tab with Inspector
+        
+        ImGui::DockBuilderDockWindow("Viewport", dock_main_id); // CENTER - largest area
+        
+        ImGui::DockBuilderDockWindow("Content Browser", dock_bottom_left_id);
+        ImGui::DockBuilderDockWindow("Console", dock_bottom_right_id);
+        
+        // Tool panels (docked at top)
+        ImGuiID dock_top_left_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Up, 0.06f, nullptr, &dock_main_id);
+        ImGuiID dock_top_right_id = ImGui::DockBuilderSplitNode(dock_top_left_id, ImGuiDir_Right, 0.70f, nullptr, &dock_top_left_id);
+        
+        ImGui::DockBuilderDockWindow("Playback Controls", dock_top_left_id);
+        ImGui::DockBuilderDockWindow("Transform Tools", dock_top_right_id);
+        
+        // Animation Editor (docked at bottom with Console)
+        ImGui::DockBuilderDockWindow("Animation Editor", dock_bottom_right_id);
+        
+        // Optional panels (will float if opened)
+        ImGui::DockBuilderDockWindow("Template Library", dock_right_id);
+        ImGui::DockBuilderDockWindow("Sprite Sheet Editor", dock_main_id);
+        ImGui::DockBuilderDockWindow("Layer Editor", dock_bottom_left_id);
 
-            ImGui::DockBuilderFinish(dockspace_id);
-        }
+        ImGui::DockBuilderFinish(dockspace_id);
+        
+        PIL_CORE_INFO("Default editor layout configured");
+    }
+
+    void EditorLayer::ResetDockspaceLayout()
+    {
+        // Clear the layout initialization flag to force re-setup
+        m_LayoutInitialized = false;
+        
+        // Remove the existing dockspace node
+        ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
+        ImGui::DockBuilderRemoveNode(dockspace_id);
+        
+        ConsolePanel::Log("Editor layout reset - will be reconfigured on next frame", LogLevel::Info);
     }
 
     void EditorLayer::CreateDefaultEntities()
@@ -537,12 +603,20 @@ namespace PillarEditor {
             ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
             ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
             
-            // Setup default layout on first frame
-            static bool firstFrame = true;
-            if (firstFrame)
+            // Setup default layout only once (or when explicitly reset via View menu)
+            if (!m_LayoutInitialized)
             {
-                SetupDockspace();
-                firstFrame = false;
+                // Check if we have a valid dockspace node with proper configuration
+                ImGuiDockNode* node = ImGui::DockBuilderGetNode(dockspace_id);
+                bool needsSetup = (node == nullptr) || !node->IsSplitNode();
+                
+                if (needsSetup)
+                {
+                    SetupDockspace();
+                }
+                
+                m_LayoutInitialized = true;
+                PIL_CORE_INFO("Editor layout initialized");
             }
         }
 
@@ -575,11 +649,11 @@ namespace PillarEditor {
         if (m_TemplateLibraryPanel)
             m_TemplateLibraryPanel->OnImGuiRender();
 
-        if (m_AnimationManagerPanel->IsVisible())
-            m_AnimationManagerPanel->OnImGuiRender();
-
         if (m_SpriteSheetEditorPanel->IsVisible())
             m_SpriteSheetEditorPanel->OnImGuiRender();
+
+        if (m_AnimationEditorPanel)
+            m_AnimationEditorPanel->OnImGuiRender();
 
         if (m_LayerEditorPanel)
             m_LayerEditorPanel->OnImGuiRender();
@@ -970,6 +1044,12 @@ namespace PillarEditor {
                 {
                     m_SpriteSheetEditorPanel->SetVisible(!spriteSheetEditorVisible);
                 }
+
+                bool animationEditorVisible = m_AnimationEditorPanel && m_AnimationEditorPanel->IsVisible();
+                if (ImGui::MenuItem("Animation Editor", nullptr, animationEditorVisible))
+                {
+                    m_AnimationEditorPanel->SetVisible(!animationEditorVisible);
+                }
                 
                 ImGui::Separator();
                 
@@ -980,9 +1060,7 @@ namespace PillarEditor {
                 
                 if (ImGui::MenuItem("Reset Layout"))
                 {
-                    // Force layout reset on next frame
-                    ImGui::DockBuilderRemoveNode(ImGui::GetID("EditorDockSpace"));
-                    ConsolePanel::Log("Layout will be reset", LogLevel::Info);
+                    ResetDockspaceLayout();
                 }
                 
                 ImGui::EndMenu();
@@ -1034,14 +1112,13 @@ namespace PillarEditor {
 
     void EditorLayer::DrawToolbar()
     {
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(4, 4));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8, 6));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(8, 4));
 
-        ImGuiWindowFlags toolbarFlags = ImGuiWindowFlags_NoDecoration | 
-                                        ImGuiWindowFlags_NoScrollbar | 
+        ImGuiWindowFlags toolbarFlags = ImGuiWindowFlags_NoScrollbar | 
                                         ImGuiWindowFlags_NoScrollWithMouse;
 
-        ImGui::Begin("##toolbar", nullptr, toolbarFlags);
+        ImGui::Begin("Playback Controls", nullptr, toolbarFlags);
 
         float buttonHeight = 28.0f;
         float buttonWidth = 60.0f;
@@ -1472,7 +1549,6 @@ namespace PillarEditor {
         // Set animation system
         m_AnimationSystem->OnAttach(m_ActiveScene.get());
         m_ActiveScene->SetAnimationSystem(m_AnimationSystem.get());
-        m_AnimationManagerPanel->SetAnimationSystem(m_AnimationSystem.get());
 
         m_SelectionContext.ClearSelection();
         
@@ -1854,7 +1930,6 @@ namespace PillarEditor {
             // Set animation system
             m_AnimationSystem->OnAttach(m_ActiveScene.get());
             m_ActiveScene->SetAnimationSystem(m_AnimationSystem.get());
-            m_AnimationManagerPanel->SetAnimationSystem(m_AnimationSystem.get());
 
             m_SelectionContext.ClearSelection();
             
