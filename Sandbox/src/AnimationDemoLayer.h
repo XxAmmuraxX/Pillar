@@ -74,8 +74,8 @@ public:
 		}
 
 		// Clear screen
-		Pillar::Renderer::SetClearColor({ 0.15f, 0.15f, 0.2f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.15f, 0.15f, 0.2f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
 		// Begin scene
 		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());

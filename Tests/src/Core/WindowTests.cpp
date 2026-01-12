@@ -299,8 +299,8 @@ TEST_F(WindowTest, Window_Destructor_CleansUpProperly) {
     WindowProps props;
     
     EXPECT_NO_THROW({
-        Window* window = Window::Create(props);
-        delete window;
+        auto window = Window::Create(props);
+        // unique_ptr automatically deletes on scope exit
     });
 }
 

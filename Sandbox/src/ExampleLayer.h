@@ -40,8 +40,8 @@ public:
 		m_Time += dt;
 		
 		// Clear screen
-		Pillar::Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
 		// Begin Renderer2D scene with camera from controller
 		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
@@ -52,15 +52,15 @@ public:
 		Pillar::Renderer2D::DrawQuad({ -0.75f, -0.5f }, { 0.5f, 0.5f }, { 0.0f, 0.0f, 1.0f, 1.0f });
 		
 		// Test 2: Draw textured quad
-		Pillar::Renderer2D::DrawQuad({ 0.75f, -0.5f }, { 0.5f, 0.5f }, m_Texture);
+		Pillar::Renderer2D::DrawQuad({ 0.75f, -0.5f }, { 0.5f, 0.5f }, { 1.0f, 1.0f, 1.0f, 1.0f }, m_Texture);
 		
 		// Test 3: Draw animated textured quad in center
 		float scale = 0.8f + sin(m_Time * 2.0f) * 0.2f;
-		Pillar::Renderer2D::DrawQuad({ 0.0f, 0.0f, 0.1f }, { scale, scale }, m_Texture);
+		Pillar::Renderer2D::DrawQuad({ 0.0f, 0.0f, 0.1f }, { scale, scale }, { 1.0f, 1.0f, 1.0f, 1.0f }, m_Texture);
 		
 		// Test 4: Draw textured quad with tint color
 		glm::vec4 tint = { 1.0f, 0.5f + sin(m_Time) * 0.5f, 0.5f, 1.0f };
-		Pillar::Renderer2D::DrawQuad({ 0.0f, -1.2f }, { 0.6f, 0.3f }, m_Texture, tint);
+		Pillar::Renderer2D::DrawQuad({ 0.0f, -1.2f }, { 0.6f, 0.3f }, tint, m_Texture);
 
 		Pillar::Renderer2D::EndScene();
     }
@@ -152,6 +152,29 @@ public:
 		{
 			ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Texture: Failed to load!");
 		}
+		
+		ImGui::Separator();
+		
+		// Renderer2D Statistics (NEW!)
+		ImGui::TextColored(ImVec4(1.0f, 0.8f, 0.2f, 1.0f), "Renderer2D Statistics:");
+		auto stats = Pillar::Renderer2D::GetStats();
+		ImGui::Text("Draw Calls: %u", stats.DrawCalls);
+		ImGui::Text("Quads: %u", stats.QuadCount);
+		ImGui::Text("Vertices: %u", stats.VertexCount);
+		ImGui::Text("Batches: %u", stats.BatchCount);
+		ImGui::Text("Texture Switches: %u", stats.TextureSwitches);
+		ImGui::Text("Buffer Uploads: %u", stats.BufferUploads);
+		ImGui::Text("Flush Count: %u", stats.FlushCount);
+		ImGui::Separator();
+		ImGui::Text("Batch Efficiency: %.2f quads/batch", stats.GetBatchEfficiency());
+		ImGui::Text("Avg Quads/Draw: %.2f", stats.GetAverageQuadsPerDraw());
+		ImGui::Text("Avg Vertices/Draw: %.2f", stats.GetAverageVerticesPerDraw());
+		ImGui::Separator();
+		ImGui::Text("Total Quads Rendered: %u", stats.TotalQuadsRendered);
+		ImGui::Text("Total Draw Calls: %u", stats.TotalDrawCalls);
+		ImGui::Text("Peak Vertices: %u", stats.PeakVertices);
+		ImGui::Text("Peak Quads: %u", stats.PeakQuads);
+		
 		ImGui::End();
 	}
 

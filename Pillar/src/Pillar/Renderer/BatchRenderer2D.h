@@ -91,16 +91,47 @@ namespace Pillar {
         uint32_t GetQuadCount() const override { return m_Stats.QuadCount; }
         void ResetStats() override;
 
-    protected:
+        // Make stats accessible for Renderer2D::GetStats()
+        // This is intentionally public to allow the static API to access detailed stats
         struct Stats
         {
+            // Per-frame counters
             uint32_t DrawCalls = 0;
             uint32_t QuadCount = 0;
             uint32_t VertexCount = 0;
+            uint32_t BatchCount = 0;
+            uint32_t TextureSwitches = 0;
+            uint32_t FlushCount = 0;
+            uint32_t BufferUploads = 0;
+            
+            // Accumulated stats
+            uint32_t TotalQuadsRendered = 0;
+            uint32_t TotalDrawCalls = 0;
+            
+            // Performance metrics
+            uint32_t PeakVertices = 0;
+            uint32_t PeakQuads = 0;
+            
+            // Efficiency ratios
+            float GetBatchEfficiency() const
+            {
+                return BatchCount > 0 ? (float)QuadCount / BatchCount : 0.0f;
+            }
+            
+            float GetAverageQuadsPerDraw() const
+            {
+                return DrawCalls > 0 ? (float)QuadCount / DrawCalls : 0.0f;
+            }
+            
+            float GetAverageVerticesPerDraw() const
+            {
+                return DrawCalls > 0 ? (float)VertexCount / DrawCalls : 0.0f;
+            }
         };
 
         Stats m_Stats;
 
+    protected:
         // Subclasses implement these
         virtual void Init() = 0;
         virtual void Shutdown() = 0;

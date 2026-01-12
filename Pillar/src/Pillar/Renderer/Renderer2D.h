@@ -12,6 +12,8 @@
 
 namespace Pillar {
 
+    class TextureAtlas;
+    struct SubTexture;
     struct TransformComponent;
     struct SpriteComponent;
 
@@ -32,6 +34,11 @@ namespace Pillar {
     public:
         static void Init();
         static void Shutdown();
+
+        // Rendering setup (convenience methods to reduce need for RenderCommand)
+        static void SetClearColor(const glm::vec4& color);
+        static void Clear();
+        static void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
         // Scene management
         static void BeginScene(const OrthographicCamera& camera);
@@ -72,6 +79,40 @@ namespace Pillar {
                                   const glm::vec2& texCoordMin = glm::vec2(0.0f), 
                                   const glm::vec2& texCoordMax = glm::vec2(1.0f),
                                   bool flipX = false, bool flipY = false);
+
+        // Texture Atlas methods
+        static void DrawQuad(const glm::vec2& position, const glm::vec2& size,
+                            const glm::vec4& color,
+                            const std::shared_ptr<TextureAtlas>& atlas,
+                            const std::string& spriteName);
+
+        static void DrawQuad(const glm::vec3& position, const glm::vec2& size,
+                            const glm::vec4& color,
+                            const std::shared_ptr<TextureAtlas>& atlas,
+                            const std::string& spriteName);
+
+        static void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
+                                   float rotation, const glm::vec4& color,
+                                   const std::shared_ptr<TextureAtlas>& atlas,
+                                   const std::string& spriteName);
+
+        static void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
+                                   float rotation, const glm::vec4& color,
+                                   const std::shared_ptr<TextureAtlas>& atlas,
+                                   const std::string& spriteName);
+
+        // Direct SubTexture methods (for advanced usage)
+        static void DrawQuad(const glm::vec3& position, const glm::vec2& size,
+                            const glm::vec4& color,
+                            const std::shared_ptr<Texture2D>& texture,
+                            const SubTexture& subTexture,
+                            bool flipX = false, bool flipY = false);
+
+        static void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
+                                   float rotation, const glm::vec4& color,
+                                   const std::shared_ptr<Texture2D>& texture,
+                                   const SubTexture& subTexture,
+                                   bool flipX = false, bool flipY = false);
 
         // Debug helpers
         static void DrawLine(const glm::vec2& start, const glm::vec2& end, const glm::vec4& color, float thickness = 1.0f);
@@ -129,8 +170,28 @@ namespace Pillar {
         };
 
         // Statistics
+        struct Renderer2DStats
+        {
+            uint32_t DrawCalls = 0;
+            uint32_t QuadCount = 0;
+            uint32_t VertexCount = 0;
+            uint32_t BatchCount = 0;
+            uint32_t TextureSwitches = 0;
+            uint32_t FlushCount = 0;
+            uint32_t BufferUploads = 0;
+            uint32_t TotalQuadsRendered = 0;
+            uint32_t TotalDrawCalls = 0;
+            uint32_t PeakVertices = 0;
+            uint32_t PeakQuads = 0;
+            
+            float GetBatchEfficiency() const { return BatchCount > 0 ? (float)QuadCount / BatchCount : 0.0f; }
+            float GetAverageQuadsPerDraw() const { return DrawCalls > 0 ? (float)QuadCount / DrawCalls : 0.0f; }
+            float GetAverageVerticesPerDraw() const { return DrawCalls > 0 ? (float)VertexCount / DrawCalls : 0.0f; }
+        };
+
         static uint32_t GetDrawCallCount();
         static uint32_t GetQuadCount();
+        static Renderer2DStats GetStats();
         static void ResetStats();
     };
 

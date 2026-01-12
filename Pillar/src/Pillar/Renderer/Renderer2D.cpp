@@ -1,6 +1,7 @@
 #include "Renderer2D.h"
 #include "Pillar/Renderer/BatchRenderer2D.h"
 #include "Pillar/Renderer/RenderCommand.h"
+#include "Pillar/Renderer/TextureAtlas.h"
 #include "Pillar/Logger.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
@@ -18,9 +19,18 @@ namespace Pillar {
     {
         PIL_CORE_INFO("Initializing Renderer2D (Batch Renderer)");
 
+        if (s_BatchRenderer)
+        {
+            PIL_CORE_WARN("Renderer2D::Init() called multiple times! Already initialized.");
+            return;
+        }
+
+        s_BatchRenderer = BatchRenderer2D::Create();
+        
         if (!s_BatchRenderer)
         {
-            s_BatchRenderer = BatchRenderer2D::Create();
+            PIL_CORE_ERROR("Failed to create batch renderer! Renderer2D initialization failed.");
+            return;
         }
 
         PIL_CORE_INFO("Renderer2D initialized successfully");
@@ -32,16 +42,39 @@ namespace Pillar {
         s_BatchRenderer.reset();  // Automatic cleanup
     }
 
+    void Renderer2D::SetClearColor(const glm::vec4& color)
+    {
+        RenderCommand::SetClearColor(color);
+    }
+
+    void Renderer2D::Clear()
+    {
+        RenderCommand::Clear();
+    }
+
+    void Renderer2D::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
+    {
+        RenderCommand::SetViewport(x, y, width, height);
+    }
+
     void Renderer2D::BeginScene(const OrthographicCamera& camera)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->BeginScene(camera);
+        if (!s_BatchRenderer)
+        {
+            PIL_CORE_ERROR("Renderer2D::BeginScene() called but Renderer2D not initialized! Call Renderer2D::Init() first.");
+            return;
+        }
+        s_BatchRenderer->BeginScene(camera);
     }
 
     void Renderer2D::EndScene()
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->EndScene();
+        if (!s_BatchRenderer)
+        {
+            PIL_CORE_ERROR("Renderer2D::EndScene() called but Renderer2D not initialized! Call Renderer2D::Init() first.");
+            return;
+        }
+        s_BatchRenderer->EndScene();
     }
 
     void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, 
@@ -113,6 +146,80 @@ namespace Pillar {
             s_BatchRenderer->DrawRotatedQuad(position, size, rotation, color, texture.get(), texCoordMin, texCoordMax, flipX, flipY);
     }
 
+    // ========================================================================
+    // Texture Atlas Draw Methods
+    // ========================================================================
+
+    void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size,
+                             const glm::vec4& color,
+                             const std::shared_ptr<TextureAtlas>& atlas,
+                             const std::string& spriteName)
+    {
+        DrawQuad(glm::vec3(position, 0.0f), size, color, atlas, spriteName);
+    }
+
+    void Renderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
+                             const glm::vec4& color,
+                             const std::shared_ptr<TextureAtlas>& atlas,
+                             const std::string& spriteName)
+    {
+        if (!atlas)
+        {
+            PIL_CORE_WARN("DrawQuad: Null texture atlas provided");
+            return;
+        }
+
+        SubTexture subTex = atlas->GetSubTexture(spriteName);
+        DrawQuad(position, size, color, atlas->GetTexture(), subTex, false, false);
+    }
+
+    void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
+                                     float rotation, const glm::vec4& color,
+                                     const std::shared_ptr<TextureAtlas>& atlas,
+                                     const std::string& spriteName)
+    {
+        DrawRotatedQuad(glm::vec3(position, 0.0f), size, rotation, color, atlas, spriteName);
+    }
+
+    void Renderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
+                                     float rotation, const glm::vec4& color,
+                                     const std::shared_ptr<TextureAtlas>& atlas,
+                                     const std::string& spriteName)
+    {
+        if (!atlas)
+        {
+            PIL_CORE_WARN("DrawRotatedQuad: Null texture atlas provided");
+            return;
+        }
+
+        SubTexture subTex = atlas->GetSubTexture(spriteName);
+        DrawRotatedQuad(position, size, rotation, color, atlas->GetTexture(), subTex, false, false);
+    }
+
+    void Renderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
+                             const glm::vec4& color,
+                             const std::shared_ptr<Texture2D>& texture,
+                             const SubTexture& subTexture,
+                             bool flipX, bool flipY)
+    {
+        if (s_BatchRenderer)
+            s_BatchRenderer->DrawQuad(position, size, color, texture.get(), subTexture.UVMin, subTexture.UVMax, flipX, flipY);
+    }
+
+    void Renderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
+                                     float rotation, const glm::vec4& color,
+                                     const std::shared_ptr<Texture2D>& texture,
+                                     const SubTexture& subTexture,
+                                     bool flipX, bool flipY)
+    {
+        if (s_BatchRenderer)
+            s_BatchRenderer->DrawRotatedQuad(position, size, rotation, color, texture.get(), subTexture.UVMin, subTexture.UVMax, flipX, flipY);
+    }
+
+    // ========================================================================
+    // Debug Drawing Helpers
+    // ========================================================================
+
     void Renderer2D::DrawLine(const glm::vec2& start, const glm::vec2& end, const glm::vec4& color, float thickness)
     {
         DrawLine(glm::vec3(start, 0.0f), glm::vec3(end, 0.0f), color, thickness);
@@ -180,17 +287,6 @@ namespace Pillar {
         glm::vec3 position(transform.Position, sprite.ZIndex);
         glm::vec2 size = sprite.Size * glm::vec2(transform.Scale.x, transform.Scale.y);
         bool hasTexture = sprite.Texture != nullptr;
-        
-        // Debug: Log UV coordinates for entities with locked UVs
-        if (hasTexture && sprite.LockUV)
-        {
-            PIL_CORE_INFO("🎨 DrawSprite (LockUV=true) - Pos({}, {}) Size({}, {}) UV: ({}, {}) to ({}, {})", 
-                          position.x, position.y,
-                          size.x, size.y,
-                          sprite.TexCoordMin.x, sprite.TexCoordMin.y,
-                          sprite.TexCoordMax.x, sprite.TexCoordMax.y);
-        }
-
         if (transform.Rotation != 0.0f)
         {
             if (hasTexture)
@@ -251,6 +347,32 @@ namespace Pillar {
         if (s_BatchRenderer)
             return s_BatchRenderer->GetQuadCount();
         return 0;
+    }
+
+    Renderer2D::Renderer2DStats Renderer2D::GetStats()
+    {
+        Renderer2DStats stats;
+        if (s_BatchRenderer)
+        {
+            // Cast to BatchRenderer2D to access full stats
+            auto* batchRenderer = dynamic_cast<BatchRenderer2D*>(s_BatchRenderer.get());
+            if (batchRenderer)
+            {
+                auto& internalStats = batchRenderer->m_Stats;
+                stats.DrawCalls = internalStats.DrawCalls;
+                stats.QuadCount = internalStats.QuadCount;
+                stats.VertexCount = internalStats.VertexCount;
+                stats.BatchCount = internalStats.BatchCount;
+                stats.TextureSwitches = internalStats.TextureSwitches;
+                stats.FlushCount = internalStats.FlushCount;
+                stats.BufferUploads = internalStats.BufferUploads;
+                stats.TotalQuadsRendered = internalStats.TotalQuadsRendered;
+                stats.TotalDrawCalls = internalStats.TotalDrawCalls;
+                stats.PeakVertices = internalStats.PeakVertices;
+                stats.PeakQuads = internalStats.PeakQuads;
+            }
+        }
+        return stats;
     }
 
     void Renderer2D::ResetStats()

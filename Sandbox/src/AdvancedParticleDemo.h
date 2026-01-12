@@ -96,8 +96,8 @@ public:
 	void OnRender() override
 	{
 		// Clear screen
-		Pillar::RenderCommand::SetClearColor({ 0.05f, 0.05f, 0.1f, 1.0f });
-		Pillar::RenderCommand::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.05f, 0.05f, 0.1f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
 		// Render scene
 		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());

@@ -54,8 +54,8 @@ public:
 
 		UpdateLightInteraction(dt);
 
-		Pillar::Renderer::SetClearColor({ 0.02f, 0.02f, 0.03f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.02f, 0.02f, 0.03f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
 		auto& app = Pillar::Application::Get();
 		uint32_t w = app.GetWindow().GetWidth();

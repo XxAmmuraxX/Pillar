@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <initializer_list>
+#include <memory>
 
 namespace Pillar {
 
@@ -127,8 +128,8 @@ namespace Pillar {
 
         virtual void SetData(const void* data, uint32_t size) = 0;
 
-        static VertexBuffer* Create(float* vertices, uint32_t size);
-        static VertexBuffer* Create(uint32_t size);
+        static std::shared_ptr<VertexBuffer> Create(float* vertices, uint32_t size);
+        static std::shared_ptr<VertexBuffer> Create(uint32_t size);
     };
 
     class PIL_API IndexBuffer
@@ -140,7 +141,7 @@ namespace Pillar {
         virtual void Unbind() const = 0;
         virtual uint32_t GetCount() const = 0;
 
-        static IndexBuffer* Create(uint32_t* indices, uint32_t count);
+        static std::shared_ptr<IndexBuffer> Create(uint32_t* indices, uint32_t count);
     };
 
 }

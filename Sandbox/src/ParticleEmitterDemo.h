@@ -86,8 +86,8 @@ public:
 		m_VelocitySystem->OnUpdate(dt);
 
 		// Render
-		Pillar::Renderer::SetClearColor({ 0.05f, 0.05f, 0.1f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.05f, 0.05f, 0.1f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
 		Pillar::Renderer2D::ResetStats();
 		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());

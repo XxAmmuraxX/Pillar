@@ -201,7 +201,12 @@ target_link_libraries(imguizmo PUBLIC imgui)
 add_subdirectory(Pillar)
 add_subdirectory(Sandbox)
 add_subdirectory(PillarEditor)
-add_subdirectory(Tests)
+
+# Only include tests in the build (users can disable tests for faster SDK builds)
+option(PILLAR_BUILD_TESTS "Build the test suite" ON)
+if(PILLAR_BUILD_TESTS)
+  add_subdirectory(Tests)
+endif()
 
 
 # ==============================
@@ -228,12 +233,14 @@ if(PILLAR_ENABLE_SDK_INSTALL)
 
   # Install third-party libraries that Pillar depends on.
   # We intentionally do NOT export these CMake targets (their include dirs often point to build-machine paths).
+  # Note: GoogleTest is excluded via INSTALL_GTEST=OFF in Tests/CMakeLists.txt
   set(_PILLAR_SDK_DEP_LIB_TARGETS "")
   foreach(_t IN ITEMS glfw glad_gl_core_46 imgui box2d OpenAL spdlog)
     if(TARGET ${_t})
       list(APPEND _PILLAR_SDK_DEP_LIB_TARGETS ${_t})
     endif()
   endforeach()
+  
   if(_PILLAR_SDK_DEP_LIB_TARGETS)
     install(TARGETS ${_PILLAR_SDK_DEP_LIB_TARGETS}
       ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}/$<CONFIG>"
@@ -261,6 +268,15 @@ if(PILLAR_ENABLE_SDK_INSTALL)
   )
   install(FILES "${CMAKE_SOURCE_DIR}/Pillar/src/Pillar.h"
     DESTINATION "include"
+  )
+  
+  # --- Install shader files (needed at runtime) ---
+  install(DIRECTORY "${CMAKE_SOURCE_DIR}/Pillar/src/Pillar/Renderer/Shaders/"
+    DESTINATION "assets/shaders"
+    FILES_MATCHING 
+      PATTERN "*.vert"
+      PATTERN "*.frag"
+      PATTERN "*.glsl"
   )
 
   # --- Install third-party headers required by public API ---
@@ -331,7 +347,7 @@ if(PILLAR_ENABLE_SDK_INSTALL)
 
   # --- CPack ZIP generator (creates an SDK-style ZIP from install rules) ---
   set(CPACK_GENERATOR "ZIP")
-  set(CPACK_PACKAGE_NAME "PillarSDK")
+  set(CPACK_PACKAGE_NAME "PillarSDK")  # <-- EDIT HERE to change the SDK/template name (e.g., "MyGameSDK")
   set(CPACK_PACKAGE_VENDOR "Pillar")
   set(CPACK_PACKAGE_VERSION "${PILLAR_PACKAGE_VERSION}")
   set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CMAKE_SYSTEM_NAME}-${CMAKE_SYSTEM_PROCESSOR}")

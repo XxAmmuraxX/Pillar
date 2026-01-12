@@ -36,12 +36,16 @@ add_library(Pillar STATIC
     src/Pillar/Renderer/Renderer2D.cpp
     src/Pillar/Renderer/RenderCommand.cpp
     src/Pillar/Renderer/Shader.cpp
+    src/Pillar/Renderer/ShaderLibrary.cpp
     src/Pillar/Renderer/Buffer.cpp
     src/Pillar/Renderer/VertexArray.cpp
     src/Pillar/Renderer/Texture.cpp
+    src/Pillar/Renderer/TextureAtlas.cpp
     src/Pillar/Renderer/Framebuffer.cpp
     src/Pillar/Renderer/Lighting2D.cpp
     src/Pillar/Renderer/Lighting2DGeometry.cpp
+    src/Pillar/Renderer/PostProcessing.cpp
+    src/Pillar/Renderer/RenderQueue.cpp
     src/Pillar/Renderer/OrthographicCamera.cpp
     src/Pillar/Renderer/OrthographicCameraController.cpp
     src/Pillar/Renderer/BatchRenderer2D.cpp

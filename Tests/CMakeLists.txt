@@ -12,6 +12,11 @@ FetchContent_Declare(
 
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+# Exclude GoogleTest from installation (SDK should not include test frameworks)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+set(INSTALL_GMOCK OFF CACHE BOOL "" FORCE)
+
 FetchContent_MakeAvailable(googletest)
 
 # Enable testing
@@ -52,6 +57,7 @@ add_executable(PillarTests
     # ===================
     src/Renderer/CameraTests.cpp
     src/Renderer/Renderer2DTests.cpp
+    src/Renderer/Renderer2DPerformanceTests.cpp
     src/Renderer/Lighting2DAPITests.cpp
     src/Renderer/Lighting2DGeometryTests.cpp
 

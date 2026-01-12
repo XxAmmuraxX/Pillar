@@ -69,8 +69,8 @@ public:
 		m_SystemTime = std::chrono::duration<float, std::milli>(sysEnd - sysStart).count();
 
 		// Render
-		Pillar::Renderer::SetClearColor({ 0.05f, 0.05f, 0.08f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.05f, 0.05f, 0.08f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
 		auto renderStart = std::chrono::high_resolution_clock::now();
 		Pillar::Renderer2D::ResetStats();

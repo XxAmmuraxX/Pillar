@@ -20,7 +20,7 @@ namespace Pillar
 	{
 		PIL_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
-		m_Window = std::unique_ptr<Window>(Window::Create(WindowProps("Pillar Engine", 1280, 720)));
+		m_Window = Window::Create(WindowProps("Pillar Engine", 1280, 720));
 		m_Window->SetEventCallback(BIND_EVENT_FN(Application::OnEvent));
 
 		// Initialize Audio Engine
@@ -48,6 +48,11 @@ namespace Pillar
 	Application& Application::Get()
 	{
 		return *s_Instance;
+	}
+
+	Application* Application::GetInstancePtr()
+	{
+		return s_Instance;
 	}
 
 	void Application::OnEvent(Event& e)

@@ -40,11 +40,11 @@ jobs:
 
       - name: Configure CMake
         run: |
-          cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+          cmake --preset ci
 
       - name: Build
         run: |
-          cmake --build build --config ${{env.BUILD_TYPE}} --parallel
+          cmake --build --preset ci
 
       - name: List build outputs
         run: |

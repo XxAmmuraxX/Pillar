@@ -25,9 +25,14 @@ namespace Pillar {
 
     void BatchRenderer2D::ResetStats()
     {
+        // Only reset per-frame counters, keep accumulated stats
         m_Stats.DrawCalls = 0;
         m_Stats.QuadCount = 0;
         m_Stats.VertexCount = 0;
+        m_Stats.BatchCount = 0;
+        m_Stats.TextureSwitches = 0;
+        m_Stats.FlushCount = 0;
+        m_Stats.BufferUploads = 0;
     }
 
 } // namespace Pillar

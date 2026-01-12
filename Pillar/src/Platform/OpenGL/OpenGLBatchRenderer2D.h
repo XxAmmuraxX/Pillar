@@ -101,7 +101,7 @@ namespace Pillar {
         std::unordered_map<uint32_t, QuadBatch> m_Batches;
         
         // Texture slots (OpenGL supports 32 texture units)
-        static const uint32_t MaxTextureSlots = 32;
+        static constexpr uint32_t MaxTextureSlots = 32;
         std::array<const Texture2D*, MaxTextureSlots> m_TextureSlots;  // const for read-only
         uint32_t m_TextureSlotIndex = 1;  // 0 = white texture
 
