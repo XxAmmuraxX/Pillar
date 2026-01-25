@@ -147,7 +147,7 @@ namespace Pillar {
         PIL_CORE_INFO("Reloading all shaders...");
         
         uint32_t successCount = 0;
-        for (auto& [name, entry] : m_Shaders)
+        for (const auto& [name, entry] : m_Shaders)
         {
             // Skip shaders not loaded from files
             if (entry.VertexPath.empty() || entry.FragmentPath.empty())

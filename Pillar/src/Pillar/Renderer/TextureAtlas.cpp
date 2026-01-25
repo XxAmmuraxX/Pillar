@@ -60,6 +60,7 @@ namespace Pillar {
             return nullptr;
         }
 
+        // Note: Cannot use make_shared due to private constructor (factory pattern)
         return std::shared_ptr<TextureAtlas>(new TextureAtlas(texture));
     }
 
@@ -71,6 +72,7 @@ namespace Pillar {
             return nullptr;
         }
 
+        // Note: Cannot use make_shared due to private constructor (factory pattern)
         return std::shared_ptr<TextureAtlas>(new TextureAtlas(texture));
     }
 

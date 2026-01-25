@@ -170,7 +170,7 @@ namespace Pillar {
                 glm::vec4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
                 
                 // Cycle through textures
-                auto& texture = textures[i % TextureCount];
+                const auto& texture = textures[i % TextureCount];
                 Renderer2D::DrawQuad({ x, y }, { 0.4f, 0.4f }, color, texture);
             }
 

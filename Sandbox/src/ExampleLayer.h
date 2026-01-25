@@ -112,20 +112,20 @@ public:
 		// Camera Settings (adjustable)
 		ImGui::Text("Camera Settings:");
 		
-		float baseTranslationSpeed = m_CameraController.GetBaseTranslationSpeed();
-		if (ImGui::SliderFloat("Move Speed", &baseTranslationSpeed, 1.0f, 20.0f))
+		if (float baseTranslationSpeed = m_CameraController.GetBaseTranslationSpeed();
+		    ImGui::SliderFloat("Move Speed", &baseTranslationSpeed, 1.0f, 20.0f))
 		{
 			m_CameraController.SetBaseTranslationSpeed(baseTranslationSpeed);
 		}
 		
-		float rotationSpeed = m_CameraController.GetRotationSpeed();
-		if (ImGui::SliderFloat("Rotation Speed", &rotationSpeed, 10.0f, 360.0f))
+		if (float rotationSpeed = m_CameraController.GetRotationSpeed();
+		    ImGui::SliderFloat("Rotation Speed", &rotationSpeed, 10.0f, 360.0f))
 		{
 			m_CameraController.SetRotationSpeed(rotationSpeed);
 		}
 		
-		float zoomSpeed = m_CameraController.GetZoomSpeed();
-		if (ImGui::SliderFloat("Zoom Speed", &zoomSpeed, 0.1f, 1.0f))
+		if (float zoomSpeed = m_CameraController.GetZoomSpeed();
+		    ImGui::SliderFloat("Zoom Speed", &zoomSpeed, 0.1f, 1.0f))
 		{
 			m_CameraController.SetZoomSpeed(zoomSpeed);
 		}

@@ -1155,7 +1155,7 @@ namespace PillarEditor {
         // If gizmo was used, decompose the matrix back to transform
         if (isCurrentlyUsing)
         {
-            glm::vec3 translation, rotation, scale;
+            glm::vec3 translation, scale;
             glm::quat rotationQuat;
             glm::vec3 skew;
             glm::vec4 perspective;

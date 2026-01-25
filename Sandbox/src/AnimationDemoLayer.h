@@ -261,7 +261,7 @@ public:
 		{
 			ImGui::Begin("Entity Inspector", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
-			ImGui::Text("Inspecting: Entity %d", m_SelectedEntityIndex);
+			ImGui::Text("Inspecting: Entity %zu", m_SelectedEntityIndex);
 			if (ImGui::Button("< Prev"))
 			{
 				m_SelectedEntityIndex = (m_SelectedEntityIndex - 1 + m_AnimatedEntities.size()) % m_AnimatedEntities.size();
@@ -519,7 +519,7 @@ private:
 	std::vector<std::string> m_EventLog;
 	
 	int m_CurrentAnimIndex = 0;  // 0=Idle, 1=Walk, 2=Jump
-	int m_SelectedEntityIndex = 0;
+	size_t m_SelectedEntityIndex = 0;
 	
 	bool m_GlobalPaused = false;
 	float m_GlobalSpeed = 1.0f;

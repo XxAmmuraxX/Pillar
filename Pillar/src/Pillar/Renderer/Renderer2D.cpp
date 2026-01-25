@@ -355,10 +355,10 @@ namespace Pillar {
         if (s_BatchRenderer)
         {
             // Cast to BatchRenderer2D to access full stats
-            auto* batchRenderer = dynamic_cast<BatchRenderer2D*>(s_BatchRenderer.get());
+            const auto* batchRenderer = dynamic_cast<const BatchRenderer2D*>(s_BatchRenderer.get());
             if (batchRenderer)
             {
-                auto& internalStats = batchRenderer->m_Stats;
+                const auto& internalStats = batchRenderer->m_Stats;
                 stats.DrawCalls = internalStats.DrawCalls;
                 stats.QuadCount = internalStats.QuadCount;
                 stats.VertexCount = internalStats.VertexCount;

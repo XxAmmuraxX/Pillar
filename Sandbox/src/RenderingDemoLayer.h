@@ -340,7 +340,7 @@ private:
         }
     }
     
-    void RenderBasicQuads()
+    void RenderBasicQuads() const
     {
         // Rainbow of colored quads
         float spacing = 1.5f;
@@ -476,7 +476,7 @@ private:
         }
     }
     
-    void RenderRotationDemo()
+    void RenderRotationDemo() const
     {
         // Rotating squares at different speeds
         float baseRotation = m_Rotation;
@@ -518,7 +518,7 @@ private:
         }
     }
     
-    void RenderPerformanceTest()
+    void RenderPerformanceTest() const
     {
         // Render large number of quads to test batch renderer
         int gridSize = 50;  // 50x50 = 2500 quads

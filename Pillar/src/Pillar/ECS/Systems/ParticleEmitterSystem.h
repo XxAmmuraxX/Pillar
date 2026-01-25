@@ -46,12 +46,12 @@ namespace Pillar {
 		/**
 		 * @brief Calculate emission position based on shape
 		 */
-		glm::vec2 CalculateEmissionPosition(const glm::vec2& basePos, const class ParticleEmitterComponent& emitter);
+		glm::vec2 CalculateEmissionPosition(const glm::vec2& basePos, const struct ParticleEmitterComponent& emitter);
 
 		/**
 		 * @brief Calculate emission velocity with randomization
 		 */
-		glm::vec2 CalculateEmissionVelocity(const class ParticleEmitterComponent& emitter);
+		glm::vec2 CalculateEmissionVelocity(const struct ParticleEmitterComponent& emitter);
 
 	private:
 		ParticlePool* m_ParticlePool = nullptr;
