@@ -92,8 +92,7 @@ namespace Pillar {
 
     std::shared_ptr<Shader> ShaderLibrary::Get(const std::string& name)
     {
-        auto it = m_Shaders.find(name);
-        if (it != m_Shaders.end())
+        if (auto it = m_Shaders.find(name); it != m_Shaders.end())
         {
             return it->second.Shader;
         }

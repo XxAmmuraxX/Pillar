@@ -4,6 +4,7 @@
 #include "Pillar/Renderer/Texture.h"
 #include <glm/glm.hpp>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <memory>
 #include <vector>

@@ -3,6 +3,7 @@
 #include "Pillar/Core.h"
 #include "Pillar/Renderer/Shader.h"
 #include <string>
+#include <string_view>
 #include <memory>
 #include <unordered_map>
 #include <vector>

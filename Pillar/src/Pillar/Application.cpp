@@ -62,7 +62,7 @@ namespace Pillar
 
 		// Handle window resize for renderer viewport
 		dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
-			Renderer::SetViewport(0, 0, event.GetWidth(), event.GetHeight());
+			Renderer2D::SetViewport(0, 0, event.GetWidth(), event.GetHeight());
 			return false;
 		});
 
@@ -119,8 +119,8 @@ namespace Pillar
 			Input::OnUpdate();
 
 			// Clear screen
-			Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
-			Renderer::Clear();
+			Renderer2D::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
+			Renderer2D::Clear();
 
 			// Begin scene
 

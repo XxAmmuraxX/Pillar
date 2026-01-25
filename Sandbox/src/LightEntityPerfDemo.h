@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
+#include "DemoUtils.h"
 #include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
@@ -93,28 +94,13 @@ public:
 	{
 		ImGui::Begin("Light Entity Performance");
 		
-		ImGui::Text("Stress Test: Pure ECS Light Entities");
-		ImGui::Separator();
-
-		// Performance stats
-		ImGui::Text("Entity Count: %zu", m_EntityCount);
-		ImGui::Text("Frame Time: %.2f ms (%.0f FPS)", m_FrameTime, 1000.0f / m_FrameTime);
-		ImGui::Text("System Time: %.2f ms", m_SystemTime);
-		ImGui::Text("Render Time: %.2f ms", m_RenderTime);
-		
-		// Renderer stats
-		ImGui::Separator();
-		ImGui::Text("Renderer Statistics:");
-		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2D::GetDrawCallCount());
-		ImGui::Text("  Quads Rendered: %u", Pillar::Renderer2D::GetQuadCount());
-		
-		// Color-coded performance
-		if (m_FrameTime < 16.67f)
-			ImGui::TextColored(ImVec4(0, 1, 0, 1), "Performance: EXCELLENT (60+ FPS)");
-		else if (m_FrameTime < 33.33f)
-			ImGui::TextColored(ImVec4(1, 1, 0, 1), "Performance: GOOD (30-60 FPS)");
-		else
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), "Performance: POOR (<30 FPS)");
+		DemoUtils::RenderPerformanceStats(
+			"Stress Test: Pure ECS Light Entities",
+			m_EntityCount,
+			m_FrameTime,
+			m_SystemTime,
+			m_RenderTime
+		);
 
 		ImGui::Separator();
 

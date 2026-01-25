@@ -3,6 +3,7 @@
 #include "Pillar/Renderer/EmbeddedShaders.h"
 #include "Pillar/Logger.h"
 #include <algorithm>
+#include <array>
 #include <glad/gl.h>
 
 namespace Pillar {
@@ -32,11 +33,11 @@ namespace Pillar {
 
     void GrayscaleEffect::Apply(uint32_t inputTexture, Framebuffer* outputFB)
     {
-        if (!m_Enabled || !m_Shader)
+        if (!IsEnabled() || !m_Shader)
             return;
 
         m_Shader->Bind();
-        m_Shader->SetFloat("u_Intensity", m_Intensity);
+        m_Shader->SetFloat("u_Intensity", GetIntensity());
         
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, inputTexture);
@@ -68,11 +69,11 @@ namespace Pillar {
 
     void VignetteEffect::Apply(uint32_t inputTexture, Framebuffer* outputFB)
     {
-        if (!m_Enabled || !m_Shader)
+        if (!IsEnabled() || !m_Shader)
             return;
 
         m_Shader->Bind();
-        m_Shader->SetFloat("u_Intensity", m_Intensity);
+        m_Shader->SetFloat("u_Intensity", GetIntensity());
         m_Shader->SetFloat("u_Radius", m_Radius);
         m_Shader->SetFloat("u_Softness", m_Softness);
         
@@ -126,11 +127,11 @@ namespace Pillar {
 
     void ChromaticAberrationEffect::Apply(uint32_t inputTexture, Framebuffer* outputFB)
     {
-        if (!m_Enabled || !m_Shader)
+        if (!IsEnabled() || !m_Shader)
             return;
 
         m_Shader->Bind();
-        m_Shader->SetFloat("u_Intensity", m_Intensity);
+        m_Shader->SetFloat("u_Intensity", GetIntensity());
         m_Shader->SetFloat("u_Offset", m_Offset);
         
         glActiveTexture(GL_TEXTURE0);
@@ -158,7 +159,7 @@ namespace Pillar {
         m_PingPongFB[1] = Framebuffer::Create(spec);
 
         // Create fullscreen quad
-        float quadVertices[] = {
+        std::array<float, 16> quadVertices = {
             // Positions    // TexCoords
             -1.0f,  1.0f,   0.0f, 1.0f,
             -1.0f, -1.0f,   0.0f, 0.0f,
@@ -170,7 +171,7 @@ namespace Pillar {
         glGenBuffers(1, &m_QuadVBO);
         glBindVertexArray(m_QuadVAO);
         glBindBuffer(GL_ARRAY_BUFFER, m_QuadVBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, quadVertices.size() * sizeof(float), quadVertices.data(), GL_STATIC_DRAW);
         
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), nullptr);
@@ -253,8 +254,12 @@ namespace Pillar {
             if (!effect->IsEnabled())
                 continue;
 
+            // Determine which framebuffer to use for ping-pong
+            const size_t pingPongIndex = pingPong ? 1 : 0;
+            
             // Last enabled effect renders to screen (null framebuffer)
-            Framebuffer* outputFB = (i == lastEnabledEffectIndex) ? nullptr : m_PingPongFB[pingPong ? 1 : 0].get();
+            const bool isLastEffect = (i == static_cast<size_t>(lastEnabledEffectIndex));
+            Framebuffer* outputFB = isLastEffect ? nullptr : m_PingPongFB[pingPongIndex].get();
 
             if (outputFB)
             {

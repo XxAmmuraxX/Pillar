@@ -4,6 +4,7 @@
 #include "Pillar/Renderer/Framebuffer.h"
 #include "Pillar/Renderer/Shader.h"
 #include <glm/glm.hpp>
+#include <array>
 #include <memory>
 #include <vector>
 #include <string>
@@ -45,7 +46,7 @@ namespace Pillar {
         void SetIntensity(float intensity) { m_Intensity = glm::clamp(intensity, 0.0f, 1.0f); }
         float GetIntensity() const { return m_Intensity; }
 
-    protected:
+    private:
         bool m_Enabled = true;
         float m_Intensity = 1.0f;
     };
@@ -199,7 +200,7 @@ namespace Pillar {
         void RenderFullscreenQuad();
 
         std::vector<std::shared_ptr<PostProcessEffect>> m_Effects;
-        std::shared_ptr<Framebuffer> m_PingPongFB[2]; // For multi-pass effects
+        std::array<std::shared_ptr<Framebuffer>, 2> m_PingPongFB; // For multi-pass effects
         bool m_Enabled = true;
         uint32_t m_Width = 1920;
         uint32_t m_Height = 1080;

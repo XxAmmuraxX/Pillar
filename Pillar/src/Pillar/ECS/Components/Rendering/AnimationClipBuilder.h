@@ -3,6 +3,7 @@
 #include "AnimationClip.h"
 #include "AnimationFrame.h"
 #include <string>
+#include <string_view>
 #include <vector>
 #include <initializer_list>
 
@@ -53,9 +54,9 @@ namespace Pillar {
 		 * @brief Start building a new animation clip
 		 * @param name Unique name for this animation (e.g., "player_walk")
 		 */
-		explicit AnimationClipBuilder(const std::string& name)
+		explicit AnimationClipBuilder(std::string_view name)
 		{
-			m_Clip.Name = name;
+			m_Clip.Name = std::string(name);
 		}
 
 		/**
@@ -105,7 +106,7 @@ namespace Pillar {
 		 * +---+---+---+---+
 		 * ```
 		 */
-		AnimationClipBuilder& FromSpriteSheet(const std::string& texturePath,
+		AnimationClipBuilder& FromSpriteSheet(std::string_view texturePath,
 			int columns, int rows, int frameCount = -1, int startFrame = 0)
 		{
 			if (columns <= 0 || rows <= 0)

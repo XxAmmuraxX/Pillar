@@ -3,6 +3,8 @@
 #include "Pillar/Core.h"
 #include "Pillar/Renderer/Texture.h"
 #include <glm/glm.hpp>
+#include <algorithm>
+#include <type_traits>
 #include <vector>
 #include <functional>
 #include <cstdint>
@@ -57,32 +59,37 @@ namespace Pillar {
          */
         struct SortKey
         {
-            union
-            {
-                struct
-                {
-                    uint32_t TextureID;       // Bits 0-31
-                    int32_t  Depth : 24;      // Bits 32-55 (signed for negative Z)
-                    uint8_t  Layer : 8;       // Bits 56-63
-                };
-                uint64_t Value;
-            };
+            uint32_t TextureID = 0;       // Bits 0-31
+            int32_t  Depth = 0;           // Bits 32-55 (signed, 24-bit range used)
+            uint8_t  Layer = 0;           // Bits 56-63
 
-            SortKey() : Value(0) {}
+            SortKey() = default;
 
             SortKey(RenderLayer layer, float depth, uint32_t textureID)
+                : TextureID(textureID)
+                , Depth(static_cast<int32_t>(depth * 1000.0f))  // Range: -2147483.648 to +2147483.647
+                , Layer(static_cast<std::underlying_type_t<RenderLayer>>(layer))
             {
-                Layer = static_cast<uint8_t>(layer);
-                // Convert float depth to fixed-point 24-bit signed int
-                // Range: -8388.608 to +8388.607 (good for most 2D games)
-                Depth = static_cast<int32_t>(depth * 1000.0f);
-                TextureID = textureID;
+            }
+
+            /**
+             * @brief Get packed 64-bit value for fast comparison
+             * Layout: Layer (8 bits) | Depth (24 bits) | TextureID (32 bits)
+             */
+            uint64_t GetPackedValue() const
+            {
+                // Clamp depth to 24-bit signed range for packing
+                int32_t clampedDepth = std::max(-8388608, std::min(8388607, Depth));
+                uint64_t value = static_cast<uint64_t>(TextureID);
+                value |= (static_cast<uint64_t>(clampedDepth & 0x00FFFFFF) << 32);
+                value |= (static_cast<uint64_t>(Layer) << 56);
+                return value;
             }
 
             // Comparison operator for sorting
             bool operator<(const SortKey& other) const
             {
-                return Value < other.Value;
+                return GetPackedValue() < other.GetPackedValue();
             }
         };
 

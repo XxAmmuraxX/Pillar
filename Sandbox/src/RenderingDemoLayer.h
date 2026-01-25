@@ -560,12 +560,12 @@ private:
         if (m_VignetteEffect)
         {
             ImGui::Text("Vignette");
-            bool enabled = m_VignetteEffect->IsEnabled();
-            if (ImGui::Checkbox("##VignetteEnabled", &enabled))
+            if (bool enabled = m_VignetteEffect->IsEnabled();
+                ImGui::Checkbox("##VignetteEnabled", &enabled))
                 m_VignetteEffect->SetEnabled(enabled);
             
-            float intensity = m_VignetteEffect->GetIntensity();
-            if (ImGui::SliderFloat("Intensity##Vignette", &intensity, 0.0f, 1.0f))
+            if (float intensity = m_VignetteEffect->GetIntensity();
+                ImGui::SliderFloat("Intensity##Vignette", &intensity, 0.0f, 1.0f))
                 m_VignetteEffect->SetIntensity(intensity);
             
             if (ImGui::SliderFloat("Radius##Vignette", &m_VignetteRadius, 0.0f, 1.0f))
@@ -580,12 +580,12 @@ private:
         if (m_ChromaEffect)
         {
             ImGui::Text("Chromatic Aberration");
-            bool enabled = m_ChromaEffect->IsEnabled();
-            if (ImGui::Checkbox("##ChromaEnabled", &enabled))
+            if (bool enabled = m_ChromaEffect->IsEnabled();
+                ImGui::Checkbox("##ChromaEnabled", &enabled))
                 m_ChromaEffect->SetEnabled(enabled);
             
-            float intensity = m_ChromaEffect->GetIntensity();
-            if (ImGui::SliderFloat("Intensity##Chroma", &intensity, 0.0f, 1.0f))
+            if (float intensity = m_ChromaEffect->GetIntensity();
+                ImGui::SliderFloat("Intensity##Chroma", &intensity, 0.0f, 1.0f))
                 m_ChromaEffect->SetIntensity(intensity);
             
             if (ImGui::SliderFloat("Offset##Chroma", &m_ChromaOffset, 0.0f, 0.02f))
@@ -597,12 +597,12 @@ private:
         if (m_GrayscaleEffect)
         {
             ImGui::Text("Grayscale");
-            bool enabled = m_GrayscaleEffect->IsEnabled();
-            if (ImGui::Checkbox("##GrayscaleEnabled", &enabled))
+            if (bool enabled = m_GrayscaleEffect->IsEnabled();
+                ImGui::Checkbox("##GrayscaleEnabled", &enabled))
                 m_GrayscaleEffect->SetEnabled(enabled);
             
-            float intensity = m_GrayscaleEffect->GetIntensity();
-            if (ImGui::SliderFloat("Intensity##Grayscale", &intensity, 0.0f, 1.0f))
+            if (float intensity = m_GrayscaleEffect->GetIntensity();
+                ImGui::SliderFloat("Intensity##Grayscale", &intensity, 0.0f, 1.0f))
                 m_GrayscaleEffect->SetIntensity(intensity);
         }
         

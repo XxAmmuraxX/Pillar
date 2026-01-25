@@ -5,8 +5,62 @@
 #include "Pillar/Renderer/Texture.h"
 #include <chrono>
 #include <memory>
+#include <functional>
 
 namespace Pillar {
+
+    /**
+     * @brief Helper struct for benchmark results
+     */
+    struct BenchmarkResult
+    {
+        long long TotalTimeMs;
+        float AvgTimePerFrame;
+        float EstimatedFPS;
+    };
+
+    /**
+     * @brief Run a rendering benchmark and measure performance
+     * @param camera The camera to use for rendering
+     * @param iterations Number of iterations to run
+     * @param renderFunc Function that renders a single frame
+     * @return BenchmarkResult with timing statistics
+     */
+    inline BenchmarkResult RunRenderBenchmark(
+        const OrthographicCamera& camera,
+        int iterations,
+        const std::function<void()>& renderFunc)
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        for (int iter = 0; iter < iterations; ++iter)
+        {
+            Renderer2D::BeginScene(camera);
+            renderFunc();
+            Renderer2D::EndScene();
+            Renderer2D::ResetStats();
+        }
+
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+        BenchmarkResult result;
+        result.TotalTimeMs = duration.count();
+        result.AvgTimePerFrame = duration.count() / static_cast<float>(iterations);
+        result.EstimatedFPS = 1000.0f / result.AvgTimePerFrame;
+        return result;
+    }
+
+    /**
+     * @brief Log benchmark results with a descriptive title
+     */
+    inline void LogBenchmarkResult(const char* title, const BenchmarkResult& result)
+    {
+        PIL_CORE_INFO("{} Performance:", title);
+        PIL_CORE_INFO("  Total Time: {} ms", result.TotalTimeMs);
+        PIL_CORE_INFO("  Avg Time Per Frame: {:.2f} ms", result.AvgTimePerFrame);
+        PIL_CORE_INFO("  Estimated FPS: {:.0f}", result.EstimatedFPS);
+    }
 
     class Renderer2DPerformanceTest : public ::testing::Test
     {
@@ -56,12 +110,7 @@ namespace Pillar {
         constexpr int QuadCount = 1000;
         constexpr int Iterations = 100;
 
-        auto start = std::chrono::high_resolution_clock::now();
-
-        for (int iter = 0; iter < Iterations; ++iter)
-        {
-            Renderer2D::BeginScene(*m_Camera);
-
+        auto result = RunRenderBenchmark(*m_Camera, Iterations, [&]() {
             for (int i = 0; i < QuadCount; ++i)
             {
                 float x = (i % 32) * 0.5f - 8.0f;
@@ -69,24 +118,12 @@ namespace Pillar {
                 glm::vec4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
                 Renderer2D::DrawQuad({ x, y }, { 0.4f, 0.4f }, color);
             }
+        });
 
-            Renderer2D::EndScene();
-            Renderer2D::ResetStats();
-        }
-
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-        float avgTimePerFrame = duration.count() / (float)Iterations;
-        float fps = 1000.0f / avgTimePerFrame;
-
-        PIL_CORE_INFO("1000 Colored Quads Performance:");
-        PIL_CORE_INFO("  Total Time: {} ms", duration.count());
-        PIL_CORE_INFO("  Avg Time Per Frame: {:.2f} ms", avgTimePerFrame);
-        PIL_CORE_INFO("  Estimated FPS: {:.0f}", fps);
+        LogBenchmarkResult("1000 Colored Quads", result);
 
         // Should easily hit 60 FPS (16.67ms per frame)
-        EXPECT_LT(avgTimePerFrame, 16.67f) << "Failed to achieve 60 FPS with 1000 quads";
+        EXPECT_LT(result.AvgTimePerFrame, 16.67f) << "Failed to achieve 60 FPS with 1000 quads";
     }
 
     // Benchmark: 10000 colored quads (single texture)
@@ -101,12 +138,7 @@ namespace Pillar {
         constexpr int QuadCount = 10000;
         constexpr int Iterations = 100;
 
-        auto start = std::chrono::high_resolution_clock::now();
-
-        for (int iter = 0; iter < Iterations; ++iter)
-        {
-            Renderer2D::BeginScene(*m_Camera);
-
+        auto result = RunRenderBenchmark(*m_Camera, Iterations, [&]() {
             for (int i = 0; i < QuadCount; ++i)
             {
                 float x = (i % 100) * 0.2f - 10.0f;
@@ -114,24 +146,12 @@ namespace Pillar {
                 glm::vec4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
                 Renderer2D::DrawQuad({ x, y }, { 0.15f, 0.15f }, color);
             }
+        });
 
-            Renderer2D::EndScene();
-            Renderer2D::ResetStats();
-        }
-
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-        float avgTimePerFrame = duration.count() / (float)Iterations;
-        float fps = 1000.0f / avgTimePerFrame;
-
-        PIL_CORE_INFO("10000 Colored Quads Performance:");
-        PIL_CORE_INFO("  Total Time: {} ms", duration.count());
-        PIL_CORE_INFO("  Avg Time Per Frame: {:.2f} ms", avgTimePerFrame);
-        PIL_CORE_INFO("  Estimated FPS: {:.0f}", fps);
+        LogBenchmarkResult("10000 Colored Quads", result);
 
         // Should easily hit 60 FPS (16.67ms per frame)
-        EXPECT_LT(avgTimePerFrame, 16.67f) << "Failed to achieve 60 FPS with 10000 quads";
+        EXPECT_LT(result.AvgTimePerFrame, 16.67f) << "Failed to achieve 60 FPS with 10000 quads";
     }
 
     // Benchmark: 1000 textured quads (10 different textures)
@@ -157,12 +177,7 @@ namespace Pillar {
             textures.push_back(texture);
         }
 
-        auto start = std::chrono::high_resolution_clock::now();
-
-        for (int iter = 0; iter < Iterations; ++iter)
-        {
-            Renderer2D::BeginScene(*m_Camera);
-
+        auto result = RunRenderBenchmark(*m_Camera, Iterations, [&]() {
             for (int i = 0; i < QuadCount; ++i)
             {
                 float x = (i % 32) * 0.5f - 8.0f;
@@ -173,24 +188,12 @@ namespace Pillar {
                 const auto& texture = textures[i % TextureCount];
                 Renderer2D::DrawQuad({ x, y }, { 0.4f, 0.4f }, color, texture);
             }
+        });
 
-            Renderer2D::EndScene();
-            Renderer2D::ResetStats();
-        }
-
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-
-        float avgTimePerFrame = duration.count() / (float)Iterations;
-        float fps = 1000.0f / avgTimePerFrame;
-
-        PIL_CORE_INFO("1000 Textured Quads (10 Textures) Performance:");
-        PIL_CORE_INFO("  Total Time: {} ms", duration.count());
-        PIL_CORE_INFO("  Avg Time Per Frame: {:.2f} ms", avgTimePerFrame);
-        PIL_CORE_INFO("  Estimated FPS: {:.0f}", fps);
+        LogBenchmarkResult("1000 Textured Quads (10 Textures)", result);
 
         // Should still hit 60 FPS even with multiple textures
-        EXPECT_LT(avgTimePerFrame, 16.67f) << "Failed to achieve 60 FPS with 1000 quads and 10 textures";
+        EXPECT_LT(result.AvgTimePerFrame, 16.67f) << "Failed to achieve 60 FPS with 1000 quads and 10 textures";
     }
 
     // Benchmark: Statistics tracking overhead

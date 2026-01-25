@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
+#include "DemoUtils.h"
 #include "Pillar/ECS/SpecializedPools.h"
 #include "Pillar/ECS/Systems/ParticleSystem.h"
 #include "Pillar/ECS/Systems/ParticleEmitterSystem.h"
@@ -295,21 +296,7 @@ private:
 
 	glm::vec2 ScreenToWorld(const glm::vec2& screenPos)
 	{
-		// Get window size (hardcoded for now)
-		float windowWidth = 1600.0f;
-		float windowHeight = 900.0f;
-
-		// Convert screen to NDC (-1 to 1)
-		glm::vec2 ndc;
-		ndc.x = (2.0f * screenPos.x) / windowWidth - 1.0f;
-		ndc.y = 1.0f - (2.0f * screenPos.y) / windowHeight;
-
-		// Convert NDC to world space using camera
-		auto& camera = m_CameraController.GetCamera();
-		glm::mat4 invViewProj = glm::inverse(camera.GetViewProjectionMatrix());
-		glm::vec4 worldPos = invViewProj * glm::vec4(ndc, 0.0f, 1.0f);
-
-		return glm::vec2(worldPos.x, worldPos.y);
+		return DemoUtils::ScreenToWorld(screenPos, m_CameraController.GetCamera());
 	}
 
 private:

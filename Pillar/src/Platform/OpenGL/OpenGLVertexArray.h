@@ -16,10 +16,10 @@ namespace Pillar {
         void Bind() const override;
         void Unbind() const override;
 
-        virtual void AddVertexBuffer(const std::shared_ptr<VertexBuffer>& vertexBuffer) override;
-        virtual void SetIndexBuffer(const std::shared_ptr<IndexBuffer>& indexBuffer) override;
+        void AddVertexBuffer(const std::shared_ptr<VertexBuffer>& vertexBuffer) override;
+        void SetIndexBuffer(const std::shared_ptr<IndexBuffer>& indexBuffer) override;
 
-        virtual const std::shared_ptr<IndexBuffer>& GetIndexBuffer() const override { return m_IndexBuffer; }
+        const std::shared_ptr<IndexBuffer>& GetIndexBuffer() const override { return m_IndexBuffer; }
 
     private:
         uint32_t m_RendererID;

@@ -12,22 +12,26 @@
 
 namespace Pillar {
 
-    // Internal state - single batch renderer (automatic memory management)
-    static std::unique_ptr<IRenderer2D> s_BatchRenderer = nullptr;
+    // Internal state accessor - avoids static initialization order issues
+    static std::unique_ptr<IRenderer2D>& GetBatchRenderer()
+    {
+        static std::unique_ptr<IRenderer2D> s_BatchRenderer = nullptr;
+        return s_BatchRenderer;
+    }
 
     void Renderer2D::Init()
     {
         PIL_CORE_INFO("Initializing Renderer2D (Batch Renderer)");
 
-        if (s_BatchRenderer)
+        if (GetBatchRenderer())
         {
             PIL_CORE_WARN("Renderer2D::Init() called multiple times! Already initialized.");
             return;
         }
 
-        s_BatchRenderer = BatchRenderer2D::Create();
+        GetBatchRenderer() = BatchRenderer2D::Create();
         
-        if (!s_BatchRenderer)
+        if (!GetBatchRenderer())
         {
             PIL_CORE_ERROR("Failed to create batch renderer! Renderer2D initialization failed.");
             return;
@@ -39,7 +43,7 @@ namespace Pillar {
     void Renderer2D::Shutdown()
     {
         PIL_CORE_INFO("Shutting down Renderer2D...");
-        s_BatchRenderer.reset();  // Automatic cleanup
+        GetBatchRenderer().reset();  // Automatic cleanup
     }
 
     void Renderer2D::SetClearColor(const glm::vec4& color)
@@ -59,50 +63,50 @@ namespace Pillar {
 
     void Renderer2D::BeginScene(const OrthographicCamera& camera)
     {
-        if (!s_BatchRenderer)
+        if (!GetBatchRenderer())
         {
             PIL_CORE_ERROR("Renderer2D::BeginScene() called but Renderer2D not initialized! Call Renderer2D::Init() first.");
             return;
         }
-        s_BatchRenderer->BeginScene(camera);
+        GetBatchRenderer()->BeginScene(camera);
     }
 
     void Renderer2D::EndScene()
     {
-        if (!s_BatchRenderer)
+        if (!GetBatchRenderer())
         {
             PIL_CORE_ERROR("Renderer2D::EndScene() called but Renderer2D not initialized! Call Renderer2D::Init() first.");
             return;
         }
-        s_BatchRenderer->EndScene();
+        GetBatchRenderer()->EndScene();
     }
 
     void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, 
                                     const glm::vec4& color)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawQuad(position, size, color);
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawQuad(position, size, color);
     }
 
     void Renderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, 
                                     const glm::vec4& color, const std::shared_ptr<Texture2D>& texture)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawQuad(position, size, color, texture.get());
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawQuad(position, size, color, texture.get());
     }
 
     void Renderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
                                     const glm::vec4& color)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawQuad(position, size, color);
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawQuad(position, size, color);
     }
 
     void Renderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
                                     const std::shared_ptr<Texture2D>& texture)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawQuad(position, size, texture.get());
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawQuad(position, size, texture.get());
     }
 
     void Renderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size, 
@@ -110,30 +114,30 @@ namespace Pillar {
                                     const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                                     bool flipX, bool flipY)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawQuad(position, size, color, texture.get(), texCoordMin, texCoordMax, flipX, flipY);
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawQuad(position, size, color, texture.get(), texCoordMin, texCoordMax, flipX, flipY);
     }
 
     void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
                                            float rotation, const glm::vec4& color)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawRotatedQuad(position, size, rotation, color);
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawRotatedQuad(position, size, rotation, color);
     }
 
     void Renderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
                                            float rotation, const glm::vec4& color, 
                                            const std::shared_ptr<Texture2D>& texture)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawRotatedQuad(position, size, rotation, color, texture.get());
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawRotatedQuad(position, size, rotation, color, texture.get());
     }
 
     void Renderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
                                            float rotation, const glm::vec4& color)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawRotatedQuad(position, size, rotation, color);
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawRotatedQuad(position, size, rotation, color);
     }
 
     void Renderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
@@ -142,8 +146,8 @@ namespace Pillar {
                                            const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                                            bool flipX, bool flipY)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawRotatedQuad(position, size, rotation, color, texture.get(), texCoordMin, texCoordMax, flipX, flipY);
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawRotatedQuad(position, size, rotation, color, texture.get(), texCoordMin, texCoordMax, flipX, flipY);
     }
 
     // ========================================================================
@@ -202,8 +206,8 @@ namespace Pillar {
                              const SubTexture& subTexture,
                              bool flipX, bool flipY)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawQuad(position, size, color, texture.get(), subTexture.UVMin, subTexture.UVMax, flipX, flipY);
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawQuad(position, size, color, texture.get(), subTexture.UVMin, subTexture.UVMax, flipX, flipY);
     }
 
     void Renderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
@@ -212,8 +216,8 @@ namespace Pillar {
                                      const SubTexture& subTexture,
                                      bool flipX, bool flipY)
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->DrawRotatedQuad(position, size, rotation, color, texture.get(), subTexture.UVMin, subTexture.UVMax, flipX, flipY);
+        if (GetBatchRenderer())
+            GetBatchRenderer()->DrawRotatedQuad(position, size, rotation, color, texture.get(), subTexture.UVMin, subTexture.UVMax, flipX, flipY);
     }
 
     // ========================================================================
@@ -227,7 +231,7 @@ namespace Pillar {
 
     void Renderer2D::DrawLine(const glm::vec3& start, const glm::vec3& end, const glm::vec4& color, float thickness)
     {
-        if (!s_BatchRenderer || thickness <= 0.0f)
+        if (!GetBatchRenderer() || thickness <= 0.0f)
             return;
 
         glm::vec3 delta = end - start;
@@ -237,7 +241,7 @@ namespace Pillar {
 
         float angle = std::atan2(delta.y, delta.x);
         glm::vec3 midpoint = start + delta * 0.5f;
-        s_BatchRenderer->DrawRotatedQuad(midpoint, { length, thickness }, angle, color);
+        GetBatchRenderer()->DrawRotatedQuad(midpoint, { length, thickness }, angle, color);
     }
 
     void Renderer2D::DrawRect(const glm::vec2& center, const glm::vec2& size, const glm::vec4& color, float thickness)
@@ -266,7 +270,7 @@ namespace Pillar {
 
     void Renderer2D::DrawCircle(const glm::vec3& center, float radius, const glm::vec4& color, int segments, float thickness)
     {
-        if (!s_BatchRenderer || radius <= 0.0f || thickness <= 0.0f)
+        if (!GetBatchRenderer() || radius <= 0.0f || thickness <= 0.0f)
             return;
 
         int clampedSegments = std::max(3, segments);
@@ -337,25 +341,25 @@ namespace Pillar {
 
     uint32_t Renderer2D::GetDrawCallCount()
     {
-        if (s_BatchRenderer)
-            return s_BatchRenderer->GetDrawCallCount();
+        if (GetBatchRenderer())
+            return GetBatchRenderer()->GetDrawCallCount();
         return 0;
     }
 
     uint32_t Renderer2D::GetQuadCount()
     {
-        if (s_BatchRenderer)
-            return s_BatchRenderer->GetQuadCount();
+        if (GetBatchRenderer())
+            return GetBatchRenderer()->GetQuadCount();
         return 0;
     }
 
     Renderer2D::Renderer2DStats Renderer2D::GetStats()
     {
         Renderer2DStats stats;
-        if (s_BatchRenderer)
+        if (GetBatchRenderer())
         {
             // Cast to BatchRenderer2D to access full stats
-            const auto* batchRenderer = dynamic_cast<const BatchRenderer2D*>(s_BatchRenderer.get());
+            const auto* batchRenderer = dynamic_cast<const BatchRenderer2D*>(GetBatchRenderer().get());
             if (batchRenderer)
             {
                 const auto& internalStats = batchRenderer->m_Stats;
@@ -377,8 +381,8 @@ namespace Pillar {
 
     void Renderer2D::ResetStats()
     {
-        if (s_BatchRenderer)
-            s_BatchRenderer->ResetStats();
+        if (GetBatchRenderer())
+            GetBatchRenderer()->ResetStats();
     }
 
     Renderer2D::ScopedDepthState::ScopedDepthState(bool enableDepthTest, bool enableDepthWrite)

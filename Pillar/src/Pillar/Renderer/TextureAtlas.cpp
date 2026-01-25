@@ -9,6 +9,150 @@ using json = nlohmann::json;
 namespace Pillar {
 
     // ========================================================================
+    // Internal Helper Functions
+    // ========================================================================
+    namespace {
+        /**
+         * @brief Parse a SubTexture from a TexturePacker JSON frame object
+         */
+        SubTexture ParseTexturePackerFrame(const json& frame, float atlasWidth, float atlasHeight)
+        {
+            SubTexture subTex;
+            
+            // Parse frame rectangle
+            int x = frame["frame"]["x"].get<int>();
+            int y = frame["frame"]["y"].get<int>();
+            int w = frame["frame"]["w"].get<int>();
+            int h = frame["frame"]["h"].get<int>();
+            
+            // OpenGL uses bottom-left origin, TexturePacker uses top-left
+            glm::vec2 pixelMin(static_cast<float>(x), atlasHeight - static_cast<float>(y + h));
+            glm::vec2 pixelMax(static_cast<float>(x + w), atlasHeight - static_cast<float>(y));
+            
+            subTex.UVMin = pixelMin / glm::vec2(atlasWidth, atlasHeight);
+            subTex.UVMax = pixelMax / glm::vec2(atlasWidth, atlasHeight);
+            
+            // Parse optional data
+            if (frame.contains("rotated"))
+                subTex.Rotated = frame["rotated"].get<bool>();
+            
+            if (frame.contains("trimmed"))
+                subTex.Trimmed = frame["trimmed"].get<bool>();
+            
+            if (frame.contains("sourceSize"))
+            {
+                subTex.SourceSize = glm::vec2(
+                    frame["sourceSize"]["w"].get<float>(),
+                    frame["sourceSize"]["h"].get<float>()
+                );
+            }
+            
+            if (frame.contains("spriteSourceSize"))
+            {
+                subTex.SourceOffset = glm::vec2(
+                    frame["spriteSourceSize"]["x"].get<float>(),
+                    frame["spriteSourceSize"]["y"].get<float>()
+                );
+            }
+            
+            return subTex;
+        }
+
+        /**
+         * @brief Strip file extension from sprite name
+         */
+        std::string StripFileExtension(const std::string& filename)
+        {
+            size_t dotPos = filename.find_last_of('.');
+            if (dotPos != std::string::npos)
+                return filename.substr(0, dotPos);
+            return filename;
+        }
+
+        /**
+         * @brief Common structure for atlas JSON loading result
+         */
+        struct AtlasJsonData
+        {
+            json Root;
+            float AtlasWidth = 0.0f;
+            float AtlasHeight = 0.0f;
+            bool Success = false;
+        };
+
+        /**
+         * @brief Load and validate atlas JSON file (common to TexturePacker and Aseprite)
+         * @param jsonPath Path to JSON file
+         * @param formatName Human-readable format name for error messages
+         * @return AtlasJsonData with parsed JSON and dimensions, or Success=false on error
+         */
+        AtlasJsonData LoadAtlasJson(const std::string& jsonPath, const char* formatName)
+        {
+            AtlasJsonData result;
+            
+            std::string resolvedPath = AssetManager::GetAssetPath(jsonPath);
+            std::ifstream file(resolvedPath);
+            if (!file.is_open())
+            {
+                PIL_CORE_ERROR("TextureAtlas: Failed to open {} JSON: '{}'", formatName, resolvedPath);
+                return result;
+            }
+
+            try
+            {
+                file >> result.Root;
+            }
+            catch (const json::exception& e)
+            {
+                PIL_CORE_ERROR("TextureAtlas: Failed to parse JSON: {}", e.what());
+                return result;
+            }
+
+            // Get texture dimensions from meta
+            if (!result.Root.contains("meta") || !result.Root["meta"].contains("size"))
+            {
+                PIL_CORE_ERROR("TextureAtlas: Invalid {} JSON (missing meta.size)", formatName);
+                return result;
+            }
+
+            result.AtlasWidth = static_cast<float>(result.Root["meta"]["size"]["w"].get<int>());
+            result.AtlasHeight = static_cast<float>(result.Root["meta"]["size"]["h"].get<int>());
+
+            // Validate frames key
+            if (!result.Root.contains("frames"))
+            {
+                PIL_CORE_ERROR("TextureAtlas: Invalid {} JSON (missing frames)", formatName);
+                return result;
+            }
+
+            result.Success = true;
+            return result;
+        }
+
+        /**
+         * @brief Parse UV coordinates from a frame object (common to both formats)
+         */
+        SubTexture ParseFrameUVs(const json& frame, float atlasWidth, float atlasHeight)
+        {
+            SubTexture subTex;
+            
+            int x = frame["frame"]["x"].get<int>();
+            int y = frame["frame"]["y"].get<int>();
+            int w = frame["frame"]["w"].get<int>();
+            int h = frame["frame"]["h"].get<int>();
+            
+            // Both formats use top-left origin, convert to OpenGL bottom-left
+            glm::vec2 pixelMin(static_cast<float>(x), atlasHeight - static_cast<float>(y + h));
+            glm::vec2 pixelMax(static_cast<float>(x + w), atlasHeight - static_cast<float>(y));
+            
+            subTex.UVMin = pixelMin / glm::vec2(atlasWidth, atlasHeight);
+            subTex.UVMax = pixelMax / glm::vec2(atlasWidth, atlasHeight);
+            
+            return subTex;
+        }
+    } // anonymous namespace
+
+    // ========================================================================
     // SubTexture Implementation
     // ========================================================================
 
@@ -84,7 +228,7 @@ namespace Pillar {
             return;
         }
 
-        if (m_SubTextures.find(name) != m_SubTextures.end())
+        if (auto it = m_SubTextures.find(name); it != m_SubTextures.end())
         {
             PIL_CORE_WARN("TextureAtlas: Sub-texture '{}' already exists, overwriting", name);
         }
@@ -100,8 +244,7 @@ namespace Pillar {
             return SubTexture(); // Return default
         }
 
-        auto it = m_SubTextures.find(name);
-        if (it != m_SubTextures.end())
+        if (auto it = m_SubTextures.find(name); it != m_SubTextures.end())
         {
             return it->second;
         }
@@ -117,8 +260,7 @@ namespace Pillar {
 
     bool TextureAtlas::RemoveSubTexture(const std::string& name)
     {
-        auto it = m_SubTextures.find(name);
-        if (it != m_SubTextures.end())
+        if (auto it = m_SubTextures.find(name); it != m_SubTextures.end())
         {
             m_SubTextures.erase(it);
             return true;
@@ -139,95 +281,20 @@ namespace Pillar {
 
     bool TextureAtlas::LoadFromTexturePacker(const std::string& jsonPath)
     {
-        std::string resolvedPath = AssetManager::GetAssetPath(jsonPath);
-        std::ifstream file(resolvedPath);
-        if (!file.is_open())
-        {
-            PIL_CORE_ERROR("TextureAtlas: Failed to open TexturePacker JSON: '{}'", resolvedPath);
+        auto atlasData = LoadAtlasJson(jsonPath, "TexturePacker");
+        if (!atlasData.Success)
             return false;
-        }
 
-        json root;
-        try
-        {
-            file >> root;
-        }
-        catch (const json::exception& e)
-        {
-            PIL_CORE_ERROR("TextureAtlas: Failed to parse JSON: {}", e.what());
-            return false;
-        }
-
-        // Get texture dimensions from meta
-        if (!root.contains("meta") || !root["meta"].contains("size"))
-        {
-            PIL_CORE_ERROR("TextureAtlas: Invalid TexturePacker JSON (missing meta.size)");
-            return false;
-        }
-
-        float atlasWidth = static_cast<float>(root["meta"]["size"]["w"].get<int>());
-        float atlasHeight = static_cast<float>(root["meta"]["size"]["h"].get<int>());
-
-        // Parse frames
-        if (!root.contains("frames"))
-        {
-            PIL_CORE_ERROR("TextureAtlas: Invalid TexturePacker JSON (missing frames)");
-            return false;
-        }
-
-        const json& frames = root["frames"];
+        const json& frames = atlasData.Root["frames"];
         
         // Handle both array and object formats
         if (frames.is_object())
         {
             // Hash format: "frames": { "sprite1.png": {...}, "sprite2.png": {...} }
-            for (auto& [frameName, frame] : frames.items())
+            for (const auto& [frameName, frame] : frames.items())
             {
-                SubTexture subTex;
-                
-                // Parse frame rectangle
-                int x = frame["frame"]["x"].get<int>();
-                int y = frame["frame"]["y"].get<int>();
-                int w = frame["frame"]["w"].get<int>();
-                int h = frame["frame"]["h"].get<int>();
-                
-                // OpenGL uses bottom-left origin, TexturePacker uses top-left
-                glm::vec2 pixelMin(static_cast<float>(x), atlasHeight - static_cast<float>(y + h));
-                glm::vec2 pixelMax(static_cast<float>(x + w), atlasHeight - static_cast<float>(y));
-                
-                subTex.UVMin = pixelMin / glm::vec2(atlasWidth, atlasHeight);
-                subTex.UVMax = pixelMax / glm::vec2(atlasWidth, atlasHeight);
-                
-                // Parse optional data
-                if (frame.contains("rotated"))
-                    subTex.Rotated = frame["rotated"].get<bool>();
-                
-                if (frame.contains("trimmed"))
-                    subTex.Trimmed = frame["trimmed"].get<bool>();
-                
-                if (frame.contains("sourceSize"))
-                {
-                    subTex.SourceSize = glm::vec2(
-                        frame["sourceSize"]["w"].get<float>(),
-                        frame["sourceSize"]["h"].get<float>()
-                    );
-                }
-                
-                if (frame.contains("spriteSourceSize"))
-                {
-                    subTex.SourceOffset = glm::vec2(
-                        frame["spriteSourceSize"]["x"].get<float>(),
-                        frame["spriteSourceSize"]["y"].get<float>()
-                    );
-                }
-                
-                // Remove file extension from name
-                std::string spriteName = frameName;
-                size_t dotPos = spriteName.find_last_of('.');
-                if (dotPos != std::string::npos)
-                    spriteName = spriteName.substr(0, dotPos);
-                
-                AddSubTexture(spriteName, subTex);
+                SubTexture subTex = ParseTexturePackerFrame(frame, atlasData.AtlasWidth, atlasData.AtlasHeight);
+                AddSubTexture(StripFileExtension(frameName), subTex);
             }
         }
         else if (frames.is_array())
@@ -239,48 +306,8 @@ namespace Pillar {
                     continue;
                 
                 std::string frameName = frame["filename"].get<std::string>();
-                
-                SubTexture subTex;
-                
-                int x = frame["frame"]["x"].get<int>();
-                int y = frame["frame"]["y"].get<int>();
-                int w = frame["frame"]["w"].get<int>();
-                int h = frame["frame"]["h"].get<int>();
-                
-                glm::vec2 pixelMin(static_cast<float>(x), atlasHeight - static_cast<float>(y + h));
-                glm::vec2 pixelMax(static_cast<float>(x + w), atlasHeight - static_cast<float>(y));
-                
-                subTex.UVMin = pixelMin / glm::vec2(atlasWidth, atlasHeight);
-                subTex.UVMax = pixelMax / glm::vec2(atlasWidth, atlasHeight);
-                
-                if (frame.contains("rotated"))
-                    subTex.Rotated = frame["rotated"].get<bool>();
-                
-                if (frame.contains("trimmed"))
-                    subTex.Trimmed = frame["trimmed"].get<bool>();
-                
-                if (frame.contains("sourceSize"))
-                {
-                    subTex.SourceSize = glm::vec2(
-                        frame["sourceSize"]["w"].get<float>(),
-                        frame["sourceSize"]["h"].get<float>()
-                    );
-                }
-                
-                if (frame.contains("spriteSourceSize"))
-                {
-                    subTex.SourceOffset = glm::vec2(
-                        frame["spriteSourceSize"]["x"].get<float>(),
-                        frame["spriteSourceSize"]["y"].get<float>()
-                    );
-                }
-                
-                std::string spriteName = frameName;
-                size_t dotPos = spriteName.find_last_of('.');
-                if (dotPos != std::string::npos)
-                    spriteName = spriteName.substr(0, dotPos);
-                
-                AddSubTexture(spriteName, subTex);
+                SubTexture subTex = ParseTexturePackerFrame(frame, atlasData.AtlasWidth, atlasData.AtlasHeight);
+                AddSubTexture(StripFileExtension(frameName), subTex);
             }
         }
 
@@ -290,61 +317,17 @@ namespace Pillar {
 
     bool TextureAtlas::LoadFromAseprite(const std::string& jsonPath)
     {
-        std::string resolvedPath = AssetManager::GetAssetPath(jsonPath);
-        std::ifstream file(resolvedPath);
-        if (!file.is_open())
-        {
-            PIL_CORE_ERROR("TextureAtlas: Failed to open Aseprite JSON: '{}'", resolvedPath);
+        auto atlasData = LoadAtlasJson(jsonPath, "Aseprite");
+        if (!atlasData.Success)
             return false;
-        }
 
-        json root;
-        try
-        {
-            file >> root;
-        }
-        catch (const json::exception& e)
-        {
-            PIL_CORE_ERROR("TextureAtlas: Failed to parse JSON: {}", e.what());
-            return false;
-        }
-
-        // Get texture dimensions from meta
-        if (!root.contains("meta") || !root["meta"].contains("size"))
-        {
-            PIL_CORE_ERROR("TextureAtlas: Invalid Aseprite JSON (missing meta.size)");
-            return false;
-        }
-
-        float atlasWidth = static_cast<float>(root["meta"]["size"]["w"].get<int>());
-        float atlasHeight = static_cast<float>(root["meta"]["size"]["h"].get<int>());
-
-        // Parse frames (Aseprite uses object format)
-        if (!root.contains("frames"))
-        {
-            PIL_CORE_ERROR("TextureAtlas: Invalid Aseprite JSON (missing frames)");
-            return false;
-        }
-
-        const json& frames = root["frames"];
+        const json& frames = atlasData.Root["frames"];
         
         if (frames.is_object())
         {
             for (auto& [frameName, frame] : frames.items())
             {
-                SubTexture subTex;
-                
-                int x = frame["frame"]["x"].get<int>();
-                int y = frame["frame"]["y"].get<int>();
-                int w = frame["frame"]["w"].get<int>();
-                int h = frame["frame"]["h"].get<int>();
-                
-                // Aseprite uses top-left origin, convert to OpenGL bottom-left
-                glm::vec2 pixelMin(static_cast<float>(x), atlasHeight - static_cast<float>(y + h));
-                glm::vec2 pixelMax(static_cast<float>(x + w), atlasHeight - static_cast<float>(y));
-                
-                subTex.UVMin = pixelMin / glm::vec2(atlasWidth, atlasHeight);
-                subTex.UVMax = pixelMax / glm::vec2(atlasWidth, atlasHeight);
+                SubTexture subTex = ParseFrameUVs(frame, atlasData.AtlasWidth, atlasData.AtlasHeight);
                 
                 // Aseprite includes duration for animations
                 // Store source size if available
