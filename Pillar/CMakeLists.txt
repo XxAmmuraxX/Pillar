@@ -33,15 +33,19 @@ add_library(Pillar STATIC
     # Renderer
     src/Pillar/Renderer/RenderAPI.cpp
     src/Pillar/Renderer/Renderer.cpp
-    src/Pillar/Renderer/Renderer2DBackend.cpp
+    src/Pillar/Renderer/Renderer2D.cpp
     src/Pillar/Renderer/RenderCommand.cpp
     src/Pillar/Renderer/Shader.cpp
+    src/Pillar/Renderer/ShaderLibrary.cpp
     src/Pillar/Renderer/Buffer.cpp
     src/Pillar/Renderer/VertexArray.cpp
     src/Pillar/Renderer/Texture.cpp
+    src/Pillar/Renderer/TextureAtlas.cpp
     src/Pillar/Renderer/Framebuffer.cpp
     src/Pillar/Renderer/Lighting2D.cpp
     src/Pillar/Renderer/Lighting2DGeometry.cpp
+    src/Pillar/Renderer/PostProcessing.cpp
+    src/Pillar/Renderer/RenderQueue.cpp
     src/Pillar/Renderer/OrthographicCamera.cpp
     src/Pillar/Renderer/OrthographicCameraController.cpp
     src/Pillar/Renderer/BatchRenderer2D.cpp
@@ -107,6 +111,7 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h
     src/Pillar/ECS/Components/Rendering/AnimationFrame.h
     src/Pillar/ECS/Components/Rendering/AnimationClip.h
+    src/Pillar/ECS/Components/Rendering/AnimationClipBuilder.h
     src/Pillar/ECS/Components/Rendering/AnimationComponent.h
     # Animation System
     src/Pillar/ECS/Systems/AnimationSystem.cpp

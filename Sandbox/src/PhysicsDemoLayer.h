@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
@@ -88,16 +88,16 @@ public:
 		m_XPCollectionSystem->OnUpdate(dt);
 
 		// Render
-		Pillar::Renderer::SetClearColor({ 0.1f, 0.1f, 0.15f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.1f, 0.1f, 0.15f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
-		Pillar::Renderer2DBackend::ResetStats();
-		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2D::ResetStats();
+		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 
 		// Draw all entities
 		DrawEntities();
 
-		Pillar::Renderer2DBackend::EndScene();
+		Pillar::Renderer2D::EndScene();
 	}
 
 	void OnEvent(Pillar::Event& event) override
@@ -273,9 +273,9 @@ private:
 				collider.HalfExtents * 2.0f : glm::vec2(collider.Radius * 2.0f);
 
 			if (transform.Rotation != 0.0f)
-				Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, { 0.3f, 0.3f, 0.3f, 1.0f });
+				Pillar::Renderer2D::DrawRotatedQuad(transform.Position, size, transform.Rotation, { 0.3f, 0.3f, 0.3f, 1.0f });
 			else
-				Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, { 0.3f, 0.3f, 0.3f, 1.0f });
+				Pillar::Renderer2D::DrawQuad(transform.Position, size, { 0.3f, 0.3f, 0.3f, 1.0f });
 		}
 
 		// Draw player
@@ -283,9 +283,9 @@ private:
 		{
 			auto& transform = m_Player.GetComponent<Pillar::TransformComponent>();
 			if (transform.Rotation != 0.0f)
-				Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, { 1.0f, 1.0f }, transform.Rotation, { 0.2f, 0.8f, 0.3f, 1.0f });
+				Pillar::Renderer2D::DrawRotatedQuad(transform.Position, { 1.0f, 1.0f }, transform.Rotation, { 0.2f, 0.8f, 0.3f, 1.0f });
 			else
-				Pillar::Renderer2DBackend::DrawQuad(transform.Position, { 1.0f, 1.0f }, { 0.2f, 0.8f, 0.3f, 1.0f });
+				Pillar::Renderer2D::DrawQuad(transform.Position, { 1.0f, 1.0f }, { 0.2f, 0.8f, 0.3f, 1.0f });
 		}
 
 		// Draw enemies
@@ -298,9 +298,9 @@ private:
 
 			auto& transform = enemyView.get<Pillar::TransformComponent>(entity);
 			if (transform.Rotation != 0.0f)
-				Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, { 0.8f, 0.8f }, transform.Rotation, { 0.9f, 0.2f, 0.2f, 1.0f });
+				Pillar::Renderer2D::DrawRotatedQuad(transform.Position, { 0.8f, 0.8f }, transform.Rotation, { 0.9f, 0.2f, 0.2f, 1.0f });
 			else
-				Pillar::Renderer2DBackend::DrawQuad(transform.Position, { 0.8f, 0.8f }, { 0.9f, 0.2f, 0.2f, 1.0f });
+				Pillar::Renderer2D::DrawQuad(transform.Position, { 0.8f, 0.8f }, { 0.9f, 0.2f, 0.2f, 1.0f });
 		}
 
 		// Draw XP gems
@@ -315,9 +315,9 @@ private:
 				glm::vec4(0.8f, 0.8f, 0.2f, 1.0f);   // Dim yellow otherwise
 
 			if (transform.Rotation != 0.0f)
-				Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, { 0.3f, 0.3f }, transform.Rotation, color);
+				Pillar::Renderer2D::DrawRotatedQuad(transform.Position, { 0.3f, 0.3f }, transform.Rotation, color);
 			else
-				Pillar::Renderer2DBackend::DrawQuad(transform.Position, { 0.3f, 0.3f }, color);
+				Pillar::Renderer2D::DrawQuad(transform.Position, { 0.3f, 0.3f }, color);
 		}
 
 		// Draw bullets
@@ -326,9 +326,9 @@ private:
 		{
 			auto& transform = bulletView.get<Pillar::TransformComponent>(entity);
 			if (transform.Rotation != 0.0f)
-				Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, { 0.2f, 0.2f }, transform.Rotation, { 1.0f, 0.5f, 0.0f, 1.0f });
+				Pillar::Renderer2D::DrawRotatedQuad(transform.Position, { 0.2f, 0.2f }, transform.Rotation, { 1.0f, 0.5f, 0.0f, 1.0f });
 			else
-				Pillar::Renderer2DBackend::DrawQuad(transform.Position, { 0.2f, 0.2f }, { 1.0f, 0.5f, 0.0f, 1.0f });
+				Pillar::Renderer2D::DrawQuad(transform.Position, { 0.2f, 0.2f }, { 1.0f, 0.5f, 0.0f, 1.0f });
 		}
 	}
 

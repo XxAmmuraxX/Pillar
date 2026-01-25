@@ -3,7 +3,7 @@
 #include "Pillar/Logger.h"
 #include "Pillar/Renderer/Renderer.h"
 #include "Pillar/Audio/AudioEngine.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/Lighting2D.h"
 #include <chrono>
 #include "Pillar/Input.h"
@@ -20,7 +20,7 @@ namespace Pillar
 	{
 		PIL_CORE_ASSERT(!s_Instance, "Application already exists!");
 		s_Instance = this;
-		m_Window = std::unique_ptr<Window>(Window::Create(WindowProps("Pillar Engine", 1280, 720)));
+		m_Window = Window::Create(WindowProps("Pillar Engine", 1280, 720));
 		m_Window->SetEventCallback(BIND_EVENT_FN(Application::OnEvent));
 
 		// Initialize Audio Engine
@@ -28,7 +28,7 @@ namespace Pillar
 
 		// Initialize Renderer
 		Renderer::Init();
-		Renderer2DBackend::Init();  // Batch renderer
+		Renderer2D::Init();  // Batch renderer
 		Lighting2D::Init();
 
 		// Create and push ImGui layer as an overlay
@@ -40,7 +40,7 @@ namespace Pillar
 	{
 		// Ensure layers are detached and destroyed via LayerStack destructor
 		Lighting2D::Shutdown();
-		Renderer2DBackend::Shutdown();
+		Renderer2D::Shutdown();
 		Renderer::Shutdown();
 		AudioEngine::Shutdown();
 	}
@@ -50,6 +50,11 @@ namespace Pillar
 		return *s_Instance;
 	}
 
+	Application* Application::GetInstancePtr()
+	{
+		return s_Instance;
+	}
+
 	void Application::OnEvent(Event& e)
 	{
 		EventDispatcher dispatcher(e);
@@ -57,7 +62,7 @@ namespace Pillar
 
 		// Handle window resize for renderer viewport
 		dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
-			Renderer::SetViewport(0, 0, event.GetWidth(), event.GetHeight());
+			Renderer2D::SetViewport(0, 0, event.GetWidth(), event.GetHeight());
 			return false;
 		});
 
@@ -114,8 +119,8 @@ namespace Pillar
 			Input::OnUpdate();
 
 			// Clear screen
-			Renderer::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
-			Renderer::Clear();
+			Renderer2D::SetClearColor({ 0.1f, 0.1f, 0.1f, 1.0f });
+			Renderer2D::Clear();
 
 			// Begin scene
 

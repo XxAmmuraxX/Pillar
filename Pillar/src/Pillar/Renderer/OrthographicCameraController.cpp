@@ -18,35 +18,39 @@ namespace Pillar {
         // Use base speed as the multiplier so user changes persist
         m_CameraTranslationSpeed = m_BaseTranslationSpeed * m_ZoomLevel;
 
-        // Movement input (WASD)
-        if (Input::IsKeyPressed(PIL_KEY_A))
+        // Only process keyboard input if enabled (disabled by default)
+        if (m_KeyboardEnabled)
         {
-            m_CameraPosition.x -= m_CameraTranslationSpeed * deltaTime;
-        }
-        else if (Input::IsKeyPressed(PIL_KEY_D))
-        {
-            m_CameraPosition.x += m_CameraTranslationSpeed * deltaTime;
-        }
-
-        if (Input::IsKeyPressed(PIL_KEY_W))
-        {
-            m_CameraPosition.y += m_CameraTranslationSpeed * deltaTime;
-        }
-        else if (Input::IsKeyPressed(PIL_KEY_S))
-        {
-            m_CameraPosition.y -= m_CameraTranslationSpeed * deltaTime;
-        }
-
-        // Rotation input (Q/E) - only if rotation enabled
-        if (m_Rotation)
-        {
-            if (Input::IsKeyPressed(PIL_KEY_Q))
+            // Movement input (WASD)
+            if (Input::IsKeyPressed(PIL_KEY_A))
             {
-                m_CameraRotation += m_CameraRotationSpeed * deltaTime;
+                m_CameraPosition.x -= m_CameraTranslationSpeed * deltaTime;
             }
-            else if (Input::IsKeyPressed(PIL_KEY_E))
+            else if (Input::IsKeyPressed(PIL_KEY_D))
             {
-                m_CameraRotation -= m_CameraRotationSpeed * deltaTime;
+                m_CameraPosition.x += m_CameraTranslationSpeed * deltaTime;
+            }
+
+            if (Input::IsKeyPressed(PIL_KEY_W))
+            {
+                m_CameraPosition.y += m_CameraTranslationSpeed * deltaTime;
+            }
+            else if (Input::IsKeyPressed(PIL_KEY_S))
+            {
+                m_CameraPosition.y -= m_CameraTranslationSpeed * deltaTime;
+            }
+
+            // Rotation input (Q/E) - only if rotation enabled
+            if (m_Rotation)
+            {
+                if (Input::IsKeyPressed(PIL_KEY_Q))
+                {
+                    m_CameraRotation += m_CameraRotationSpeed * deltaTime;
+                }
+                else if (Input::IsKeyPressed(PIL_KEY_E))
+                {
+                    m_CameraRotation -= m_CameraRotationSpeed * deltaTime;
+                }
             }
         }
 
@@ -65,8 +69,8 @@ namespace Pillar {
     bool OrthographicCameraController::OnMouseScrolled(MouseScrolledEvent& e)
     {
         m_ZoomLevel -= e.GetYOffset() * m_ZoomSpeed;
-        m_ZoomLevel = std::max(m_ZoomLevel, 0.25f); // Min zoom
-        m_ZoomLevel = std::min(m_ZoomLevel, 10.0f);  // Max zoom
+        m_ZoomLevel = std::max(m_ZoomLevel, m_MinZoom);
+        m_ZoomLevel = std::min(m_ZoomLevel, m_MaxZoom);
         
         // Recalculate projection matrix with new zoom level
         m_Camera = OrthographicCamera(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);
@@ -94,8 +98,8 @@ namespace Pillar {
 
     void OrthographicCameraController::SetZoomLevel(float level)
     {
-        m_ZoomLevel = std::max(level, 0.25f); // Min zoom
-        m_ZoomLevel = std::min(m_ZoomLevel, 10.0f);  // Max zoom
+        m_ZoomLevel = std::max(level, m_MinZoom);
+        m_ZoomLevel = std::min(m_ZoomLevel, m_MaxZoom);
         
         // Recalculate projection matrix
         m_Camera = OrthographicCamera(-m_AspectRatio * m_ZoomLevel, m_AspectRatio * m_ZoomLevel, -m_ZoomLevel, m_ZoomLevel);
@@ -103,6 +107,18 @@ namespace Pillar {
         // Restore camera position and rotation
         m_Camera.SetPosition(m_CameraPosition);
         m_Camera.SetRotation(m_CameraRotation);
+    }
+
+    void OrthographicCameraController::SetZoomLimits(float minZoom, float maxZoom)
+    {
+        m_MinZoom = std::max(minZoom, 0.01f);  // Prevent zero/negative zoom
+        m_MaxZoom = std::max(maxZoom, m_MinZoom);  // Ensure max >= min
+        
+        // Clamp current zoom level to new limits
+        if (m_ZoomLevel < m_MinZoom || m_ZoomLevel > m_MaxZoom)
+        {
+            SetZoomLevel(m_ZoomLevel);  // This will clamp and update camera
+        }
     }
 
 }

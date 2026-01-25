@@ -33,16 +33,16 @@ namespace Pillar {
                      const glm::vec4& color) override;
         
         void DrawQuad(const glm::vec2& position, const glm::vec2& size, 
-                     const glm::vec4& color, Texture2D* texture) override;
+                     const glm::vec4& color, const Texture2D* texture) override;
 
         void DrawQuad(const glm::vec3& position, const glm::vec2& size,
                  const glm::vec4& color) override;
 
         void DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                 Texture2D* texture) override;
+                 const Texture2D* texture) override;
 
         void DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                 const glm::vec4& color, Texture2D* texture,
+                 const glm::vec4& color, const Texture2D* texture,
                  const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                  bool flipX = false, bool flipY = false) override;
 
@@ -50,13 +50,13 @@ namespace Pillar {
                      float rotation, const glm::vec4& color) override;
         
         void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
-                     float rotation, const glm::vec4& color, Texture2D* texture) override;
+                     float rotation, const glm::vec4& color, const Texture2D* texture) override;
 
         void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
                      float rotation, const glm::vec4& color) override;
 
         void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
-                     float rotation, const glm::vec4& color, Texture2D* texture,
+                     float rotation, const glm::vec4& color, const Texture2D* texture,
                      const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                      bool flipX = false, bool flipY = false) override;
 
@@ -79,7 +79,7 @@ namespace Pillar {
         // Batch data structure (per texture)
         struct QuadBatch
         {
-            Texture2D* Texture = nullptr;
+            const Texture2D* Texture = nullptr;  // const for read-only access
             std::vector<QuadVertex> Vertices;  // 4 vertices per quad
             uint32_t QuadCount = 0;
 
@@ -101,8 +101,8 @@ namespace Pillar {
         std::unordered_map<uint32_t, QuadBatch> m_Batches;
         
         // Texture slots (OpenGL supports 32 texture units)
-        static const uint32_t MaxTextureSlots = 32;
-        std::array<Texture2D*, MaxTextureSlots> m_TextureSlots;
+        static constexpr uint32_t MaxTextureSlots = 32;
+        std::array<const Texture2D*, MaxTextureSlots> m_TextureSlots;  // const for read-only
         uint32_t m_TextureSlotIndex = 1;  // 0 = white texture
 
         // Camera
@@ -111,9 +111,9 @@ namespace Pillar {
     // Helper methods
     void StartBatch();
     void NextBatch();
-    uint32_t GetOrAddTextureSlot(Texture2D* texture);
+    uint32_t GetOrAddTextureSlot(const Texture2D* texture);  // const parameter
     void AddQuadToBatch(const glm::vec3& position, const glm::vec2& size,
-                       const glm::vec4& color, Texture2D* texture,
+                       const glm::vec4& color, const Texture2D* texture,  // const parameter
                        const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                        float rotation, bool flipX = false, bool flipY = false);
 };} // namespace Pillar

@@ -424,15 +424,19 @@ namespace Pillar {
 				if (j.contains("orderInLayer"))
 					s.OrderInLayer = j["orderInLayer"].get<int>();
 				
-				// Compute ZIndex from Layer if available, otherwise use saved value
+				// Deserialize ZIndex first if present
+				if (j.contains("zIndex"))
+					s.ZIndex = j["zIndex"].get<float>();
+				
+				// Then override with layer-based ZIndex if layer is specified
+				// (In editor context, layer manager will have set proper base ZIndex values)
 				if (!s.Layer.empty())
 				{
-					// Use GetFinalZIndex() which handles both fallback and layer-based computation
-					s.ZIndex = s.GetFinalZIndex();
-				}
-				else if (j.contains("zIndex"))
-				{
-					s.ZIndex = j["zIndex"].get<float>();
+					// Note: This will only compute correctly if running in editor with layer manager
+					// For engine-only usage, the serialized zIndex is used above
+					float layerBasedZ = s.GetFinalZIndex();
+					if (layerBasedZ != 0.0f) // Only override if layer system provided a value
+						s.ZIndex = layerBasedZ;
 				}
 			},
 			// Copy

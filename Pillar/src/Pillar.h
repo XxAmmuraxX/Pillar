@@ -22,16 +22,24 @@
 
 // Renderer
 #include "Pillar/Renderer/Renderer.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/RenderCommand.h"
 #include "Pillar/Renderer/RenderAPI.h"
+#include "Pillar/Renderer/RenderQueue.h"
 #include "Pillar/Renderer/Shader.h"
+#include "Pillar/Renderer/ShaderLibrary.h"
 #include "Pillar/Renderer/Buffer.h"
 #include "Pillar/Renderer/VertexArray.h"
 #include "Pillar/Renderer/Texture.h"
+#include "Pillar/Renderer/TextureAtlas.h"
 #include "Pillar/Renderer/Framebuffer.h"
+#include "Pillar/Renderer/PostProcessing.h"
 #include "Pillar/Renderer/Lighting2D.h"
 #include "Pillar/Renderer/OrthographicCamera.h"
 #include "Pillar/Renderer/OrthographicCameraController.h"
 
-
+// ECS
+#include "Pillar/ECS/Components.h"
+#include "Pillar/ECS/Entity.h"
+#include "Pillar/ECS/Scene.h"
 

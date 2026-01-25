@@ -235,7 +235,7 @@ namespace PillarEditor {
 
         char buffer[256];
         memset(buffer, 0, sizeof(buffer));
-        strncpy(buffer, tag.Tag.c_str(), sizeof(buffer) - 1);
+        strncpy_s(buffer, sizeof(buffer), tag.Tag.c_str(), sizeof(buffer) - 1);
 
         ImGui::PushItemWidth(-1);
         if (ImGui::InputText("##Tag", buffer, sizeof(buffer)))
@@ -535,8 +535,7 @@ namespace PillarEditor {
             
             ImGui::PushItemWidth(-150);
             char buffer[256];
-            std::strncpy(buffer, sprite.TexturePath.c_str(), sizeof(buffer));
-            buffer[sizeof(buffer) - 1] = '\0';
+            strncpy_s(buffer, sizeof(buffer), sprite.TexturePath.c_str(), sizeof(buffer) - 1);
             
             if (ImGui::InputText("##TexturePath", buffer, sizeof(buffer)))
             {
@@ -2362,107 +2361,7 @@ namespace PillarEditor {
                     ImGui::Spacing();
                     
                     // Count bodies in scene
-                    auto& scene = m_EditorLayer->GetActiveScene();
-                    auto view = scene->GetRegistry().view<Pillar::RigidbodyComponent>();
-                    int totalBodies = 0;
-                    int awakeBodies = 0;
-                    int sleepingBodies = 0;
-                    int inactiveBodies = 0;
-                    
-                    for (auto entityID : view)
-                    {
-                        auto& component = view.get<Pillar::RigidbodyComponent>(entityID);
-                        if (component.Body)
-                        {
-                            totalBodies++;
-                            if (!component.Body->IsEnabled())
-                                inactiveBodies++;
-                            else if (component.Body->IsAwake())
-                                awakeBodies++;
-                            else
-                                sleepingBodies++;
-                        }
-                    }
-                    
-                    ImGui::Columns(3);
-                    ImGui::Text("Total Bodies: %d", totalBodies);
-                    ImGui::NextColumn();
-                    ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.3f, 1.0f), "Awake: %d", awakeBodies);
-                    ImGui::NextColumn();
-                    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f), "Sleeping: %d", sleepingBodies);
-                    ImGui::Columns(1);
-                    
-                    if (inactiveBodies > 0)
-                    {
-                        ImGui::TextColored(ImVec4(0.9f, 0.4f, 0.4f, 1.0f), "Inactive: %d", inactiveBodies);
-                    }
-                    
-                    // Performance tip
-                    if (sleepingBodies > 0)
-                    {
-                        ImGui::SameLine();
-                        ImGui::TextDisabled("(✓ Sleeping bodies save CPU)");
-                    }
-                }
-                ImGui::EndChild();
-                ImGui::PopStyleColor();
-                
-                ImGui::Spacing();
-                ImGui::Separator();
-                ImGui::Spacing();
-            }
-
-            // === HELP BUTTON ===
-            ImGui::SameLine();
-            ImGui::SetCursorPosX(ImGui::GetContentRegionMax().x - 30);
-            if (ImGui::SmallButton("?"))
-                ImGui::OpenPopup("RigidbodyHelp");
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("Rigidbody Component Help");
-            
-            // Help popup
-            if (ImGui::BeginPopup("RigidbodyHelp"))
-            {
-                ImGui::TextColored(ImVec4(0.3f, 0.8f, 1.0f, 1.0f), "Rigidbody Component Guide");
-                ImGui::Separator();
-                ImGui::Spacing();
-                
-                ImGui::TextWrapped("The Rigidbody component makes an entity respond to physics.");
-                ImGui::Spacing();
-                
-                ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.3f, 1.0f), "Body Types:");
-                ImGui::BulletText("Static: Immovable objects (walls, floors)");
-                ImGui::BulletText("Kinematic: Manually controlled (moving platforms)");
-                ImGui::BulletText("Dynamic: Fully simulated physics (players, enemies)");
-                ImGui::Spacing();
-                
-                ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.3f, 1.0f), "Common Issues:");
-                ImGui::BulletText("No collision? Add a Collider component");
-                ImGui::BulletText("Objects fall through? Enable Bullet Mode");
-                ImGui::BulletText("Too bouncy? Increase damping values");
-                ImGui::BulletText("Won't rotate? Disable Fixed Rotation");
-                ImGui::Spacing();
-                
-                ImGui::TextColored(ImVec4(1.0f, 0.9f, 0.3f, 1.0f), "Tips:");
-                ImGui::BulletText("Use presets for quick setup");
-                ImGui::BulletText("Apply impulses for instant velocity changes");
-                ImGui::BulletText("Sleeping bodies save performance");
-                ImGui::BulletText("Press X in viewport to see physics gizmos");
-                
-                ImGui::EndPopup();
-            }
-
-            // === PERFORMANCE INDICATORS (Play Mode Only) ===
-            if (isPlaying)
-            {
-                ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.1f, 0.25f, 0.7f));
-                if (ImGui::BeginChild("PerfIndicators", ImVec2(0, 60), true))
-                {
-                    ImGui::TextDisabled("Performance Metrics");
-                    ImGui::Spacing();
-                    
-                    // Count bodies in scene
-                    auto& scene = m_EditorLayer->GetActiveScene();
+                    auto scene = m_EditorLayer->GetActiveScene();
                     auto view = scene->GetRegistry().view<Pillar::RigidbodyComponent>();
                     int totalBodies = 0;
                     int awakeBodies = 0;

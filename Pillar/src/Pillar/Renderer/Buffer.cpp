@@ -6,12 +6,12 @@
 
 namespace Pillar {
 
-    VertexBuffer* VertexBuffer::Create(float* vertices, uint32_t size)
+    std::shared_ptr<VertexBuffer> VertexBuffer::Create(float* vertices, uint32_t size)
     {
         switch (RenderAPI::GetAPI())
         {
             case RendererAPI::OpenGL:
-                return new OpenGLVertexBuffer(vertices, size);
+                return std::make_shared<OpenGLVertexBuffer>(vertices, size);
             case RendererAPI::None:
                 PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
                 return nullptr;
@@ -21,12 +21,12 @@ namespace Pillar {
         return nullptr;
     }
 
-    VertexBuffer* VertexBuffer::Create(uint32_t size)
+    std::shared_ptr<VertexBuffer> VertexBuffer::Create(uint32_t size)
     {
         switch (RenderAPI::GetAPI())
         {
             case RendererAPI::OpenGL:
-                return new OpenGLVertexBuffer(size);
+                return std::make_shared<OpenGLVertexBuffer>(size);
             case RendererAPI::None:
                 PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
                 return nullptr;
@@ -36,12 +36,12 @@ namespace Pillar {
         return nullptr;
     }
 
-    IndexBuffer* IndexBuffer::Create(uint32_t* indices, uint32_t count)
+    std::shared_ptr<IndexBuffer> IndexBuffer::Create(uint32_t* indices, uint32_t count)
     {
         switch (RenderAPI::GetAPI())
         {
             case RendererAPI::OpenGL:
-                return new OpenGLIndexBuffer(indices, count);
+                return std::make_shared<OpenGLIndexBuffer>(indices, count);
             case RendererAPI::None:
                 PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
                 return nullptr;

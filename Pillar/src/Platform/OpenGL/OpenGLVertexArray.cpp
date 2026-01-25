@@ -46,7 +46,7 @@ namespace Pillar {
         glBindVertexArray(0);
     }
 
-    void OpenGLVertexArray::AddVertexBuffer(VertexBuffer* vertexBuffer)
+    void OpenGLVertexArray::AddVertexBuffer(const std::shared_ptr<VertexBuffer>& vertexBuffer)
     {
         glBindVertexArray(m_RendererID);
         vertexBuffer->Bind();
@@ -71,7 +71,7 @@ namespace Pillar {
         glBindVertexArray(0);
     }
 
-    void OpenGLVertexArray::SetIndexBuffer(IndexBuffer* indexBuffer)
+    void OpenGLVertexArray::SetIndexBuffer(const std::shared_ptr<IndexBuffer>& indexBuffer)
     {
         glBindVertexArray(m_RendererID);
         indexBuffer->Bind();

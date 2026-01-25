@@ -366,6 +366,31 @@ FodyWeavers.xsd
 imgui.ini
 /coverage
 
-# CMake build directories
+# CMake build directories (consolidated)
 build/
 [Bb]uild/
+out/
+[Oo]ut/
+
+# SDK output
+sdk/
+PillarSDK-*/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+CPackConfig.cmake
+CPackSourceConfig.cmake
+*.cmake.in
+CTestTestfile.cmake
+
+# Binary outputs
+/bin/
+
+# IDE specific
+.vscode/
+*.swp
+*.swo
+*~

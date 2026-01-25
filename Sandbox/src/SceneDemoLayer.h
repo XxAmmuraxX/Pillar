@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/ECS/SceneManager.h"
 #include "Pillar/ECS/SceneSerializer.h"
 #include "Pillar/ECS/Entity.h"
@@ -95,17 +95,17 @@ public:
         }
 
         // Render
-        Pillar::Renderer::SetClearColor({ 0.1f, 0.1f, 0.15f, 1.0f });
-        Pillar::Renderer::Clear();
+        Pillar::Renderer2D::SetClearColor({ 0.1f, 0.1f, 0.15f, 1.0f });
+        Pillar::Renderer2D::Clear();
 
-        Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+        Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
         
         if (activeScene)
         {
             DrawScene(activeScene);
         }
 
-        Pillar::Renderer2DBackend::EndScene();
+        Pillar::Renderer2D::EndScene();
     }
 
     void OnEvent(Pillar::Event& event) override
@@ -593,9 +593,9 @@ private:
             }
 
             if (transform.Rotation != 0.0f)
-                Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
+                Pillar::Renderer2D::DrawRotatedQuad(transform.Position, size, transform.Rotation, color);
             else
-                Pillar::Renderer2DBackend::DrawQuad(transform.Position, size, color);
+                Pillar::Renderer2D::DrawQuad(transform.Position, size, color);
         }
     }
 

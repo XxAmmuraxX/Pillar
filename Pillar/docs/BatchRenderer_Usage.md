@@ -30,40 +30,40 @@ The Batch Renderer 2D is a high-performance GPU-accelerated rendering system tha
 ### Basic Usage
 
 ```cpp
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 
 // In OnUpdate(float dt)
-Renderer2DBackend::BeginScene(camera);
+Renderer2D::BeginScene(camera);
 
 // Draw colored quad
-Renderer2DBackend::DrawQuad(
+Renderer2D::DrawQuad(
     glm::vec2(0, 0),           // position
     glm::vec2(1, 1),           // size
     glm::vec4(1, 0, 0, 1)      // color (red)
 );
 
 // Draw textured quad
-Renderer2DBackend::DrawQuad(
+Renderer2D::DrawQuad(
     glm::vec2(2, 0),           // position
     glm::vec2(1, 1),           // size
     glm::vec4(1, 1, 1, 1),     // tint color (white = no tint)
     myTexture                   // shared_ptr<Texture2D>
 );
 
-Renderer2DBackend::EndScene();
+Renderer2D::EndScene();
 ```
 
 ### Switching Renderers at Runtime
 
 ```cpp
 // Use batch renderer (default, recommended)
-Renderer2DBackend::SetAPI(Renderer2DBackend::API::Batch);
+Renderer2D::SetAPI(Renderer2D::API::Batch);
 
 // Use basic renderer (legacy, for debugging)
-Renderer2DBackend::SetAPI(Renderer2DBackend::API::Basic);
+Renderer2D::SetAPI(Renderer2D::API::Basic);
 
 // Check current API
-auto currentAPI = Renderer2DBackend::GetAPI();
+auto currentAPI = Renderer2D::GetAPI();
 ```
 
 ---
@@ -74,10 +74,10 @@ auto currentAPI = Renderer2DBackend::GetAPI();
 
 ```cpp
 // Called automatically by Application
-Renderer2DBackend::Init(Renderer2DBackend::API::Batch);
+Renderer2D::Init(Renderer2D::API::Batch);
 
 // Shutdown (automatic on app exit)
-Renderer2DBackend::Shutdown();
+Renderer2D::Shutdown();
 ```
 
 ### Scene Management
@@ -107,7 +107,7 @@ void DrawQuad(
 **Example:**
 ```cpp
 // Draw red square at origin
-Renderer2DBackend::DrawQuad(
+Renderer2D::DrawQuad(
     glm::vec2(0, 0),
     glm::vec2(1, 1),
     glm::vec4(1, 0, 0, 1)  // RGBA
@@ -129,7 +129,7 @@ void DrawQuad(
 ```cpp
 auto sprite = Texture2D::Create("assets/textures/player.png");
 
-Renderer2DBackend::DrawQuad(
+Renderer2D::DrawQuad(
     glm::vec2(0, 0),
     glm::vec2(2, 2),
     glm::vec4(1, 1, 1, 1),  // No tint
@@ -156,7 +156,7 @@ void DrawQuad(
 float spriteSize = 16.0f / 256.0f;
 int spriteX = 3, spriteY = 2;  // Which sprite to use
 
-Renderer2DBackend::DrawQuad(
+Renderer2D::DrawQuad(
     glm::vec3(0, 0, 0.5f),  // Z = 0.5 for layering
     glm::vec2(1, 1),
     glm::vec4(1, 1, 1, 1),
@@ -182,7 +182,7 @@ void DrawRotatedQuad(
 #include <glm/gtc/constants.hpp>
 
 // Draw rotated square (45 degrees)
-Renderer2DBackend::DrawRotatedQuad(
+Renderer2D::DrawRotatedQuad(
     glm::vec2(0, 0),
     glm::vec2(1, 1),
     glm::radians(45.0f),
@@ -213,14 +213,14 @@ void ResetStats();             // Reset counters (call at frame start)
 **Example:**
 ```cpp
 void OnUpdate(float dt) {
-    Renderer2DBackend::ResetStats();
+    Renderer2D::ResetStats();
     
-    Renderer2DBackend::BeginScene(camera);
+    Renderer2D::BeginScene(camera);
     // ... draw calls ...
-    Renderer2DBackend::EndScene();
+    Renderer2D::EndScene();
     
-    uint32_t drawCalls = Renderer2DBackend::GetDrawCallCount();
-    uint32_t quads = Renderer2DBackend::GetQuadCount();
+    uint32_t drawCalls = Renderer2D::GetDrawCallCount();
+    uint32_t quads = Renderer2D::GetQuadCount();
     
     PIL_INFO("Rendered {0} quads in {1} draw calls", quads, drawCalls);
 }
@@ -257,9 +257,9 @@ auto spriteSystem = new SpriteRenderSystem();
 spriteSystem->OnAttach(scene);
 
 // In OnUpdate
-Renderer2DBackend::BeginScene(camera);
+Renderer2D::BeginScene(camera);
 spriteSystem->OnUpdate(dt);  // Automatically renders all sprites
-Renderer2DBackend::EndScene();
+Renderer2D::EndScene();
 ```
 
 **Features:**
@@ -278,7 +278,7 @@ Renderer2DBackend::EndScene();
 ```cpp
 for (int i = 0; i < 10000; ++i) {
     auto texture = (i % 2 == 0) ? texture1 : texture2;
-    Renderer2DBackend::DrawQuad(pos, size, color, texture);
+    Renderer2D::DrawQuad(pos, size, color, texture);
 }
 ```
 
@@ -286,12 +286,12 @@ for (int i = 0; i < 10000; ++i) {
 ```cpp
 // Draw all texture1 quads first
 for (int i = 0; i < 5000; ++i) {
-    Renderer2DBackend::DrawQuad(pos, size, color, texture1);
+    Renderer2D::DrawQuad(pos, size, color, texture1);
 }
 
 // Then all texture2 quads
 for (int i = 0; i < 5000; ++i) {
-    Renderer2DBackend::DrawQuad(pos, size, color, texture2);
+    Renderer2D::DrawQuad(pos, size, color, texture2);
 }
 ```
 
@@ -310,7 +310,7 @@ for (int i = 0; i < 100; ++i) {
     float u = (i % 10) * 0.1f;
     float v = (i / 10) * 0.1f;
     
-    Renderer2DBackend::DrawQuad(
+    Renderer2D::DrawQuad(
         glm::vec3(pos, 0),
         size,
         color,
@@ -352,8 +352,8 @@ bulletPool.Release(bullet);
 ```cpp
 void OnImGuiRender() {
     ImGui::Begin("Renderer Stats");
-    ImGui::Text("Draw Calls: %u", Renderer2DBackend::GetDrawCallCount());
-    ImGui::Text("Quads: %u", Renderer2DBackend::GetQuadCount());
+    ImGui::Text("Draw Calls: %u", Renderer2D::GetDrawCallCount());
+    ImGui::Text("Quads: %u", Renderer2D::GetQuadCount());
     
     // Aim for:
     // - Draw calls < 10 for best performance
@@ -388,7 +388,7 @@ class AnimatedSprite {
         float frameWidth = 1.0f / m_FrameCount;
         float u = m_CurrentFrame * frameWidth;
         
-        Renderer2DBackend::DrawQuad(
+        Renderer2D::DrawQuad(
             glm::vec3(position, 0),
             glm::vec2(1, 1),
             glm::vec4(1, 1, 1, 1),
@@ -421,11 +421,11 @@ void UpdateParticles(float dt) {
 }
 
 void RenderParticles() {
-    Renderer2DBackend::BeginScene(camera);
+    Renderer2D::BeginScene(camera);
     
     for (const auto& p : particles) {
         if (p.Lifetime > 0) {
-            Renderer2DBackend::DrawQuad(
+            Renderer2D::DrawQuad(
                 p.Position,
                 glm::vec2(0.1f, 0.1f),
                 p.Color
@@ -433,7 +433,7 @@ void RenderParticles() {
         }
     }
     
-    Renderer2DBackend::EndScene();
+    Renderer2D::EndScene();
 }
 ```
 
@@ -445,7 +445,7 @@ void DrawHealthBar(glm::vec2 position, float health, float maxHealth) {
     float barHeight = 0.1f;
     
     // Background (red)
-    Renderer2DBackend::DrawQuad(
+    Renderer2D::DrawQuad(
         position,
         glm::vec2(barWidth, barHeight),
         glm::vec4(0.8f, 0, 0, 1)
@@ -453,7 +453,7 @@ void DrawHealthBar(glm::vec2 position, float health, float maxHealth) {
     
     // Foreground (green)
     float healthPercent = health / maxHealth;
-    Renderer2DBackend::DrawQuad(
+    Renderer2D::DrawQuad(
         position,
         glm::vec2(barWidth * healthPercent, barHeight),
         glm::vec4(0, 0.8f, 0, 1)
@@ -480,20 +480,20 @@ void OnUpdate(float dt) {
 ### After (Batch Renderer)
 
 ```cpp
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 
 void OnUpdate(float dt) {
-    Renderer2DBackend::ResetStats();  // Add for statistics
-    Renderer2DBackend::BeginScene(camera);
-    Renderer2DBackend::DrawQuad(pos, size, color);
-    Renderer2DBackend::EndScene();
+    Renderer2D::ResetStats();  // Add for statistics
+    Renderer2D::BeginScene(camera);
+    Renderer2D::DrawQuad(pos, size, color);
+    Renderer2D::EndScene();
 }
 ```
 
 **Changes:**
-1. Replace `Renderer2D` with `Renderer2DBackend`
+1. Replace `Renderer2D` with `Renderer2D`
 2. Add `ResetStats()` if using statistics
-3. Initialize backend in Application: `Renderer2DBackend::Init()`
+3. Initialize backend in Application: `Renderer2D::Init()`
 4. Texture parameters now use `shared_ptr<Texture2D>` instead of raw pointers
 
 ---

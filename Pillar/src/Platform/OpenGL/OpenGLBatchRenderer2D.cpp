@@ -2,6 +2,8 @@
 #include "Pillar/Renderer/Buffer.h"
 #include "Pillar/Renderer/VertexArray.h"
 #include "Pillar/Renderer/Shader.h"
+#include "Pillar/Renderer/ShaderLibrary.h"
+#include "Pillar/Renderer/EmbeddedShaders.h"
 #include "Pillar/Logger.h"
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -33,12 +35,10 @@ namespace Pillar {
         m_TextureSlotIndex = 1;
 
         // Create vertex array
-        m_QuadVertexArray = std::shared_ptr<VertexArray>(VertexArray::Create());
+        m_QuadVertexArray = VertexArray::Create();
 
         // Create vertex buffer (dynamic - will be updated each frame)
-        m_QuadVertexBuffer = std::shared_ptr<VertexBuffer>(
-            VertexBuffer::Create(MaxVertices * sizeof(QuadVertex))
-        );
+        m_QuadVertexBuffer = VertexBuffer::Create(MaxVertices * sizeof(QuadVertex));
 
         // Set vertex buffer layout
         m_QuadVertexBuffer->SetLayout({
@@ -48,7 +48,7 @@ namespace Pillar {
             { ShaderDataType::Float,  "a_TexIndex" }
         });
 
-        m_QuadVertexArray->AddVertexBuffer(m_QuadVertexBuffer.get());
+        m_QuadVertexArray->AddVertexBuffer(m_QuadVertexBuffer);
 
         // Create index buffer (static - indices pattern repeats)
         std::vector<uint32_t> quadIndices;
@@ -69,58 +69,21 @@ namespace Pillar {
             offset += 4;
         }
 
-        m_QuadIndexBuffer = std::shared_ptr<IndexBuffer>(
-            IndexBuffer::Create(quadIndices.data(), MaxIndices)
-        );
-        m_QuadVertexArray->SetIndexBuffer(m_QuadIndexBuffer.get());
+        m_QuadIndexBuffer = IndexBuffer::Create(quadIndices.data(), MaxIndices);
+        m_QuadVertexArray->SetIndexBuffer(m_QuadIndexBuffer);
 
-        // Load batch shader from embedded source (shaders are part of engine, not assets)
-        const char* vertexShaderSrc = R"(
-            #version 410 core
-
-            layout(location = 0) in vec3 a_Position;
-            layout(location = 1) in vec4 a_Color;
-            layout(location = 2) in vec2 a_TexCoord;
-            layout(location = 3) in float a_TexIndex;
-
-            uniform mat4 u_ViewProjection;
-
-            out vec4 v_Color;
-            out vec2 v_TexCoord;
-            out float v_TexIndex;
-
-            void main()
-            {
-                v_Color = a_Color;
-                v_TexCoord = a_TexCoord;
-                v_TexIndex = a_TexIndex;
-                gl_Position = u_ViewProjection * vec4(a_Position, 1.0);
-            }
-        )";
-
-        const char* fragmentShaderSrc = R"(
-            #version 410 core
-
-            layout(location = 0) out vec4 color;
-
-            in vec4 v_Color;
-            in vec2 v_TexCoord;
-            in float v_TexIndex;
-
-            uniform sampler2D u_Textures[32];
-
-            void main()
-            {
-                int texIndex = int(v_TexIndex);
-                color = texture(u_Textures[texIndex], v_TexCoord) * v_Color;
-            }
-        )";
-
-        m_BatchShader = std::shared_ptr<Shader>(Shader::Create(vertexShaderSrc, fragmentShaderSrc));
+        // Load batch shader - prefer embedded shaders for SDK distribution
+        // Falls back to file-based loading for hot-reload during development
+        auto& shaderLibrary = ShaderLibrary::GetInstance();
+        
+        // First try embedded shaders (always available, no file dependencies)
+        m_BatchShader = shaderLibrary.LoadFromSource("BatchQuad",
+                                                      EmbeddedShaders::BatchQuadVertex,
+                                                      EmbeddedShaders::BatchQuadFragment);
 
         if (!m_BatchShader)
         {
-            PIL_CORE_ERROR("Failed to create batch shader!");
+            PIL_CORE_ERROR("Failed to create batch shader from embedded source!");
             return;
         }
 
@@ -163,14 +126,14 @@ namespace Pillar {
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, 
-                                        const glm::vec4& color, Texture2D* texture)
+                                        const glm::vec4& color, const Texture2D* texture)
     {
         DrawQuad(glm::vec3(position, 0.0f), size, color, texture, 
                 glm::vec2(0.0f), glm::vec2(1.0f), false, false);
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                           const glm::vec4& color, Texture2D* texture,
+                           const glm::vec4& color, const Texture2D* texture,
                            const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                            bool flipX, bool flipY)
     {
@@ -184,7 +147,7 @@ namespace Pillar {
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                           Texture2D* texture)
+                           const Texture2D* texture)
     {
         AddQuadToBatch(position, size, glm::vec4(1.0f), texture, glm::vec2(0.0f), glm::vec2(1.0f), 0.0f, false, false);
     }
@@ -197,7 +160,7 @@ namespace Pillar {
     }
 
     void OpenGLBatchRenderer2D::DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
-                                               float rotation, const glm::vec4& color, Texture2D* texture)
+                                               float rotation, const glm::vec4& color, const Texture2D* texture)
     {
         AddQuadToBatch(glm::vec3(position, 0.0f), size, color, texture,
                       glm::vec2(0.0f), glm::vec2(1.0f), rotation, false, false);
@@ -210,7 +173,7 @@ namespace Pillar {
         }
 
         void OpenGLBatchRenderer2D::DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
-                                                   float rotation, const glm::vec4& color, Texture2D* texture,
+                                                   float rotation, const glm::vec4& color, const Texture2D* texture,
                                                    const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                                                    bool flipX, bool flipY)
         {
@@ -246,18 +209,25 @@ namespace Pillar {
             return;
         }
 
+        // Track flush count
+        m_Stats.FlushCount++;
+
         // Bind shader and set view-projection matrix
         m_BatchShader->Bind();
         m_BatchShader->SetMat4("u_ViewProjection", m_ViewProjectionMatrix);
 
-        // Bind all textures to their slots
+        // Bind all textures to their slots and track texture switches
         for (uint32_t i = 0; i < m_TextureSlotIndex; ++i)
         {
             if (m_TextureSlots[i])
             {
                 m_TextureSlots[i]->Bind(i);
+                m_Stats.TextureSwitches++;
             }
         }
+
+        // Count batches
+        m_Stats.BatchCount = static_cast<uint32_t>(m_Batches.size());
 
         // Render each batch
         for (auto& [textureID, batch] : m_Batches)
@@ -268,6 +238,7 @@ namespace Pillar {
             // Upload vertex data to GPU
             uint32_t dataSize = static_cast<uint32_t>(batch.Vertices.size() * sizeof(QuadVertex));
             m_QuadVertexBuffer->SetData(batch.Vertices.data(), dataSize);
+            m_Stats.BufferUploads++;
 
             // Bind vertex array and draw
             m_QuadVertexArray->Bind();
@@ -277,8 +248,18 @@ namespace Pillar {
             // Update stats
             m_Stats.DrawCalls++;
             m_Stats.QuadCount += batch.QuadCount;
-            m_Stats.VertexCount += batch.Vertices.size();
+            m_Stats.VertexCount += static_cast<uint32_t>(batch.Vertices.size());
         }
+
+        // Update accumulated stats
+        m_Stats.TotalQuadsRendered += m_Stats.QuadCount;
+        m_Stats.TotalDrawCalls += m_Stats.DrawCalls;
+
+        // Update peak stats
+        if (m_Stats.VertexCount > m_Stats.PeakVertices)
+            m_Stats.PeakVertices = m_Stats.VertexCount;
+        if (m_Stats.QuadCount > m_Stats.PeakQuads)
+            m_Stats.PeakQuads = m_Stats.QuadCount;
     }
 
     void OpenGLBatchRenderer2D::FlushAndReset()
@@ -287,7 +268,7 @@ namespace Pillar {
         StartBatch();
     }
 
-    uint32_t OpenGLBatchRenderer2D::GetOrAddTextureSlot(Texture2D* texture)
+    uint32_t OpenGLBatchRenderer2D::GetOrAddTextureSlot(const Texture2D* texture)
     {
         if (!texture)
             return 0;  // White texture
@@ -319,7 +300,7 @@ namespace Pillar {
     }
 
     void OpenGLBatchRenderer2D::AddQuadToBatch(const glm::vec3& position, const glm::vec2& size,
-                                              const glm::vec4& color, Texture2D* texture,
+                                              const glm::vec4& color, const Texture2D* texture,
                                               const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                                               float rotation, bool flipX, bool flipY)
     {

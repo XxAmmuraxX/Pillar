@@ -6,12 +6,12 @@
 
 namespace Pillar {
 
-    VertexArray* VertexArray::Create()
+    std::shared_ptr<VertexArray> VertexArray::Create()
     {
         switch (RenderAPI::GetAPI())
         {
             case RendererAPI::OpenGL:
-                return new OpenGLVertexArray();
+                return std::make_shared<OpenGLVertexArray>();
             case RendererAPI::None:
                 PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
                 return nullptr;

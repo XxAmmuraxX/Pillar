@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "DemoUtils.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
@@ -69,14 +70,14 @@ public:
 		m_SystemTime = std::chrono::duration<float, std::milli>(sysEnd - sysStart).count();
 
 		// Render
-		Pillar::Renderer::SetClearColor({ 0.05f, 0.05f, 0.08f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.05f, 0.05f, 0.08f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
 		auto renderStart = std::chrono::high_resolution_clock::now();
-		Pillar::Renderer2DBackend::ResetStats();
-		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2D::ResetStats();
+		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 		DrawEntities();
-		Pillar::Renderer2DBackend::EndScene();
+		Pillar::Renderer2D::EndScene();
 		auto renderEnd = std::chrono::high_resolution_clock::now();
 		m_RenderTime = std::chrono::duration<float, std::milli>(renderEnd - renderStart).count();
 
@@ -93,28 +94,13 @@ public:
 	{
 		ImGui::Begin("Light Entity Performance");
 		
-		ImGui::Text("Stress Test: Pure ECS Light Entities");
-		ImGui::Separator();
-
-		// Performance stats
-		ImGui::Text("Entity Count: %zu", m_EntityCount);
-		ImGui::Text("Frame Time: %.2f ms (%.0f FPS)", m_FrameTime, 1000.0f / m_FrameTime);
-		ImGui::Text("System Time: %.2f ms", m_SystemTime);
-		ImGui::Text("Render Time: %.2f ms", m_RenderTime);
-		
-		// Renderer stats
-		ImGui::Separator();
-		ImGui::Text("Renderer Statistics:");
-		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2DBackend::GetDrawCallCount());
-		ImGui::Text("  Quads Rendered: %u", Pillar::Renderer2DBackend::GetQuadCount());
-		
-		// Color-coded performance
-		if (m_FrameTime < 16.67f)
-			ImGui::TextColored(ImVec4(0, 1, 0, 1), "Performance: EXCELLENT (60+ FPS)");
-		else if (m_FrameTime < 33.33f)
-			ImGui::TextColored(ImVec4(1, 1, 0, 1), "Performance: GOOD (30-60 FPS)");
-		else
-			ImGui::TextColored(ImVec4(1, 0, 0, 1), "Performance: POOR (<30 FPS)");
+		DemoUtils::RenderPerformanceStats(
+			"Stress Test: Pure ECS Light Entities",
+			m_EntityCount,
+			m_FrameTime,
+			m_SystemTime,
+			m_RenderTime
+		);
 
 		ImGui::Separator();
 
@@ -185,9 +171,9 @@ private:
 		{
 			auto& transform = m_Player.GetComponent<Pillar::TransformComponent>();
 			if (transform.Rotation != 0.0f)
-				Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, { 1.0f, 1.0f }, transform.Rotation, { 0.2f, 0.8f, 0.3f, 1.0f });
+				Pillar::Renderer2D::DrawRotatedQuad(transform.Position, { 1.0f, 1.0f }, transform.Rotation, { 0.2f, 0.8f, 0.3f, 1.0f });
 			else
-				Pillar::Renderer2DBackend::DrawQuad(transform.Position, { 1.0f, 1.0f }, { 0.2f, 0.8f, 0.3f, 1.0f });
+				Pillar::Renderer2D::DrawQuad(transform.Position, { 1.0f, 1.0f }, { 0.2f, 0.8f, 0.3f, 1.0f });
 		}
 
 		// Draw particles/gems
@@ -206,9 +192,9 @@ private:
 			);
 
 			if (transform.Rotation != 0.0f)
-				Pillar::Renderer2DBackend::DrawRotatedQuad(transform.Position, { 0.15f, 0.15f }, transform.Rotation, color);
+				Pillar::Renderer2D::DrawRotatedQuad(transform.Position, { 0.15f, 0.15f }, transform.Rotation, color);
 			else
-				Pillar::Renderer2DBackend::DrawQuad(transform.Position, { 0.15f, 0.15f }, color);
+				Pillar::Renderer2D::DrawQuad(transform.Position, { 0.15f, 0.15f }, color);
 		}
 	}
 

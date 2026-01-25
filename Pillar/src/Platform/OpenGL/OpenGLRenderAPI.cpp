@@ -46,4 +46,42 @@ namespace Pillar {
         glDrawElements(GL_TRIANGLES, vertexArray->GetIndexBuffer()->GetCount(), GL_UNSIGNED_INT, nullptr);
     }
 
+    bool OpenGLRenderAPI::GetDepthTest() const
+    {
+        return glIsEnabled(GL_DEPTH_TEST) == GL_TRUE;
+    }
+
+    bool OpenGLRenderAPI::GetDepthWrite() const
+    {
+        GLboolean depthMask = GL_TRUE;
+        glGetBooleanv(GL_DEPTH_WRITEMASK, &depthMask);
+        return depthMask == GL_TRUE;
+    }
+
+    bool OpenGLRenderAPI::GetBlending() const
+    {
+        return glIsEnabled(GL_BLEND) == GL_TRUE;
+    }
+
+    void OpenGLRenderAPI::SetDepthTest(bool enable)
+    {
+        if (enable)
+            glEnable(GL_DEPTH_TEST);
+        else
+            glDisable(GL_DEPTH_TEST);
+    }
+
+    void OpenGLRenderAPI::SetDepthWrite(bool enable)
+    {
+        glDepthMask(enable ? GL_TRUE : GL_FALSE);
+    }
+
+    void OpenGLRenderAPI::SetBlending(bool enable)
+    {
+        if (enable)
+            glEnable(GL_BLEND);
+        else
+            glDisable(GL_BLEND);
+    }
+
 }

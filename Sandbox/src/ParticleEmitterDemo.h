@@ -1,11 +1,12 @@
 #pragma once
 
 #include "Pillar.h"
+#include "DemoUtils.h"
 #include "Pillar/ECS/SpecializedPools.h"
 #include "Pillar/ECS/Systems/ParticleSystem.h"
 #include "Pillar/ECS/Systems/ParticleEmitterSystem.h"
 #include "Pillar/ECS/Systems/VelocityIntegrationSystem.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Gameplay/ParticleComponent.h"
 #include "Pillar/ECS/Components/Gameplay/ParticleEmitterComponent.h"
@@ -86,16 +87,16 @@ public:
 		m_VelocitySystem->OnUpdate(dt);
 
 		// Render
-		Pillar::Renderer::SetClearColor({ 0.05f, 0.05f, 0.1f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.05f, 0.05f, 0.1f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
-		Pillar::Renderer2DBackend::ResetStats();
-		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2D::ResetStats();
+		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 
 		// Render all sprites (particles)
 		m_SpriteRenderSystem->OnUpdate(dt);
 
-		Pillar::Renderer2DBackend::EndScene();
+		Pillar::Renderer2D::EndScene();
 	}
 
 	void OnEvent(Pillar::Event& event) override
@@ -142,8 +143,8 @@ public:
 
 		// Renderer statistics
 		ImGui::Text("Renderer:");
-		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2DBackend::GetDrawCallCount());
-		ImGui::Text("  Quads: %u", Pillar::Renderer2DBackend::GetQuadCount());
+		ImGui::Text("  Draw Calls: %u", Pillar::Renderer2D::GetDrawCallCount());
+		ImGui::Text("  Quads: %u", Pillar::Renderer2D::GetQuadCount());
 
 		ImGui::Separator();
 
@@ -295,21 +296,7 @@ private:
 
 	glm::vec2 ScreenToWorld(const glm::vec2& screenPos)
 	{
-		// Get window size (hardcoded for now)
-		float windowWidth = 1600.0f;
-		float windowHeight = 900.0f;
-
-		// Convert screen to NDC (-1 to 1)
-		glm::vec2 ndc;
-		ndc.x = (2.0f * screenPos.x) / windowWidth - 1.0f;
-		ndc.y = 1.0f - (2.0f * screenPos.y) / windowHeight;
-
-		// Convert NDC to world space using camera
-		auto& camera = m_CameraController.GetCamera();
-		glm::mat4 invViewProj = glm::inverse(camera.GetViewProjectionMatrix());
-		glm::vec4 worldPos = invViewProj * glm::vec4(ndc, 0.0f, 1.0f);
-
-		return glm::vec2(worldPos.x, worldPos.y);
+		return DemoUtils::ScreenToWorld(screenPos, m_CameraController.GetCamera());
 	}
 
 private:

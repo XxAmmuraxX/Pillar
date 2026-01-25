@@ -30,16 +30,16 @@ namespace Pillar {
                             const glm::vec4& color) = 0;
         
         virtual void DrawQuad(const glm::vec2& position, const glm::vec2& size, 
-                            const glm::vec4& color, Texture2D* texture) = 0;
+                            const glm::vec4& color, const Texture2D* texture) = 0;
 
         virtual void DrawQuad(const glm::vec3& position, const glm::vec2& size,
                              const glm::vec4& color) = 0;
 
         virtual void DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                             Texture2D* texture) = 0;
+                             const Texture2D* texture) = 0;
 
         virtual void DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                             const glm::vec4& color, Texture2D* texture,
+                             const glm::vec4& color, const Texture2D* texture,
                              const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                              bool flipX = false, bool flipY = false) = 0;
 
@@ -47,13 +47,13 @@ namespace Pillar {
                                     float rotation, const glm::vec4& color) = 0;
 
         virtual void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
-                                    float rotation, const glm::vec4& color, Texture2D* texture) = 0;
+                                    float rotation, const glm::vec4& color, const Texture2D* texture) = 0;
 
         virtual void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
                                     float rotation, const glm::vec4& color) = 0;
 
         virtual void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
-                                    float rotation, const glm::vec4& color, Texture2D* texture,
+                                    float rotation, const glm::vec4& color, const Texture2D* texture,
                                     const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
                                     bool flipX = false, bool flipY = false) = 0;
 
@@ -83,58 +83,55 @@ namespace Pillar {
         virtual ~BatchRenderer2D() = default;
 
         // Factory method (creates OpenGLBatchRenderer2D)
-        static BatchRenderer2D* Create();
-
-        // IRenderer2D interface
-        void BeginScene(const OrthographicCamera& camera) override;
-        void EndScene() override;
-
-        void DrawQuad(const glm::vec2& position, const glm::vec2& size, 
-                     const glm::vec4& color) override;
-        
-        void DrawQuad(const glm::vec2& position, const glm::vec2& size, 
-                     const glm::vec4& color, Texture2D* texture) override;
-
-        void DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                 const glm::vec4& color) override;
-
-        void DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                 Texture2D* texture) override;
-
-        void DrawQuad(const glm::vec3& position, const glm::vec2& size,
-                 const glm::vec4& color, Texture2D* texture,
-                 const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
-                 bool flipX = false, bool flipY = false) override;
-
-        void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
-                     float rotation, const glm::vec4& color) override;
-        
-        void DrawRotatedQuad(const glm::vec2& position, const glm::vec2& size,
-                     float rotation, const glm::vec4& color, Texture2D* texture) override;
-
-        void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
-                     float rotation, const glm::vec4& color) override;
-
-        void DrawRotatedQuad(const glm::vec3& position, const glm::vec2& size,
-                     float rotation, const glm::vec4& color, Texture2D* texture,
-                     const glm::vec2& texCoordMin, const glm::vec2& texCoordMax,
-                     bool flipX = false, bool flipY = false) override;
+        // Returns unique_ptr for automatic memory management
+        static std::unique_ptr<BatchRenderer2D> Create();
 
         // Stats
         uint32_t GetDrawCallCount() const override { return m_Stats.DrawCalls; }
         uint32_t GetQuadCount() const override { return m_Stats.QuadCount; }
         void ResetStats() override;
 
-    protected:
+        // Make stats accessible for Renderer2D::GetStats()
+        // This is intentionally public to allow the static API to access detailed stats
         struct Stats
         {
+            // Per-frame counters
             uint32_t DrawCalls = 0;
             uint32_t QuadCount = 0;
             uint32_t VertexCount = 0;
+            uint32_t BatchCount = 0;
+            uint32_t TextureSwitches = 0;
+            uint32_t FlushCount = 0;
+            uint32_t BufferUploads = 0;
+            
+            // Accumulated stats
+            uint32_t TotalQuadsRendered = 0;
+            uint32_t TotalDrawCalls = 0;
+            
+            // Performance metrics
+            uint32_t PeakVertices = 0;
+            uint32_t PeakQuads = 0;
+            
+            // Efficiency ratios
+            float GetBatchEfficiency() const
+            {
+                return BatchCount > 0 ? (float)QuadCount / BatchCount : 0.0f;
+            }
+            
+            float GetAverageQuadsPerDraw() const
+            {
+                return DrawCalls > 0 ? (float)QuadCount / DrawCalls : 0.0f;
+            }
+            
+            float GetAverageVerticesPerDraw() const
+            {
+                return DrawCalls > 0 ? (float)VertexCount / DrawCalls : 0.0f;
+            }
         };
 
         Stats m_Stats;
 
+    protected:
         // Subclasses implement these
         virtual void Init() = 0;
         virtual void Shutdown() = 0;

@@ -35,12 +35,12 @@ namespace Pillar {
         return result;
     }
 
-    Shader* Shader::Create(const std::string& vertexSrc, const std::string& fragmentSrc)
+    std::shared_ptr<Shader> Shader::Create(const std::string& vertexSrc, const std::string& fragmentSrc)
     {
         switch (RenderAPI::GetAPI())
         {
             case RendererAPI::OpenGL:
-                return new OpenGLShader(vertexSrc, fragmentSrc);
+                return std::make_shared<OpenGLShader>(vertexSrc, fragmentSrc);
             case RendererAPI::None:
                 PIL_CORE_ASSERT(false, "RendererAPI::None is not supported!");
                 return nullptr;
@@ -50,11 +50,11 @@ namespace Pillar {
         return nullptr;
     }
 
-    Shader* Shader::CreateFromFile(const std::string& vertexPath, const std::string& fragmentPath)
+    std::shared_ptr<Shader> Shader::CreateFromFile(const std::string& vertexPath, const std::string& fragmentPath)
     {
-        // Resolve paths using AssetManager
-        std::string vertexFullPath = AssetManager::GetAssetPath(vertexPath);
-        std::string fragmentFullPath = AssetManager::GetAssetPath(fragmentPath);
+        // Resolve paths using AssetManager's shader-specific path resolution
+        std::string vertexFullPath = AssetManager::GetShaderPath(vertexPath);
+        std::string fragmentFullPath = AssetManager::GetShaderPath(fragmentPath);
 
         PIL_CORE_INFO("Loading vertex shader from: {0}", vertexFullPath);
         PIL_CORE_INFO("Loading fragment shader from: {0}", fragmentFullPath);

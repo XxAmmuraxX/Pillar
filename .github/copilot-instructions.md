@@ -21,10 +21,9 @@
 
 ### Prerequisites
 - Visual Studio 2022 with C++ development tools
-- CMake 3.5+ (tested with 3.31.6-msvc6)
+- CMake 3.21+ (tested with 3.31.6-msvc6)
 - Ninja 1.12.1+
 - Python 3.x with jinja2 package (required for GLAD2 code generation)
-- Developer PowerShell for VS 2022
 
 ### Python Setup
 GLAD2 requires Python with jinja2. Install it with:
@@ -32,42 +31,112 @@ GLAD2 requires Python with jinja2. Install it with:
 python -m pip install jinja2
 ```
 
-### Building the Project
+### Quick Start (Recommended)
 
-**ALWAYS use these exact commands in order:**
-
-1. **Configure** (first time or after CMakeLists.txt changes):
+**First-time setup:**
 ```powershell
-cmake -S . -B out/build/x64-Debug -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
+.\scripts\bootstrap.ps1
 ```
 
-2. **Build** (incremental builds):
+This script will:
+- Validate all prerequisites (VS 2022, CMake, Ninja, Python, jinja2)
+- Set up MSVC environment automatically
+- Configure CMake with the appropriate preset
+
+**Build the project:**
 ```powershell
-cmake --build out/build/x64-Debug --config Debug
+cmake --build --preset windows-debug
 ```
 
-3. **Build with filtered output** (to see only errors and key events):
+**Run tests:**
 ```powershell
-cmake --build out/build/x64-Debug --config Debug 2>&1 | Select-String -Pattern "error|Building.*Emitter|succeeded|failed|Linking" -Context 0,1
+ctest --preset windows-debug
 ```
 
-4. **Full Clean Build** (when needed):
+**Run the application:**
 ```powershell
-Remove-Item -Path out/build/x64-Debug -Recurse -Force -ErrorAction SilentlyContinue
-cmake -S . -B out/build/x64-Debug -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
-cmake --build out/build/x64-Debug --config Debug
+.\bin\Debug-x64\Sandbox\SandboxApp.exe
 ```
 
-**Note:** Ninja is the recommended generator for faster builds and better parallel compilation support.
+### Available CMake Presets
+
+The project uses CMake Presets (CMakePresets.json) for consistent builds:
+
+- **windows-debug** - Debug build (default)
+- **windows-release** - Optimized release build
+- **windows-relwithdebinfo** - Release with debug info
+- **ci** - CI/CD build configuration
+
+**Usage:**
+```powershell
+# Configure
+cmake --preset windows-debug
+
+# Build
+cmake --build --preset windows-debug
+
+# Test
+ctest --preset windows-debug
+
+# For Release builds
+cmake --preset windows-release
+cmake --build --preset windows-release
+```
+
+### Building the SDK
+
+To create a packaged SDK for game developers:
+
+```powershell
+.\scripts\build-sdk.ps1 -Config Release -CreateZip
+```
+
+This creates:
+- SDK directory: `sdk/PillarSDK-{version}-Windows-x64/`
+- ZIP archive: `sdk/PillarSDK-{version}-Windows-x64.zip`
+
+**SDK Options:**
+```powershell
+# Build Debug SDK without ZIP
+.\scripts\build-sdk.ps1 -Config Debug
+
+# Skip build step (if already built)
+.\scripts\build-sdk.ps1 -SkipBuild -CreateZip
+
+# Custom output directory
+.\scripts\build-sdk.ps1 -OutputDir "C:\MySDK"
+```
+
+### Manual Build (Alternative)
+
+If you prefer not to use the bootstrap script:
+
+1. **Open Developer PowerShell for VS 2022** (important!)
+2. **Configure:**
+```powershell
+cmake --preset windows-debug
+```
+
+3. **Build:**
+```powershell
+cmake --build --preset windows-debug
+```
+
+4. **Full Clean Build:**
+```powershell
+Remove-Item -Path build\windows-debug -Recurse -Force -ErrorAction SilentlyContinue
+cmake --preset windows-debug
+cmake --build --preset windows-debug
+```
 
 **Build outputs:**
 - Pillar.lib → `bin/Debug-x64/Pillar/`
 - PillarEditor.exe → `bin/Debug-x64/PillarEditor/`
 - SandboxApp.exe → `bin/Debug-x64/Sandbox/`
 - PillarTests.exe → `bin/Debug-x64/Tests/`
-- Pillar is now a static library (no DLL copying needed)
+- Build artifacts → `build/windows-debug/`
 
-**Build time:** ~15-30 seconds for incremental, ~2-3 minutes for clean build (depends on FetchContent cache)
+**Build time:** ~15-30 seconds for incremental, ~2-3 minutes for clean build
 
 ### Running the Application
 ```powershell
@@ -81,10 +150,16 @@ The ImGui panel "Renderer2D Test" shows camera stats and allows real-time adjust
 
 ### Running Tests
 ```powershell
-# Run all tests
+# Run all tests (using CTest)
+ctest --preset windows-debug
+
+# Run with verbose output
+ctest --preset windows-debug --output-on-failure
+
+# Or run directly
 .\bin\Debug-x64\Tests\PillarTests.exe
 
-# Run with verbose output and XML results
+# Run with XML output
 .\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml
 
 # Run specific test suite
@@ -100,29 +175,34 @@ See `Tests/README.md` for detailed testing information.
 
 **Issue 1: Missing Python or jinja2**
 - **Symptom:** CMake configure fails with "Python package 'jinja2' is required but not found!"
-- **Fix:** Install Python 3.x and run `python -m pip install jinja2`
+- **Fix:** Run `.\scripts\bootstrap.ps1` or manually: `python -m pip install jinja2`
 - **Reason:** GLAD2 uses Python code generation to create OpenGL loaders
 
-**Issue 2: Missing forward declarations cause C2061 errors**
+**Issue 2: cl.exe not found**
+- **Symptom:** CMake fails with "Could not find C compiler" or "cl.exe not found"
+- **Fix:** Use Developer PowerShell for VS 2022 OR run `.\scripts\bootstrap.ps1` which sets up the environment
+- **Reason:** MSVC compiler is not in PATH by default
+
+**Issue 3: Missing forward declarations cause C2061 errors**
 - **Symptom:** `error C2061: syntax error: identifier 'WindowCloseEvent'`
 - **Fix:** Always include event headers when using event types in header files
 - **Example:** In `Application.h`, add `#include "Pillar/Events/ApplicationEvent.h"` before using `WindowCloseEvent`
 
-**Issue 3: EventDispatcher template parameter mismatch**
+**Issue 4: EventDispatcher template parameter mismatch**
 - **Symptom:** `error C2664: cannot convert argument 1 from 'std::_Binder<...>'`
 - **Fix:** The `EventDispatcher::Dispatch<T>()` casts `Event&` to specific event type `T&` using `static_cast<T&>`
 - **Pattern:** Event handler functions should take specific event types: `bool OnEvent(WindowCloseEvent& e)` not `Event& e`
 
-**Issue 4: First-time build may take longer**
+**Issue 5: First-time build may take longer**
 - FetchContent downloads dependencies (GLFW, spdlog, GLAD2, GLM, stb, ImGui, GoogleTest) on first configure
 - GLAD2 generates OpenGL loader code using Python during configuration
-- Subsequent builds use cached dependencies from `out/build/x64-Debug/_deps/`
+- Subsequent builds use cached dependencies from `build/windows-debug/_deps/`
 
-**Issue 5: OpenGL shader version**
+**Issue 6: OpenGL shader version**
 - Shaders use `#version 410 core` (OpenGL 4.1) for compatibility
 - GLAD2 is configured for OpenGL 4.6 but actual version depends on system
 
-**Issue 6: Texture loading fails**
+**Issue 7: Texture loading fails**
 - **Symptom:** Application runs but texture appears as white or black square
 - **Fix:** Ensure texture files are in `Sandbox/assets/textures/` folder or next to executable
 - **AssetManager:** Automatically searches multiple locations (development and distribution paths)
@@ -356,6 +436,24 @@ PILLAR_/
 
 ### Configuration Files
 
+**CMakePresets.json (NEW):**
+- Provides standardized build configurations
+- Presets:
+  - `windows-debug` - Debug build with full symbols
+  - `windows-release` - Optimized release build
+  - `windows-relwithdebinfo` - Release with debug info
+  - `ci` - CI/CD build configuration
+- All presets use Ninja generator
+- Build directory: `build/${presetName}/`
+- Usage: `cmake --preset windows-debug`, `cmake --build --preset windows-debug`, `ctest --preset windows-debug`
+- Supported by VS Code, Visual Studio 2022, CLion, and command line
+
+**CMakeSettings.json:**
+- Visual Studio-specific CMake configuration
+- Uses presets-compatible paths: `build/windows-debug/`, `build/windows-release/`
+- Inherits MSVC environment for Ninja compilation
+- Compatible with CMakePresets.json structure
+
 **CMakeLists.txt (root):**
 - Sets C++17 standard
 - Defines `PIL_WINDOWS` on Windows
@@ -367,6 +465,8 @@ PILLAR_/
 - OpenAL-Soft configured with utils, examples, install disabled
 - GoogleTest configured with `gtest_force_shared_crt` for Windows compatibility
 - Python check at configure time (required for GLAD2 code generation)
+- SDK install support with `PILLAR_ENABLE_SDK_INSTALL` option
+- Excludes test libraries (gtest, gmock) from SDK install
 
 **Pillar/CMakeLists.txt:**
 - Builds `Pillar` as STATIC library (changed from SHARED)
@@ -410,8 +510,8 @@ PILLAR_/
   3. Install jinja2 via pip (required for GLAD2)
   4. Install Ninja
   5. Setup Mesa3D for software OpenGL rendering (allows GUI tests in CI)
-  6. Configure: `cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Debug`
-  7. Build: `cmake --build build --config Debug --parallel`
+  6. Configure: `cmake --preset ci`
+  7. Build: `cmake --build --preset ci`
   8. List outputs: `dir "bin\Debug-x64" -Recurse`
   9. Run tests: `.\bin\Debug-x64\Tests\PillarTests.exe --gtest_output=xml:test-results.xml`
   10. Publish test results using EnricoMi/publish-unit-test-result-action
@@ -738,13 +838,13 @@ Enable by defining `PIL_ENABLE_ASSERTS` (currently not defined)
 ## Validation Steps
 
 **After code changes, ALWAYS:**
-1. Build: `cmake --build out/build/x64-Debug --config Debug`
+1. Build: `cmake --build --preset windows-debug`
 2. Check for compilation errors (see Known Issues section)
 3. Verify build outputs exist:
    - `Test-Path bin/Debug-x64/Pillar/Pillar.lib` should return True
    - `Test-Path bin/Debug-x64/Sandbox/SandboxApp.exe` should return True
    - `Test-Path bin/Debug-x64/Tests/PillarTests.exe` should return True
-4. Run tests: `.\bin\Debug-x64\Tests\PillarTests.exe`
+4. Run tests: `ctest --preset windows-debug` or `.\bin\Debug-x64\Tests\PillarTests.exe`
    - All tests should pass
    - Fix any failing tests before proceeding
 5. Run application: `.\bin\Debug-x64\Sandbox\SandboxApp.exe`
@@ -755,7 +855,7 @@ Enable by defining `PIL_ENABLE_ASSERTS` (currently not defined)
 **Before committing:**
 1. Ensure code compiles without warnings
 2. All unit tests pass
-3. Check GitHub Actions will pass (same build commands + tests)
+3. Check GitHub Actions will pass (uses `cmake --preset ci`)
 4. Verify no hardcoded paths or user-specific configurations
 5. Test that application runs and renders correctly
 6. Update tests if you changed behavior

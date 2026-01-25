@@ -1,7 +1,7 @@
 #include "Pillar/Renderer/Lighting2D.h"
 
 #include "Pillar/Logger.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Renderer/Shader.h"
 #include "Pillar/Renderer/Lighting2DGeometry.h"
 
@@ -175,9 +175,9 @@ namespace Pillar
 			};
 			ShadowUniformLocations ShadowUniforms;
 
-			Shader* LightShader = nullptr;
-			Shader* ShadowShader = nullptr;
-			Shader* CompositeShader = nullptr;
+		std::shared_ptr<Shader> LightShader = nullptr;
+		std::shared_ptr<Shader> ShadowShader = nullptr;
+		std::shared_ptr<Shader> CompositeShader = nullptr;
 
 			GLuint QuadVAO = 0;
 			GLuint QuadVBO = 0;
@@ -691,12 +691,9 @@ void main()
 
 		PIL_CORE_INFO("Shutting down Lighting2D...");
 
-		delete s_Data.LightShader;
-		delete s_Data.ShadowShader;
-		delete s_Data.CompositeShader;
-		s_Data.LightShader = nullptr;
-		s_Data.ShadowShader = nullptr;
-		s_Data.CompositeShader = nullptr;
+		s_Data.LightShader.reset();
+		s_Data.ShadowShader.reset();
+		s_Data.CompositeShader.reset();
 
 		if (s_Data.QuadVAO) glDeleteVertexArrays(1, &s_Data.QuadVAO);
 		if (s_Data.QuadVBO) glDeleteBuffers(1, &s_Data.QuadVBO);
@@ -738,7 +735,7 @@ void main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-		Renderer2DBackend::BeginScene(camera);
+		Renderer2D::BeginScene(camera);
 		s_Data.InScene = true;
 	}
 
@@ -785,7 +782,7 @@ void main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-		Renderer2DBackend::BeginScene(camera);
+		Renderer2D::BeginScene(camera);
 		s_Data.InScene = true;
 	}
 
@@ -811,7 +808,7 @@ void main()
 	{
 		PIL_CORE_ASSERT(s_Data.InScene, "Lighting2D::EndScene called without BeginScene");
 
-		Renderer2DBackend::EndScene();
+		Renderer2D::EndScene();
 		s_Data.SceneColorFramebuffer->Unbind();
 
 		RenderLightAccumulation();

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Pillar.h"
-#include "Pillar/Renderer/Renderer2DBackend.h"
+#include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/ECS/Scene.h"
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Systems/AnimationSystem.h"
@@ -74,11 +74,11 @@ public:
 		}
 
 		// Clear screen
-		Pillar::Renderer::SetClearColor({ 0.15f, 0.15f, 0.2f, 1.0f });
-		Pillar::Renderer::Clear();
+		Pillar::Renderer2D::SetClearColor({ 0.15f, 0.15f, 0.2f, 1.0f });
+		Pillar::Renderer2D::Clear();
 
 		// Begin scene
-		Pillar::Renderer2DBackend::BeginScene(m_CameraController.GetCamera());
+		Pillar::Renderer2D::BeginScene(m_CameraController.GetCamera());
 
 		// Render all animated entities
 		auto& registry = m_Scene->GetRegistry();
@@ -93,7 +93,7 @@ public:
 			if (sprite.Texture)
 			{
 			// Draw textured quad with UV coordinates from sprite
-			Pillar::Renderer2DBackend::DrawQuad(
+			Pillar::Renderer2D::DrawQuad(
 				glm::vec3(transform.Position, 0.0f),  // Convert vec2 to vec3
 				transform.Scale,
 				sprite.Color,
@@ -106,7 +106,7 @@ public:
 			}
 		}
 
-		Pillar::Renderer2DBackend::EndScene();
+		Pillar::Renderer2D::EndScene();
 	}
 	
 	void OnEvent(Pillar::Event& event) override
@@ -261,7 +261,7 @@ public:
 		{
 			ImGui::Begin("Entity Inspector", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
-			ImGui::Text("Inspecting: Entity %d", m_SelectedEntityIndex);
+			ImGui::Text("Inspecting: Entity %zu", m_SelectedEntityIndex);
 			if (ImGui::Button("< Prev"))
 			{
 				m_SelectedEntityIndex = (m_SelectedEntityIndex - 1 + m_AnimatedEntities.size()) % m_AnimatedEntities.size();
@@ -519,7 +519,7 @@ private:
 	std::vector<std::string> m_EventLog;
 	
 	int m_CurrentAnimIndex = 0;  // 0=Idle, 1=Walk, 2=Jump
-	int m_SelectedEntityIndex = 0;
+	size_t m_SelectedEntityIndex = 0;
 	
 	bool m_GlobalPaused = false;
 	float m_GlobalSpeed = 1.0f;

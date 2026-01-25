@@ -57,6 +57,13 @@ namespace Pillar {
         static std::string GetMusicPath(const std::string& musicName);
 
         /**
+         * @brief Resolves a shader path (checks source directory and assets/shaders/)
+         * @param shaderName The shader filename (e.g., "BatchQuad.vert")
+         * @return Full path to the shader file if found
+         */
+        static std::string GetShaderPath(const std::string& shaderName);
+
+        /**
          * @brief Sets the base assets directory (overrides automatic detection)
          * @param path The base assets directory path
          */

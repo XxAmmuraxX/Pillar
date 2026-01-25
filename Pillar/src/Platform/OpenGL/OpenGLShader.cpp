@@ -109,27 +109,52 @@ namespace Pillar {
         glUseProgram(0);
     }
 
+    int OpenGLShader::GetUniformLocation(const std::string& name) const
+    {
+        // Check cache first
+        auto it = m_UniformLocationCache.find(name);
+        if (it != m_UniformLocationCache.end())
+            return it->second;
+
+        // Query OpenGL and cache the result
+        int location = glGetUniformLocation(m_RendererID, name.c_str());
+        m_UniformLocationCache[name] = location;
+        
+        if (location == -1)
+        {
+            PIL_CORE_WARN("Uniform '{0}' not found in shader!", name);
+        }
+        
+        return location;
+    }
+
     void OpenGLShader::SetInt(const std::string& name, int value)
     {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
+        GLint location = GetUniformLocation(name);
         glUniform1i(location, value);
     }
 
     void OpenGLShader::SetIntArray(const std::string& name, int* values, uint32_t count)
     {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
+        GLint location = GetUniformLocation(name);
         glUniform1iv(location, count, values);
+    }
+
+    void OpenGLShader::SetFloat(const std::string& name, float value)
+    {
+        GLint location = GetUniformLocation(name);
+        glUniform1f(location, value);
     }
 
     void OpenGLShader::SetFloat4(const std::string& name, const glm::vec4& value)
     {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
+        GLint location = GetUniformLocation(name);
         glUniform4f(location, value.x, value.y, value.z, value.w);
     }
 
     void OpenGLShader::SetMat4(const std::string& name, const glm::mat4& value)
     {
-        GLint location = glGetUniformLocation(m_RendererID, name.c_str());
+        GLint location = GetUniformLocation(name);
         glUniformMatrix4fv(location, 1, GL_FALSE, &value[0][0]);
     }
 

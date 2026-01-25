@@ -29,6 +29,7 @@ namespace Pillar
 		inline ImGuiLayer* GetImGuiLayer() { return m_ImGuiLayer; }
 
 		static Application& Get();
+		static Application* GetInstancePtr();
 
 	private:
 		bool OnWindowClose(WindowCloseEvent& e);

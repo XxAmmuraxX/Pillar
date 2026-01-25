@@ -253,6 +253,73 @@ namespace Pillar {
         return GetAudioPath(musicName);
     }
 
+    std::string AssetManager::GetShaderPath(const std::string& shaderName)
+    {
+        // For shaders, we need to check:
+        // 1. Direct path (if absolute or already correct)
+        // 2. Pillar/src/Pillar/Renderer/Shaders/ (source tree for development)
+        // 3. assets/shaders/ relative to executable (for SDK distribution)
+        // 4. assets/shaders/ via AssetManager (for Sandbox)
+        
+        std::filesystem::path directPath(shaderName);
+        if (std::filesystem::exists(directPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found shader at direct path: {0}", directPath.string());
+            return directPath.string();
+        }
+
+        // Try source tree location (for development)
+        std::filesystem::path exeDir = GetExecutableDirectory();
+        std::filesystem::path workspaceRoot = exeDir.parent_path().parent_path().parent_path();
+        std::filesystem::path sourceShaderPath = workspaceRoot / "Pillar" / "src" / "Pillar" / "Renderer" / "Shaders" / shaderName;
+        
+        if (std::filesystem::exists(sourceShaderPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found shader in source tree: {0}", sourceShaderPath.string());
+            return sourceShaderPath.string();
+        }
+
+        // Try SDK-style location: assets/ next to executable or one level up
+        // For SDK: executable is at <SDK>/editor/PillarEditor.exe, shaders at <SDK>/assets/shaders/
+        std::filesystem::path sdkShaderPath = exeDir.parent_path() / "assets" / "shaders" / shaderName;
+        if (std::filesystem::exists(sdkShaderPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found shader in SDK assets: {0}", sdkShaderPath.string());
+            return sdkShaderPath.string();
+        }
+
+        // Try assets/shaders/ next to executable (alternative SDK layout)
+        std::filesystem::path localShaderPath = exeDir / "assets" / "shaders" / shaderName;
+        if (std::filesystem::exists(localShaderPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found shader in local assets: {0}", localShaderPath.string());
+            return localShaderPath.string();
+        }
+
+        // Try assets/shaders/ via standard AssetManager directory (for Sandbox)
+        if (s_AssetsDirectory.empty())
+        {
+            GetAssetsDirectory();
+        }
+
+        std::filesystem::path assetsShaderPath = s_AssetsDirectory / "shaders" / shaderName;
+        if (std::filesystem::exists(assetsShaderPath))
+        {
+            PIL_CORE_TRACE("AssetManager: Found shader in assets: {0}", assetsShaderPath.string());
+            return assetsShaderPath.string();
+        }
+
+        // Shader not found
+        PIL_CORE_WARN("AssetManager: Could not find shader '{0}'. Searched in:", shaderName);
+        PIL_CORE_WARN("  - {0}", directPath.string());
+        PIL_CORE_WARN("  - {0}", sourceShaderPath.string());
+        PIL_CORE_WARN("  - {0}", sdkShaderPath.string());
+        PIL_CORE_WARN("  - {0}", localShaderPath.string());
+        PIL_CORE_WARN("  - {0}", assetsShaderPath.string());
+
+        return shaderName;
+    }
+
     void AssetManager::SetAssetsDirectory(const std::string& path)
     {
         s_AssetsDirectory = path;
