@@ -134,7 +134,7 @@ Pillar::Application* Pillar::CreateApplication()
 }
 ```
 
-## 🔧 CMake Presets
+## CMake Presets
 
 | Preset | Description |
 |--------|-------------|
@@ -149,7 +149,7 @@ cmake --preset windows-release
 cmake --build --preset windows-release
 ```
 
-## 📚 Documentation
+## Documentation
 
 - [Quick Start Guide](docs/QUICK_START.md)
 - [User's Guide](docs/USERS_GUIDE.md)
@@ -182,7 +182,7 @@ ctest --preset windows-debug --output-on-failure
 
 See [Tests/README.md](Tests/README.md) for detailed testing documentation.
 
-## 🛠️ Dependencies
+## Dependencies
 
 All dependencies are fetched automatically via CMake FetchContent:
 
@@ -199,7 +199,7 @@ All dependencies are fetched automatically via CMake FetchContent:
 | [Box2D](https://github.com/erincatto/box2d) | 2.4.1 | Physics engine |
 | [Google Test](https://github.com/google/googletest) | 1.14.0 | Testing framework |
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Missing Python or jinja2
 ```powershell
