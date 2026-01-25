@@ -13,7 +13,7 @@
 
 ---
 
-## ✨ Features
+## Features
 
 - **Rendering System** - OpenGL 4.6 abstraction with 2D batch renderer, texture support, and orthographic camera
 - **Audio System** - OpenAL-Soft backend with 2D/3D spatial audio, WAV loading, and volume/pitch controls
@@ -25,14 +25,14 @@
 - **Input System** - Polling API for keyboard and mouse input
 - **Asset Management** - Automatic path resolution for development and distribution
 
-## 📋 Prerequisites
+## Prerequisites
 
 - **Visual Studio 2022** with C++ development tools
 - **CMake 3.21+**
 - **Ninja 1.12.1+**
 - **Python 3.x** with jinja2 (`pip install jinja2`)
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Clone the Repository
 
@@ -67,7 +67,7 @@ cmake --build --preset windows-debug
 ctest --preset windows-debug
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Pillar/
@@ -165,7 +165,7 @@ cmake --build --preset windows-release
 - [Object Pooling](Pillar/docs/ObjectPooling.md)
 - [Batch Renderer Usage](Pillar/docs/BatchRenderer_Usage.md)
 
-## 🧪 Testing
+## Testing
 
 The project uses Google Test for unit testing.
 
@@ -217,11 +217,11 @@ cmake --preset windows-debug
 cmake --build --preset windows-debug
 ```
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
