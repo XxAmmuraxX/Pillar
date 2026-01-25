@@ -2,6 +2,7 @@
 #include "Pillar/Renderer/RenderCommand.h"
 #include "Pillar/Renderer/EmbeddedShaders.h"
 #include "Pillar/Logger.h"
+#include <algorithm>
 #include <glad/gl.h>
 
 namespace Pillar {
