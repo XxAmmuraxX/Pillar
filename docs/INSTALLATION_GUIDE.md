@@ -90,17 +90,27 @@ After extracting, you should see folders like:
 
 ### Step 2: Create a New Game Project from the Template
 
+> **Important:** The Pillar SDK is built in **Release** mode. Your game must also be built in Release mode to avoid linker errors.
+
 1. (Optional) Rename the project name inside `CMakeLists.txt`.
 
-2. Configure and build:
+2. Configure and build in **Release** mode:
 
 ```powershell
-cmake -S . -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Debug
-cmake --build build --config Debug --parallel
+cmake -S . -B build/Release -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+cmake --build build/Release --parallel
 ```
-Or use Visual Studio support for CMake.
 
-3. Run your game executable from the build output directory.
+Or use the provided presets:
+```powershell
+cmake --preset default
+cmake --build --preset default
+```
+
+3. Run your game executable:
+```powershell
+.\build\Release\<YourProjectName>.exe
+```
 
 ### Step 3: Launch the Editor
 
@@ -167,6 +177,25 @@ Run tests:
 ---
 
 ## Troubleshooting
+
+### Linker Error: LNK2038 mismatch detected for '_ITERATOR_DEBUG_LEVEL' or 'RuntimeLibrary'
+
+This error occurs when mixing Debug and Release libraries. The Pillar SDK is distributed with **Release** libraries only.
+
+**Solution:** Build your game in Release mode:
+```powershell
+# Clean and rebuild in Release mode
+Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+cmake --preset default
+cmake --build --preset default
+```
+
+If you need Debug builds for development, build the Pillar SDK from source with Debug configuration:
+```powershell
+.\scripts\build-sdk.ps1 -Config Debug -CreateZip
+```
+
+---
 
 ### CMake Configuration Fails
 

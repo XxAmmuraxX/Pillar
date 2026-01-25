@@ -24,22 +24,22 @@
     },
     {
       "name": "default",
-      "displayName": "Debug",
-      "description": "Default debug configuration (MSVC required)",
-      "inherits": "base",
-      "binaryDir": "${sourceDir}/build/Debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    },
-    {
-      "name": "release",
       "displayName": "Release",
-      "description": "Optimized release configuration (MSVC required)",
+      "description": "Default release configuration (MSVC required). The Pillar SDK is built in Release mode.",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/Release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug (requires Debug SDK)",
+      "description": "Debug configuration - requires Pillar SDK built with Debug. Not available with standard SDK.",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
     {
@@ -56,14 +56,14 @@
   "buildPresets": [
     {
       "name": "default",
-      "displayName": "Build Debug",
+      "displayName": "Build Release",
       "configurePreset": "default",
       "jobs": 8
     },
     {
-      "name": "release",
-      "displayName": "Build Release",
-      "configurePreset": "release",
+      "name": "debug",
+      "displayName": "Build Debug (requires Debug SDK)",
+      "configurePreset": "debug",
       "jobs": 8
     },
     {
