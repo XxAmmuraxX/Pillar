@@ -6,8 +6,7 @@
 #include "Pillar/Input.h"
 
 GameLayer::GameLayer()
-    : Pillar::Layer("GameLayer"),
-      m_CameraController(1920.0f / 1080.0f, true)
+    : Pillar::Layer("GameLayer")
 {
 }
 

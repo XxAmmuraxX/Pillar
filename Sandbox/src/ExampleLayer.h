@@ -10,8 +10,7 @@ class ExampleLayer : public Pillar::Layer
 {
 public:
 	ExampleLayer() 
-		: Layer("ExampleLayer"), 
-		  m_CameraController(16.0f / 9.0f, true) // Aspect ratio, enable rotation
+		: Layer("ExampleLayer")
 	{
 	}
 
@@ -28,12 +27,7 @@ public:
 		
 		PIL_INFO("Renderer2D test initialized with texture!");
 	}
-	
-	void OnDetach() override 
-	{ 
-		Layer::OnDetach();
-	}
-	
+
     void OnUpdate(float dt) override
     {
 		// Update camera controller
@@ -75,7 +69,7 @@ public:
 
         if (event.GetEventType() == Pillar::EventType::KeyPressed)
         {
-			Pillar::KeyPressedEvent& keyEvent = static_cast<Pillar::KeyPressedEvent&>(event);
+			const auto& keyEvent = static_cast<const Pillar::KeyPressedEvent&>(event);
 			if (keyEvent.GetRepeatCount() == 0)  // Only log on first press
 			{
 				PIL_INFO("Key Pressed: {0}", keyEvent.GetKeyCode());
@@ -105,7 +99,7 @@ public:
 		ImGui::Separator();
 		
 		// Camera stats
-		auto& camera = m_CameraController.GetCamera();
+		const auto& camera = m_CameraController.GetCamera();
 		glm::vec3 pos = camera.GetPosition();
 		float rotation = camera.GetRotation();
 		float zoom = m_CameraController.GetZoomLevel();
@@ -183,6 +177,6 @@ public:
 
 private:
 	std::shared_ptr<Pillar::Texture2D> m_Texture;
-	Pillar::OrthographicCameraController m_CameraController;
+	Pillar::OrthographicCameraController m_CameraController{ 16.0f / 9.0f, true };
 	float m_Time = 0.0f;
 };

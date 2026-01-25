@@ -5,6 +5,7 @@
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Rendering/AnimationComponent.h"
 #include "Pillar/ECS/Components/Rendering/AnimationClip.h"
+#include "Pillar/ECS/Components/Rendering/AnimationClipBuilder.h"
 #include "Pillar/ECS/Components/Rendering/AnimationFrame.h"
 #include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
 #include "Pillar/ECS/Systems/AnimationSystem.h"
@@ -637,8 +638,6 @@ TEST(AnimationLoaderTests, EmptyClipSerialization)
 // ============================================================================
 // AnimationClipBuilder Tests
 // ============================================================================
-
-#include "Pillar/ECS/Components/Rendering/AnimationClipBuilder.h"
 
 TEST(AnimationClipBuilderTests, BasicConstruction)
 {

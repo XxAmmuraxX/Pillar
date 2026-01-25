@@ -175,7 +175,7 @@ namespace Pillar {
                          const glm::vec2& spacing = { 0.0f, 0.0f });
 
     private:
-        TextureAtlas(std::shared_ptr<Texture2D> texture);
+        explicit TextureAtlas(std::shared_ptr<Texture2D> texture);
 
         std::shared_ptr<Texture2D> m_Texture;
         std::unordered_map<std::string, SubTexture> m_SubTextures;

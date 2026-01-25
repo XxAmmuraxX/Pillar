@@ -7,19 +7,19 @@ namespace Pillar {
     class OpenGLRenderAPI : public RenderAPI
     {
     public:
-        virtual void Init() override;
-        virtual void SetClearColor(const glm::vec4& color) override;
-        virtual void Clear() override;
-        virtual void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) override;
-        virtual void DrawIndexed(const VertexArray* vertexArray) override;
+        void Init() override;
+        void SetClearColor(const glm::vec4& color) override;
+        void Clear() override;
+        void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) override;
+        void DrawIndexed(const VertexArray* vertexArray) override;
 
         // State management
-        virtual bool GetDepthTest() const override;
-        virtual bool GetDepthWrite() const override;
-        virtual bool GetBlending() const override;
-        virtual void SetDepthTest(bool enable) override;
-        virtual void SetDepthWrite(bool enable) override;
-        virtual void SetBlending(bool enable) override;
+        bool GetDepthTest() const override;
+        bool GetDepthWrite() const override;
+        bool GetBlending() const override;
+        void SetDepthTest(bool enable) override;
+        void SetDepthWrite(bool enable) override;
+        void SetBlending(bool enable) override;
     };
 
 }

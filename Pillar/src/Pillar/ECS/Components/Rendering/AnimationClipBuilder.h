@@ -200,7 +200,7 @@ namespace Pillar {
 		}
 
 		/**
-		 * @brief Implicit conversion to AnimationClip
+		 * @brief Explicit conversion to AnimationClip
 		 * 
 		 * Allows passing builder directly to RegisterClip:
 		 * ```cpp
@@ -209,7 +209,7 @@ namespace Pillar {
 		 *     .Build());
 		 * ```
 		 */
-		operator AnimationClip() const
+		explicit operator AnimationClip() const
 		{
 			return Build();
 		}

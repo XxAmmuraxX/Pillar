@@ -33,7 +33,7 @@ TEST(Renderer2DOverloads, SupportsVec3RotatedQuadWithUVAndFlip)
 TEST(Renderer2DScopedDepthState, ReturnsScopedType)
 {
     using Scoped = Renderer2D::ScopedDepthState;
-    static_assert(std::is_same<Scoped, decltype(Scoped::DepthWriteDisabled())>::value, "DepthWriteDisabled should return ScopedDepthState");
+    static_assert(std::is_same_v<Scoped, decltype(Scoped::DepthWriteDisabled())>, "DepthWriteDisabled should return ScopedDepthState");
     SUCCEED();
 }
 

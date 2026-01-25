@@ -29,7 +29,7 @@ public:
         PIL_INFO("=== Pillar Engine - Comprehensive Rendering Demo ===");
         
         // Get window size
-        auto& window = Pillar::Application::Get().GetWindow();
+        const auto& window = Pillar::Application::Get().GetWindow();
         m_ViewportWidth = window.GetWidth();
         m_ViewportHeight = window.GetHeight();
         
@@ -90,7 +90,7 @@ public:
         // Handle window resize for framebuffer
         if (event.GetEventType() == Pillar::EventType::WindowResize)
         {
-            auto& resizeEvent = static_cast<Pillar::WindowResizeEvent&>(event);
+            const auto& resizeEvent = static_cast<const Pillar::WindowResizeEvent&>(event);
             m_ViewportWidth = resizeEvent.GetWidth();
             m_ViewportHeight = resizeEvent.GetHeight();
             
@@ -109,7 +109,7 @@ public:
         // Handle key presses for demo mode switching
         if (event.GetEventType() == Pillar::EventType::KeyPressed)
         {
-            auto& keyEvent = static_cast<Pillar::KeyPressedEvent&>(event);
+            const auto& keyEvent = static_cast<const Pillar::KeyPressedEvent&>(event);
             
             switch (keyEvent.GetKeyCode())
             {
@@ -119,6 +119,7 @@ public:
                 case PIL_KEY_4: m_DemoMode = DemoMode::Rotation; break;
                 case PIL_KEY_5: m_DemoMode = DemoMode::Performance; break;
                 case PIL_KEY_P: m_PostProcessingEnabled = !m_PostProcessingEnabled; break;
+                default: break;
             }
         }
     }
@@ -157,7 +158,7 @@ public:
         ImGui::BulletText("Q/E - Rotate");
         ImGui::BulletText("Mouse Wheel - Zoom");
         
-        auto& camera = m_CameraController->GetCamera();
+        const auto& camera = m_CameraController->GetCamera();
         ImGui::Text("Position: (%.2f, %.2f)", 
                     camera.GetPosition().x, 
                     camera.GetPosition().y);

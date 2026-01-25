@@ -59,7 +59,7 @@ namespace Pillar {
         }
 
         // Execute all commands in sorted order
-        for (auto& cmd : m_Commands)
+        for (const auto& cmd : m_Commands)
         {
             if (cmd.Execute)
             {

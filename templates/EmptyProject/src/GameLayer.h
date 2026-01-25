@@ -16,7 +16,7 @@ public:
 
 private:
     // Camera
-    Pillar::OrthographicCameraController m_CameraController;
+    Pillar::OrthographicCameraController m_CameraController{ 1920.0f / 1080.0f, true };
     
     // Example rendering
     std::shared_ptr<Pillar::Texture2D> m_CheckerboardTexture;
