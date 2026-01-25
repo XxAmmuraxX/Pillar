@@ -13,3 +13,4 @@ void main()
     int texIndex = int(v_TexIndex);
     color = texture(u_Textures[texIndex], v_TexCoord) * v_Color;
 }
+

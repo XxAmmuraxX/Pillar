@@ -25,7 +25,7 @@ public:
 		//PushLayer(new DemoMenuLayer());
 		
 		// Option 1: Physics Demo (Gameplay)
-		//PushLayer(new PhysicsDemoLayer());
+		// PushLayer(new PhysicsDemoLayer());
 		
 		// Option 2: Light Entity Performance Demo
 		//PushLayer(new LightEntityPerfDemo());
@@ -38,7 +38,7 @@ public:
 		
 
 		// Option 3: Heavy Entity Performance Demo
-		//PushLayer(new HeavyEntityPerfDemo());
+		PushLayer(new HeavyEntityPerfDemo());
 
 		// Option 4: Object Pool Demo
 		//PushLayer(new ObjectPoolDemo());
@@ -55,7 +55,7 @@ public:
 		// Option 8: 2D Lighting + Shadows Demo
 		// PushLayer(new Lighting2DDemoLayer());
 
-		PushLayer(new RenderingDemo::RenderingDemoLayer());
+		// PushLayer(new RenderingDemo::RenderingDemoLayer());
 	}
 
 	~Sandbox()

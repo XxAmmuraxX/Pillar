@@ -111,6 +111,7 @@ add_library(Pillar STATIC
     src/Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h
     src/Pillar/ECS/Components/Rendering/AnimationFrame.h
     src/Pillar/ECS/Components/Rendering/AnimationClip.h
+    src/Pillar/ECS/Components/Rendering/AnimationClipBuilder.h
     src/Pillar/ECS/Components/Rendering/AnimationComponent.h
     # Animation System
     src/Pillar/ECS/Systems/AnimationSystem.cpp

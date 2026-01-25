@@ -2,8 +2,8 @@
 # Builds the Pillar Engine and packages it as an SDK for game developers
 
 param(
-    [ValidateSet("Debug", "Release", "RelWithDebInfo")]
-    [string]$Config = "Release",
+    [ValidateSet("Debug", "Release", "RelWithDebInfo", "Both")]
+    [string]$Config = "Both",
     [switch]$SkipBuild,
     [switch]$CreateZip,
     [string]$OutputDir = "sdk"
@@ -26,46 +26,63 @@ else {
 }
 
 $sdkName = "PillarSDK-$sdkVersion-Windows-x64"
-$preset = "windows-$($Config.ToLower())"
-$buildDir = "build\$preset"
 $installDir = "$OutputDir\$sdkName"
 
-Write-Host "`n=== Building Pillar SDK $sdkVersion ===" -ForegroundColor Cyan
-Write-Host "Configuration: $Config" -ForegroundColor White
-Write-Host "Preset:        $preset" -ForegroundColor White
-Write-Host "Output:        $installDir`n" -ForegroundColor White
+# Determine which configurations to build
+if ($Config -eq "Both") {
+    $configs = @("Debug", "Release")
+    Write-Host "`n=== Building Pillar SDK $sdkVersion (Debug + Release) ===" -ForegroundColor Cyan
+}
+else {
+    $configs = @($Config)
+    Write-Host "`n=== Building Pillar SDK $sdkVersion ===" -ForegroundColor Cyan
+}
+
+Write-Host "Configurations: $($configs -join ', ')" -ForegroundColor White
+Write-Host "Output:         $installDir`n" -ForegroundColor White
 
 # ============================================================================
-# Build
+# Build (all configurations)
 # ============================================================================
 
 if (-not $SkipBuild) {
-    Write-Host "Configuring CMake..." -ForegroundColor Yellow
-    cmake --preset $preset -DPILLAR_BUILD_TESTS=OFF
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[ERROR] CMake configuration failed!" -ForegroundColor Red
-        exit 1
-    }
+    foreach ($cfg in $configs) {
+        $preset = "windows-$($cfg.ToLower())"
+        $buildDir = "build\$preset"
 
-    Write-Host "`nBuilding Pillar ($Config)..." -ForegroundColor Yellow
-    cmake --build --preset $preset --parallel
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[ERROR] Build failed!" -ForegroundColor Red
-        exit 1
+        Write-Host "`n--- Building $cfg configuration ---" -ForegroundColor Yellow
+
+        Write-Host "Configuring CMake ($cfg)..." -ForegroundColor Yellow
+        cmake --preset $preset -DPILLAR_BUILD_TESTS=OFF
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] CMake configuration failed for $cfg!" -ForegroundColor Red
+            exit 1
+        }
+
+        Write-Host "Building Pillar ($cfg)..." -ForegroundColor Yellow
+        cmake --build --preset $preset --parallel
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] Build failed for $cfg!" -ForegroundColor Red
+            exit 1
+        }
+        Write-Host "[OK] $cfg build completed successfully" -ForegroundColor Green
     }
-    Write-Host "[OK] Build completed successfully" -ForegroundColor Green
 }
 else {
     Write-Host "Skipping build (--SkipBuild specified)" -ForegroundColor Yellow
-    if (-not (Test-Path $buildDir)) {
-        Write-Host "[ERROR] Build directory not found: $buildDir" -ForegroundColor Red
-        Write-Host "Run without --SkipBuild first to build the project." -ForegroundColor White
-        exit 1
+    foreach ($cfg in $configs) {
+        $preset = "windows-$($cfg.ToLower())"
+        $buildDir = "build\$preset"
+        if (-not (Test-Path $buildDir)) {
+            Write-Host "[ERROR] Build directory not found: $buildDir" -ForegroundColor Red
+            Write-Host "Run without --SkipBuild first to build the project." -ForegroundColor White
+            exit 1
+        }
     }
 }
 
 # ============================================================================
-# Install/Package SDK
+# Install/Package SDK (install each configuration)
 # ============================================================================
 
 Write-Host "`nPackaging SDK..." -ForegroundColor Yellow
@@ -76,11 +93,17 @@ if (Test-Path $installDir) {
     Remove-Item -Path $installDir -Recurse -Force
 }
 
-# Install to SDK directory
-cmake --install $buildDir --prefix $installDir --config $Config
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[ERROR] SDK installation failed!" -ForegroundColor Red
-    exit 1
+# Install each configuration to SDK directory
+foreach ($cfg in $configs) {
+    $preset = "windows-$($cfg.ToLower())"
+    $buildDir = "build\$preset"
+
+    Write-Host "Installing $cfg libraries..." -ForegroundColor Yellow
+    cmake --install $buildDir --prefix $installDir --config $cfg
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "[ERROR] SDK installation failed for $cfg!" -ForegroundColor Red
+        exit 1
+    }
 }
 
 Write-Host "[OK] SDK installed to: $installDir" -ForegroundColor Green
@@ -118,6 +141,14 @@ Write-Host "[OK] SDK cleanup complete" -ForegroundColor Green
 # Create README for SDK
 # ============================================================================
 
+# Determine which configs were built for README
+if ($Config -eq "Both") {
+    $configDesc = "Debug and Release"
+}
+else {
+    $configDesc = $Config
+}
+
 $readmeContent = @"
 # Pillar Engine SDK v$sdkVersion
 
@@ -126,7 +157,8 @@ This SDK contains everything you need to create games with Pillar Engine.
 ## Contents
 
 - **include/** - Engine headers and third-party library headers
-- **lib/** - Engine libraries ($Config configuration)
+- **lib/Debug/** - Debug libraries (with debug symbols, for development)
+- **lib/Release/** - Release libraries (optimized, for distribution)
 - **editor/** - PillarEditor executable
 - **templates/** - Project templates to get started quickly
 - **docs/** - API reference and user guides
@@ -144,9 +176,10 @@ This SDK contains everything you need to create games with Pillar Engine.
 Copy-Item -Recurse "`$env:PILLAR_SDK_DIR\templates\EmptyProject" "MyGame"
 cd MyGame
 
-# Build your game
+# Build your game (Debug or Release)
 cmake --preset default
-cmake --build --preset default
+cmake --build --preset default          # Debug build
+cmake --build --preset default-release  # Release build
 ``````
 
 ### Option 2: Manual Configuration
@@ -158,8 +191,17 @@ cd MyGame
 
 # Configure with explicit SDK path
 cmake -S . -B build -DCMAKE_PREFIX_PATH="C:\path\to\$sdkName"
-cmake --build build
+cmake --build build --config Debug    # Debug build
+cmake --build build --config Release  # Release build
 ``````
+
+## Build Configurations
+
+This SDK includes both Debug and Release libraries:
+- **Debug**: Use for development (includes debug symbols, assertions enabled)
+- **Release**: Use for distribution (optimized, smaller binary size)
+
+CMake will automatically select the correct library based on your CMAKE_BUILD_TYPE.
 
 ## Documentation
 

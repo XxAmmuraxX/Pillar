@@ -38,5 +38,8 @@
 #include "Pillar/Renderer/OrthographicCamera.h"
 #include "Pillar/Renderer/OrthographicCameraController.h"
 
-
+// ECS
+#include "Pillar/ECS/Components.h"
+#include "Pillar/ECS/Entity.h"
+#include "Pillar/ECS/Scene.h"
 

@@ -18,30 +18,53 @@ namespace Pillar {
 	 * 
 	 * Contains all data needed for efficient sprite rendering:
 	 * - Texture reference (for texture batching)
-	 * - Color tint
+	 * - Color tint/fill
 	 * - Size/scale
 	 * - Texture coordinates (for sprite sheets)
 	 * - Z-index (for sorting)
 	 */
 	struct SpriteComponent
 	{
+		/// Texture to render. When nullptr, a solid color quad is drawn using Color.
 		std::shared_ptr<Texture2D> Texture;
-		std::string TexturePath;  // Path for serialization and editor
+		
+		/// Texture path for serialization and editor (set automatically when loading)
+		std::string TexturePath;
+		
+		/// Color multiplier (RGBA). Behavior depends on whether Texture is set:
+		/// - With Texture: Acts as a tint/modulate. White (1,1,1,1) = no tint.
+		/// - Without Texture: Acts as solid fill color for the quad.
+		/// Alpha component controls transparency (0 = invisible, 1 = opaque).
 		glm::vec4 Color = { 1.0f, 1.0f, 1.0f, 1.0f };
+		
+		/// Size in world units (width, height)
 		glm::vec2 Size = { 1.0f, 1.0f };
+		
+		/// UV coordinates for sprite sheet support (normalized 0-1)
 		glm::vec2 TexCoordMin = { 0.0f, 0.0f };
 		glm::vec2 TexCoordMax = { 1.0f, 1.0f };
-		// When true, AnimationSystem will not overwrite UVs
+		
+		/// When true, AnimationSystem will not overwrite UVs
 		bool LockUV = false;
+		
+		/// Depth for sorting (higher = rendered later/on top)
 		float ZIndex = 0.0f;
-		bool FlipX = false;  // Flip sprite horizontally
-		bool FlipY = false;  // Flip sprite vertically
-		bool Visible = true; // Visibility flag (controlled by layer visibility)
+		
+		/// Flip sprite horizontally (mirrors texture UVs)
+		bool FlipX = false;
+		
+		/// Flip sprite vertically (mirrors texture UVs)
+		bool FlipY = false;
+		
+		/// Visibility flag (false = skip rendering)
+		bool Visible = true;
 
 		// === LAYER SYSTEM ===
-		// New: Named layer system replaces raw ZIndex manipulation
-		std::string Layer = "Default";  // Layer name (e.g., "Background", "Player", "UI")
-		int OrderInLayer = 0;           // Fine control within layer (-100 to 100)
+		/// Named layer for render ordering (e.g., "Background", "Player", "UI")
+		std::string Layer = "Default";
+		
+		/// Fine control within layer (-100 to 100, higher = rendered later)
+		int OrderInLayer = 0;
 
 		SpriteComponent() = default;
 		SpriteComponent(const SpriteComponent&) = default;

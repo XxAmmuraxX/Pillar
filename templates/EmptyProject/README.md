@@ -130,6 +130,15 @@ cmake --build --preset default
 
 ## Troubleshooting
 
+### "Pillar SDK requires Microsoft Visual C++ (MSVC) compiler"
+
+The Pillar SDK is built with MSVC and requires MSVC for linking due to ABI compatibility.
+
+**Solutions:**
+1. Open **Developer PowerShell for VS 2022** and run cmake from there
+2. Use `cmake --preset default` (the preset forces MSVC)
+3. Set compiler explicitly: `-DCMAKE_CXX_COMPILER=cl`
+
 ### "Could not find Pillar" error
 
 **Solution:** Set `PILLAR_SDK_DIR` environment variable:

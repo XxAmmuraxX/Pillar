@@ -633,3 +633,257 @@ TEST(AnimationLoaderTests, EmptyClipSerialization)
 	EXPECT_TRUE(loadedClip.Frames.empty());
 	EXPECT_TRUE(loadedClip.Events.empty());
 }
+
+// ============================================================================
+// AnimationClipBuilder Tests
+// ============================================================================
+
+#include "Pillar/ECS/Components/Rendering/AnimationClipBuilder.h"
+
+TEST(AnimationClipBuilderTests, BasicConstruction)
+{
+	auto clip = AnimationClipBuilder("TestAnim").Build();
+	
+	EXPECT_EQ(clip.Name, "TestAnim");
+	EXPECT_TRUE(clip.Frames.empty());
+	EXPECT_TRUE(clip.Loop);  // default
+	EXPECT_FLOAT_EQ(clip.PlaybackSpeed, 1.0f);  // default
+}
+
+TEST(AnimationClipBuilderTests, AddFrameSimple)
+{
+	auto clip = AnimationClipBuilder("Walk")
+		.AddFrame("walk_01.png", 0.1f)
+		.AddFrame("walk_02.png", 0.15f)
+		.Build();
+	
+	EXPECT_EQ(clip.Name, "Walk");
+	EXPECT_EQ(clip.GetFrameCount(), 2);
+	
+	EXPECT_EQ(clip.Frames[0].TexturePath, "walk_01.png");
+	EXPECT_FLOAT_EQ(clip.Frames[0].Duration, 0.1f);
+	
+	EXPECT_EQ(clip.Frames[1].TexturePath, "walk_02.png");
+	EXPECT_FLOAT_EQ(clip.Frames[1].Duration, 0.15f);
+}
+
+TEST(AnimationClipBuilderTests, AddFrameWithUV)
+{
+	auto clip = AnimationClipBuilder("Manual")
+		.AddFrame("sheet.png", 0.1f, {0.0f, 0.0f}, {0.5f, 0.5f})
+		.AddFrame("sheet.png", 0.1f, {0.5f, 0.0f}, {1.0f, 0.5f})
+		.Build();
+	
+	EXPECT_EQ(clip.GetFrameCount(), 2);
+	
+	EXPECT_EQ(clip.Frames[0].UVMin, glm::vec2(0.0f, 0.0f));
+	EXPECT_EQ(clip.Frames[0].UVMax, glm::vec2(0.5f, 0.5f));
+	
+	EXPECT_EQ(clip.Frames[1].UVMin, glm::vec2(0.5f, 0.0f));
+	EXPECT_EQ(clip.Frames[1].UVMax, glm::vec2(1.0f, 0.5f));
+}
+
+TEST(AnimationClipBuilderTests, FromSpriteSheetHorizontal)
+{
+	// 4 frames in a horizontal strip (4 columns, 1 row)
+	auto clip = AnimationClipBuilder("HStrip")
+		.FromSpriteSheet("strip.png", 4, 1)
+		.Build();
+	
+	EXPECT_EQ(clip.GetFrameCount(), 4);
+	
+	// Each frame should be 0.25 wide
+	EXPECT_FLOAT_EQ(clip.Frames[0].UVMin.x, 0.0f);
+	EXPECT_FLOAT_EQ(clip.Frames[0].UVMax.x, 0.25f);
+	
+	EXPECT_FLOAT_EQ(clip.Frames[1].UVMin.x, 0.25f);
+	EXPECT_FLOAT_EQ(clip.Frames[1].UVMax.x, 0.5f);
+	
+	EXPECT_FLOAT_EQ(clip.Frames[2].UVMin.x, 0.5f);
+	EXPECT_FLOAT_EQ(clip.Frames[2].UVMax.x, 0.75f);
+	
+	EXPECT_FLOAT_EQ(clip.Frames[3].UVMin.x, 0.75f);
+	EXPECT_FLOAT_EQ(clip.Frames[3].UVMax.x, 1.0f);
+}
+
+TEST(AnimationClipBuilderTests, FromSpriteSheetGrid)
+{
+	// 2x2 grid = 4 frames
+	auto clip = AnimationClipBuilder("Grid")
+		.FromSpriteSheet("grid.png", 2, 2)
+		.Build();
+	
+	EXPECT_EQ(clip.GetFrameCount(), 4);
+	
+	// Frame 0: top-left (0,0) to (0.5, 0.5) - but Y is flipped
+	EXPECT_FLOAT_EQ(clip.Frames[0].UVMin.x, 0.0f);
+	EXPECT_FLOAT_EQ(clip.Frames[0].UVMax.x, 0.5f);
+	EXPECT_FLOAT_EQ(clip.Frames[0].UVMin.y, 0.5f);  // Y flipped
+	EXPECT_FLOAT_EQ(clip.Frames[0].UVMax.y, 1.0f);
+	
+	// Frame 1: top-right
+	EXPECT_FLOAT_EQ(clip.Frames[1].UVMin.x, 0.5f);
+	EXPECT_FLOAT_EQ(clip.Frames[1].UVMax.x, 1.0f);
+	
+	// Frame 2: bottom-left
+	EXPECT_FLOAT_EQ(clip.Frames[2].UVMin.y, 0.0f);
+	EXPECT_FLOAT_EQ(clip.Frames[2].UVMax.y, 0.5f);
+}
+
+TEST(AnimationClipBuilderTests, FromSpriteSheetPartialFrames)
+{
+	// Only use first 3 frames of a 4-column strip
+	auto clip = AnimationClipBuilder("Partial")
+		.FromSpriteSheet("strip.png", 4, 1, 3)  // frameCount = 3
+		.Build();
+	
+	EXPECT_EQ(clip.GetFrameCount(), 3);
+}
+
+TEST(AnimationClipBuilderTests, FromSpriteSheetStartOffset)
+{
+	// Start from frame 2 of a 4-column strip, take 2 frames
+	auto clip = AnimationClipBuilder("Offset")
+		.FromSpriteSheet("strip.png", 4, 1, 2, 2)  // startFrame = 2
+		.Build();
+	
+	EXPECT_EQ(clip.GetFrameCount(), 2);
+	
+	// First frame should start at 0.5 (frame index 2)
+	EXPECT_FLOAT_EQ(clip.Frames[0].UVMin.x, 0.5f);
+	EXPECT_FLOAT_EQ(clip.Frames[0].UVMax.x, 0.75f);
+}
+
+TEST(AnimationClipBuilderTests, SetFrameDuration)
+{
+	auto clip = AnimationClipBuilder("Duration")
+		.SetFrameDuration(0.2f)
+		.FromSpriteSheet("sheet.png", 3, 1)
+		.Build();
+	
+	for (const auto& frame : clip.Frames)
+	{
+		EXPECT_FLOAT_EQ(frame.Duration, 0.2f);
+	}
+}
+
+TEST(AnimationClipBuilderTests, SetLooping)
+{
+	auto looping = AnimationClipBuilder("Loop")
+		.SetLooping(true)
+		.Build();
+	EXPECT_TRUE(looping.Loop);
+	
+	auto oneShot = AnimationClipBuilder("OneShot")
+		.SetLooping(false)
+		.Build();
+	EXPECT_FALSE(oneShot.Loop);
+}
+
+TEST(AnimationClipBuilderTests, SetPlaybackSpeed)
+{
+	auto fast = AnimationClipBuilder("Fast")
+		.SetPlaybackSpeed(2.0f)
+		.Build();
+	EXPECT_FLOAT_EQ(fast.PlaybackSpeed, 2.0f);
+	
+	auto slow = AnimationClipBuilder("Slow")
+		.SetPlaybackSpeed(0.5f)
+		.Build();
+	EXPECT_FLOAT_EQ(slow.PlaybackSpeed, 0.5f);
+}
+
+TEST(AnimationClipBuilderTests, AddEvents)
+{
+	auto clip = AnimationClipBuilder("WithEvents")
+		.FromSpriteSheet("sheet.png", 4, 1)
+		.AddEvent(0, "start")
+		.AddEvent(2, "hit")
+		.AddEvent(3, "end")
+		.Build();
+	
+	EXPECT_EQ(clip.Events.size(), 3);
+	EXPECT_EQ(clip.Events[0].FrameIndex, 0);
+	EXPECT_EQ(clip.Events[0].EventName, "start");
+	EXPECT_EQ(clip.Events[1].FrameIndex, 2);
+	EXPECT_EQ(clip.Events[1].EventName, "hit");
+	EXPECT_EQ(clip.Events[2].FrameIndex, 3);
+	EXPECT_EQ(clip.Events[2].EventName, "end");
+}
+
+TEST(AnimationClipBuilderTests, ChainedBuilding)
+{
+	// Full fluent example
+	auto attack = AnimationClipBuilder("Attack")
+		.FromSpriteSheet("attack.png", 8, 1)
+		.SetFrameDuration(0.05f)
+		.SetLooping(false)
+		.SetPlaybackSpeed(1.5f)
+		.AddEvent(3, "hit")
+		.AddEvent(7, "complete")
+		.Build();
+	
+	EXPECT_EQ(attack.Name, "Attack");
+	EXPECT_EQ(attack.GetFrameCount(), 8);
+	EXPECT_FALSE(attack.Loop);
+	EXPECT_FLOAT_EQ(attack.PlaybackSpeed, 1.5f);
+	EXPECT_EQ(attack.Events.size(), 2);
+	
+	for (const auto& frame : attack.Frames)
+	{
+		EXPECT_EQ(frame.TexturePath, "attack.png");
+		EXPECT_FLOAT_EQ(frame.Duration, 0.05f);
+	}
+}
+
+TEST(AnimationClipBuilderTests, CreateAnimationFromStripConvenience)
+{
+	auto walk = CreateAnimationFromStrip("Walk", "walk.png", 6, 0.1f, true);
+	
+	EXPECT_EQ(walk.Name, "Walk");
+	EXPECT_EQ(walk.GetFrameCount(), 6);
+	EXPECT_TRUE(walk.Loop);
+	
+	for (const auto& frame : walk.Frames)
+	{
+		EXPECT_EQ(frame.TexturePath, "walk.png");
+		EXPECT_FLOAT_EQ(frame.Duration, 0.1f);
+	}
+}
+
+TEST(AnimationClipBuilderTests, RegisterWithSystem)
+{
+	Scene scene;
+	AnimationSystem system;
+	system.OnAttach(&scene);
+	
+	// Create and register using builder
+	auto idle = AnimationClipBuilder("Idle")
+		.AddFrame("idle.png", 1.0f)
+		.SetLooping(true)
+		.Build();
+	
+	system.RegisterClip(idle);
+	
+	EXPECT_TRUE(system.HasClip("Idle"));
+	EXPECT_EQ(system.GetClipCount(), 1);
+	
+	auto* retrieved = system.GetClip("Idle");
+	ASSERT_NE(retrieved, nullptr);
+	EXPECT_EQ(retrieved->Name, "Idle");
+}
+
+TEST(AnimationClipBuilderTests, InvalidSpriteSheet)
+{
+	// Zero or negative columns/rows should not crash
+	auto clip1 = AnimationClipBuilder("Invalid1")
+		.FromSpriteSheet("test.png", 0, 1)
+		.Build();
+	EXPECT_EQ(clip1.GetFrameCount(), 0);
+	
+	auto clip2 = AnimationClipBuilder("Invalid2")
+		.FromSpriteSheet("test.png", 4, -1)
+		.Build();
+	EXPECT_EQ(clip2.GetFrameCount(), 0);
+}
+

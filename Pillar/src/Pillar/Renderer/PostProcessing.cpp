@@ -1,5 +1,6 @@
 #include "PostProcessing.h"
 #include "Pillar/Renderer/RenderCommand.h"
+#include "Pillar/Renderer/EmbeddedShaders.h"
 #include "Pillar/Logger.h"
 #include <glad/gl.h>
 
@@ -13,14 +14,15 @@ namespace Pillar {
 
     void GrayscaleEffect::Init()
     {
-        m_Shader = Shader::CreateFromFile(
-            "PostProcessing/Grayscale.vert",
-            "PostProcessing/Grayscale.frag"
+        // Use embedded shaders for SDK distribution (no file dependencies)
+        m_Shader = Shader::Create(
+            EmbeddedShaders::PostProcessVertex,
+            EmbeddedShaders::GrayscaleFragment
         );
         
         if (!m_Shader)
         {
-            PIL_CORE_ERROR("PostProcessing: Failed to load GrayscaleEffect shader!");
+            PIL_CORE_ERROR("PostProcessing: Failed to create GrayscaleEffect shader!");
             return;
         }
         
@@ -48,14 +50,15 @@ namespace Pillar {
 
     void VignetteEffect::Init()
     {
-        m_Shader = Shader::CreateFromFile(
-            "PostProcessing/Vignette.vert",
-            "PostProcessing/Vignette.frag"
+        // Use embedded shaders for SDK distribution (no file dependencies)
+        m_Shader = Shader::Create(
+            EmbeddedShaders::PostProcessVertex,
+            EmbeddedShaders::VignetteFragment
         );
         
         if (!m_Shader)
         {
-            PIL_CORE_ERROR("PostProcessing: Failed to load VignetteEffect shader!");
+            PIL_CORE_ERROR("PostProcessing: Failed to create VignetteEffect shader!");
             return;
         }
         
@@ -105,10 +108,18 @@ namespace Pillar {
 
     void ChromaticAberrationEffect::Init()
     {
-        m_Shader = Shader::CreateFromFile(
-            "PostProcessing/ChromaticAberration.vert",
-            "PostProcessing/ChromaticAberration.frag"
+        // Use embedded shaders for SDK distribution (no file dependencies)
+        m_Shader = Shader::Create(
+            EmbeddedShaders::PostProcessVertex,
+            EmbeddedShaders::ChromaticAberrationFragment
         );
+        
+        if (!m_Shader)
+        {
+            PIL_CORE_ERROR("PostProcessing: Failed to create ChromaticAberrationEffect shader!");
+            return;
+        }
+        
         PIL_CORE_INFO("PostProcessing: ChromaticAberrationEffect initialized");
     }
 

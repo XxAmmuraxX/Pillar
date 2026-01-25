@@ -4,6 +4,25 @@ project(EmptyPillarProject LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# ==============================================================================
+# Compiler Verification
+# ==============================================================================
+# Pillar SDK is built with MSVC (Visual Studio 2022) and requires MSVC for linking.
+# Using Clang, GCC, or MinGW will cause linker errors due to ABI incompatibility.
+if(NOT MSVC)
+  message(FATAL_ERROR 
+    "Pillar SDK requires Microsoft Visual C++ (MSVC) compiler.\n"
+    "Current compiler: ${CMAKE_CXX_COMPILER_ID}\n"
+    "\n"
+    "Solutions:\n"
+    "  1. Open 'Developer PowerShell for VS 2022' and run cmake from there\n"
+    "  2. Use cmake --preset default (uses MSVC via preset)\n"
+    "  3. Set CMAKE_CXX_COMPILER to cl.exe explicitly\n"
+    "\n"
+    "See Pillar SDK documentation for compiler setup instructions."
+  )
+endif()
+
 # Prefer SDK path from env var if provided.
 if(NOT DEFINED PILLAR_SDK_DIR AND DEFINED ENV{PILLAR_SDK_DIR})
   set(PILLAR_SDK_DIR "$ENV{PILLAR_SDK_DIR}")

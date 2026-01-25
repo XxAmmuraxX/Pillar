@@ -308,6 +308,35 @@ if(PILLAR_ENABLE_SDK_INSTALL)
       )
     endif()
   endif()
+  
+  # ImGui headers (required for OnImGuiRender() in game projects)
+  if(DEFINED imgui_SOURCE_DIR)
+    # Install core ImGui headers
+    install(FILES
+      "${imgui_SOURCE_DIR}/imgui.h"
+      "${imgui_SOURCE_DIR}/imconfig.h"
+      "${imgui_SOURCE_DIR}/imgui_internal.h"
+      "${imgui_SOURCE_DIR}/imstb_rectpack.h"
+      "${imgui_SOURCE_DIR}/imstb_textedit.h"
+      "${imgui_SOURCE_DIR}/imstb_truetype.h"
+      DESTINATION "include/thirdparty/imgui"
+    )
+    # Install backend headers (GLFW + OpenGL3)
+    install(FILES
+      "${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.h"
+      "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3.h"
+      "${imgui_SOURCE_DIR}/backends/imgui_impl_opengl3_loader.h"
+      DESTINATION "include/thirdparty/imgui/backends"
+    )
+  endif()
+  
+  # ImGuizmo headers (for transform gizmos in editor/game)
+  if(DEFINED imguizmo_SOURCE_DIR)
+    install(FILES
+      "${imguizmo_SOURCE_DIR}/ImGuizmo.h"
+      DESTINATION "include/thirdparty/imguizmo"
+    )
+  endif()
 
   # --- Install templates/docs/license (added in later steps) ---
   if(EXISTS "${CMAKE_SOURCE_DIR}/templates")

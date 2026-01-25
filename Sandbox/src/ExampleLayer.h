@@ -20,6 +20,9 @@ public:
 		Layer::OnAttach();
 		PIL_INFO("ExampleLayer attached - Testing Renderer2D and Texture");
 		
+		// Enable keyboard controls for demo camera (WASD movement, Q/E rotation)
+		m_CameraController.SetKeyboardControlEnabled(true);
+		
 		// Load texture
 		m_Texture = Pillar::Texture2D::Create("pillar_logo.png");
 		

@@ -17,6 +17,10 @@ void GameLayer::OnAttach()
 {
     PIL_INFO("GameLayer attached - Welcome to Pillar Engine!");
     
+    // Enable keyboard camera controls for this demo
+    // In a real game, you might want to disable this and control the camera programmatically
+    m_CameraController.SetKeyboardControlEnabled(true);
+    
     // Load a placeholder texture (create a checkerboard if missing)
     // You can replace this with your own texture in assets/textures/
     m_CheckerboardTexture = Pillar::Texture2D::Create("checkerboard.png");

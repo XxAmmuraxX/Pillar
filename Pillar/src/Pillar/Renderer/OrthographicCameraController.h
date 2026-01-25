@@ -109,6 +109,39 @@ namespace Pillar {
          */
         float GetZoomSpeed() const { return m_ZoomSpeed; }
 
+        /**
+         * @brief Enable or disable keyboard controls (WASD movement)
+         * 
+         * Keyboard controls are disabled by default to avoid conflicts with
+         * player movement controls. Enable explicitly for editor/debug cameras.
+         * 
+         * @param enabled Whether to enable keyboard camera controls
+         */
+        void SetKeyboardControlEnabled(bool enabled) { m_KeyboardEnabled = enabled; }
+        
+        /**
+         * @brief Check if keyboard controls are enabled
+         */
+        bool IsKeyboardControlEnabled() const { return m_KeyboardEnabled; }
+
+        /**
+         * @brief Set the minimum and maximum zoom limits
+         * 
+         * @param minZoom Minimum zoom level (zoomed in) - default 0.25
+         * @param maxZoom Maximum zoom level (zoomed out) - default 10.0
+         */
+        void SetZoomLimits(float minZoom, float maxZoom);
+
+        /**
+         * @brief Get the minimum zoom level
+         */
+        float GetMinZoom() const { return m_MinZoom; }
+
+        /**
+         * @brief Get the maximum zoom level
+         */
+        float GetMaxZoom() const { return m_MaxZoom; }
+
     private:
         bool OnMouseScrolled(MouseScrolledEvent& e);
         bool OnWindowResized(WindowResizeEvent& e);
@@ -119,6 +152,7 @@ namespace Pillar {
         OrthographicCamera m_Camera;
 
         bool m_Rotation;
+        bool m_KeyboardEnabled = false;  // Disabled by default to avoid conflicts with player controls
 
         glm::vec3 m_CameraPosition = { 0.0f, 0.0f, 0.0f };
         float m_CameraRotation = 0.0f; // In degrees, counter-clockwise
@@ -127,6 +161,9 @@ namespace Pillar {
         float m_CameraTranslationSpeed = 5.0f;
         float m_CameraRotationSpeed = 180.0f;
         float m_ZoomSpeed = 0.25f;
+
+        float m_MinZoom = 0.25f;
+        float m_MaxZoom = 10.0f;
     };
 
 }

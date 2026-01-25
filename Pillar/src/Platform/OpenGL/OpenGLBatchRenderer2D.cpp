@@ -3,6 +3,7 @@
 #include "Pillar/Renderer/VertexArray.h"
 #include "Pillar/Renderer/Shader.h"
 #include "Pillar/Renderer/ShaderLibrary.h"
+#include "Pillar/Renderer/EmbeddedShaders.h"
 #include "Pillar/Logger.h"
 #include <glad/gl.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -71,16 +72,18 @@ namespace Pillar {
         m_QuadIndexBuffer = IndexBuffer::Create(quadIndices.data(), MaxIndices);
         m_QuadVertexArray->SetIndexBuffer(m_QuadIndexBuffer);
 
-        // Load batch shader from files using ShaderLibrary
-        // Shaders are located in Pillar/src/Pillar/Renderer/Shaders/ (development) or assets/shaders/ (distribution)
+        // Load batch shader - prefer embedded shaders for SDK distribution
+        // Falls back to file-based loading for hot-reload during development
         auto& shaderLibrary = ShaderLibrary::GetInstance();
-        m_BatchShader = shaderLibrary.Load("BatchQuad", 
-                                           "BatchQuad.vert",
-                                           "BatchQuad.frag");
+        
+        // First try embedded shaders (always available, no file dependencies)
+        m_BatchShader = shaderLibrary.LoadFromSource("BatchQuad",
+                                                      EmbeddedShaders::BatchQuadVertex,
+                                                      EmbeddedShaders::BatchQuadFragment);
 
         if (!m_BatchShader)
         {
-            PIL_CORE_ERROR("Failed to load batch shader from files!");
+            PIL_CORE_ERROR("Failed to create batch shader from embedded source!");
             return;
         }
 
