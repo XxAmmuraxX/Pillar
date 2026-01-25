@@ -33,8 +33,10 @@ cmake --build --preset default
 
 4. **Run**:
 ```powershell
-.\build\Debug\EmptyPillarProject.exe
+.\build\Release\EmptyPillarProject.exe
 ```
+
+> **Note:** The Pillar SDK is built in Release mode. The `default` preset uses Release configuration to match.
 
 ### Project Structure
 
@@ -107,20 +109,24 @@ auto clip = Pillar::AudioClip::Create("explosion.wav");
 
 ### Building Configurations
 
+The Pillar SDK is distributed with **Release** libraries only. Your game must be built in Release mode to link correctly.
+
 ```powershell
-# Debug (default) - with symbols, slower
+# Release (default) - optimized, matches SDK
 cmake --preset default
 cmake --build --preset default
 
-# Release - optimized, faster
-cmake --preset release
-cmake --build --preset release
+# RelWithDebInfo - optimized with debug symbols
+cmake --preset relwithdebinfo
+cmake --build --preset relwithdebinfo
 
 # Clean rebuild
 Remove-Item -Recurse -Force build
 cmake --preset default
 cmake --build --preset default
 ```
+
+> **Important:** Debug builds (`--preset debug`) require a Debug-built SDK, which is not included in the standard distribution. If you need Debug builds, build the SDK from source with `-Config Debug`.
 
 ## Documentation
 
@@ -129,6 +135,20 @@ cmake --build --preset default
 - **Editor Guide:** See `$env:PILLAR_SDK_DIR/docs/PILLAR_EDITOR_GUIDE.md`
 
 ## Troubleshooting
+
+### LNK2038: mismatch detected for '_ITERATOR_DEBUG_LEVEL' or 'RuntimeLibrary'
+
+This error occurs when mixing Debug and Release libraries. The Pillar SDK is built in **Release** mode.
+
+**Solution:** Build your game in Release mode:
+```powershell
+# Clean and rebuild in Release mode
+Remove-Item -Recurse -Force build -ErrorAction SilentlyContinue
+cmake --preset default
+cmake --build --preset default
+```
+
+If you need Debug builds for development, build the Pillar SDK from source with Debug configuration.
 
 ### "Pillar SDK requires Microsoft Visual C++ (MSVC) compiler"
 

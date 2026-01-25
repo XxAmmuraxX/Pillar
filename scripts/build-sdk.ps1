@@ -1,5 +1,15 @@
 # Pillar SDK Build Script
 # Builds the Pillar Engine and packages it as an SDK for game developers
+#
+# IMPORTANT: Game projects must match the SDK's build configuration.
+# - Release SDK: Games must build with CMAKE_BUILD_TYPE=Release
+# - Debug SDK: Games must build with CMAKE_BUILD_TYPE=Debug
+# - Both: Games can use either configuration
+#
+# Usage:
+#   .\build-sdk.ps1 -Config Release -CreateZip   # Release-only SDK (default for distribution)
+#   .\build-sdk.ps1 -Config Debug -CreateZip     # Debug-only SDK (for development)
+#   .\build-sdk.ps1 -Config Both -CreateZip      # Both configurations (larger SDK)
 
 param(
     [ValidateSet("Debug", "Release", "RelWithDebInfo", "Both")]
@@ -157,8 +167,7 @@ This SDK contains everything you need to create games with Pillar Engine.
 ## Contents
 
 - **include/** - Engine headers and third-party library headers
-- **lib/Debug/** - Debug libraries (with debug symbols, for development)
-- **lib/Release/** - Release libraries (optimized, for distribution)
+- **lib/** - Engine and dependency libraries ($configDesc configuration)
 - **editor/** - PillarEditor executable
 - **templates/** - Project templates to get started quickly
 - **docs/** - API reference and user guides
@@ -176,10 +185,12 @@ This SDK contains everything you need to create games with Pillar Engine.
 Copy-Item -Recurse "`$env:PILLAR_SDK_DIR\templates\EmptyProject" "MyGame"
 cd MyGame
 
-# Build your game (Debug or Release)
+# Build your game
 cmake --preset default
-cmake --build --preset default          # Debug build
-cmake --build --preset default-release  # Release build
+cmake --build --preset default
+
+# Run
+.\build\Release\EmptyPillarProject.exe
 ``````
 
 ### Option 2: Manual Configuration
@@ -189,19 +200,43 @@ cmake --build --preset default-release  # Release build
 Copy-Item -Recurse "$sdkName\templates\EmptyProject" "MyGame"
 cd MyGame
 
-# Configure with explicit SDK path
-cmake -S . -B build -DCMAKE_PREFIX_PATH="C:\path\to\$sdkName"
-cmake --build build --config Debug    # Debug build
-cmake --build build --config Release  # Release build
+# Configure with explicit SDK path (Release mode)
+cmake -S . -B build/Release -DCMAKE_PREFIX_PATH="C:\path\to\$sdkName" -DCMAKE_BUILD_TYPE=Release
+cmake --build build/Release
 ``````
 
-## Build Configurations
+## Build Configuration
 
+$(if ($Config -eq "Both") {
+@"
 This SDK includes both Debug and Release libraries:
 - **Debug**: Use for development (includes debug symbols, assertions enabled)
 - **Release**: Use for distribution (optimized, smaller binary size)
 
 CMake will automatically select the correct library based on your CMAKE_BUILD_TYPE.
+"@
+} elseif ($Config -eq "Release" -or $configs.Count -eq 1 -and $configs[0] -eq "Release") {
+@"
+**Important:** This SDK contains **Release** libraries only.
+
+Your game project must be built in Release mode to avoid linker errors:
+``````powershell
+cmake --preset default        # Uses Release configuration
+cmake --build --preset default
+``````
+
+If you need Debug builds for development, rebuild the SDK with:
+``````powershell
+.\scripts\build-sdk.ps1 -Config Both -CreateZip
+``````
+"@
+} else {
+@"
+**Important:** This SDK contains **$Config** libraries only.
+
+Your game project must be built in $Config mode to avoid linker errors.
+"@
+})
 
 ## Documentation
 
@@ -223,7 +258,7 @@ CMake will automatically select the correct library based on your CMAKE_BUILD_TY
 - License: See LICENSE.txt
 
 ---
-Built with Pillar Engine ($Config configuration)
+Built with Pillar Engine ($configDesc configuration)
 Generated: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss")
 "@
 

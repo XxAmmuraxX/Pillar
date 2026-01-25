@@ -114,6 +114,8 @@ This creates:
 
 ## Using the SDK (Game Development)
 
+> **Important:** The Pillar SDK is distributed with **Release** libraries only. Your game must be built in Release mode.
+
 ### Option 1: Environment Variable (Recommended)
 
 ```powershell
@@ -125,9 +127,12 @@ $env:PILLAR_SDK_DIR = "C:\path\to\sdk\PillarSDK-0.1.0-Windows-x64"
 Copy-Item -Recurse "$env:PILLAR_SDK_DIR\templates\EmptyProject" MyGame
 cd MyGame
 
-# Build your game
+# Build your game (Release mode to match SDK)
 cmake --preset default
 cmake --build --preset default
+
+# Run
+.\build\Release\EmptyPillarProject.exe
 ```
 
 ### Option 2: Manual Configuration
@@ -137,9 +142,9 @@ cmake --build --preset default
 Copy-Item -Recurse "C:\path\to\sdk\templates\EmptyProject" MyGame
 cd MyGame
 
-# Configure with explicit path
-cmake -S . -B build -DCMAKE_PREFIX_PATH="C:\path\to\sdk\PillarSDK-0.1.0-Windows-x64"
-cmake --build build
+# Configure with explicit path (Release mode)
+cmake -S . -B build/Release -DCMAKE_PREFIX_PATH="C:\path\to\sdk\PillarSDK-0.1.0-Windows-x64" -DCMAKE_BUILD_TYPE=Release
+cmake --build build/Release
 ```
 
 ---

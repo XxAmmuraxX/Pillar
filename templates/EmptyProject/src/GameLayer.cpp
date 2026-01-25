@@ -4,6 +4,7 @@
 #include "Pillar/Renderer/Renderer.h"
 #include "Pillar/Renderer/Renderer2D.h"
 #include "Pillar/Input.h"
+#include <imgui.h>
 
 GameLayer::GameLayer()
     : Pillar::Layer("GameLayer")
@@ -53,7 +54,7 @@ void GameLayer::OnUpdate(float deltaTime)
     // Example: Draw textured square offset from origin
     if (m_CheckerboardTexture)
     {
-        Pillar::Renderer2D::DrawQuad({ 2.0f, 0.0f }, { 1.0f, 1.0f }, m_CheckerboardTexture.get());
+        Pillar::Renderer2D::DrawQuad(glm::vec2(2.0f, 0.0f), glm::vec2(1.0f, 1.0f), glm::vec4(1.0f), m_CheckerboardTexture);
     }
     
     // Example: Draw rotating quad
