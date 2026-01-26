@@ -12,14 +12,6 @@ set_target_properties(Sandbox PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${EXECUTABLE_OUTPUT_DIR}
 )
 
-# Override for all configurations
-foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)
-    string(TOUPPER ${CONFIG} CONFIG_UPPER)
-    set_target_properties(Sandbox PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${EXECUTABLE_OUTPUT_DIR}
-    )
-endforeach()
-
 # Create assets directory structure in the Sandbox source folder (for development)
 add_custom_command(TARGET Sandbox POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_SOURCE_DIR}/assets

@@ -9,7 +9,7 @@
     {
       "name": "base",
       "hidden": true,
-      "description": "Base preset - requires MSVC toolchain (Visual Studio 2022)",
+      "description": "Base preset - requires MSVC in PATH (use build.ps1 or Developer PowerShell)",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl",
@@ -24,8 +24,8 @@
     },
     {
       "name": "default",
-      "displayName": "Release",
-      "description": "Default release configuration (MSVC required). The Pillar SDK is built in Release mode.",
+      "displayName": "Release (Recommended)",
+      "description": "Release build with Ninja + MSVC. Use build.ps1 for automatic environment setup.",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/Release",
       "cacheVariables": {
@@ -34,8 +34,8 @@
     },
     {
       "name": "debug",
-      "displayName": "Debug (requires Debug SDK)",
-      "description": "Debug configuration - requires Pillar SDK built with Debug. Not available with standard SDK.",
+      "displayName": "Debug",
+      "description": "Debug build with Ninja + MSVC. Requires Debug SDK libraries.",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/Debug",
       "cacheVariables": {
@@ -44,12 +44,48 @@
     },
     {
       "name": "relwithdebinfo",
-      "displayName": "RelWithDebInfo",
-      "description": "Release with debug information (MSVC required)",
+      "displayName": "Release with Debug Info",
+      "description": "Release with debug symbols for profiling.",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/RelWithDebInfo",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+    {
+      "name": "clang-base",
+      "hidden": true,
+      "description": "Base Clang preset - requires LLVM/Clang installed and in PATH",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      }
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Clang Release (LLVM required)",
+      "description": "Uses clang-cl from LLVM. Install LLVM and add to PATH. No vcvars needed.",
+      "inherits": "clang-base",
+      "binaryDir": "${sourceDir}/build/clang-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "clang-debug",
+      "displayName": "Clang Debug (LLVM required)",
+      "description": "Debug with Clang. Requires Debug SDK libraries.",
+      "inherits": "clang-base",
+      "binaryDir": "${sourceDir}/build/clang-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ],
@@ -62,7 +98,7 @@
     },
     {
       "name": "debug",
-      "displayName": "Build Debug (requires Debug SDK)",
+      "displayName": "Build Debug",
       "configurePreset": "debug",
       "jobs": 8
     },
@@ -70,6 +106,18 @@
       "name": "relwithdebinfo",
       "displayName": "Build RelWithDebInfo",
       "configurePreset": "relwithdebinfo",
+      "jobs": 8
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Build (Clang Release)",
+      "configurePreset": "clang-release",
+      "jobs": 8
+    },
+    {
+      "name": "clang-debug",
+      "displayName": "Build (Clang Debug)",
+      "configurePreset": "clang-debug",
       "jobs": 8
     }
   ]

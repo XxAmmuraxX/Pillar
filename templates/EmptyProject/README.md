@@ -7,36 +7,80 @@ A minimal Pillar Engine project template to get you started quickly.
 ### Prerequisites
 
 - Windows 10/11 (64-bit)
-- Visual Studio 2022 or compatible C++17 compiler
-- CMake 3.16+
-- Ninja build system (recommended)
+- Visual Studio 2022+ with C++ workload (Build Tools or full IDE)
+- CMake 3.25+
+- Ninja build system
 - Pillar SDK installed
+- (Optional) LLVM/Clang for alternative compiler
 
 ### Building Your Game
 
-1. **Set SDK path** (if not already set):
+**Option 1: Use build.ps1 (Recommended)**
+
+The build script automatically sets up the MSVC environment - just run it from any PowerShell:
+
 ```powershell
+# Set SDK path (one-time setup)
 $env:PILLAR_SDK_DIR = "C:\path\to\PillarSDK-0.1.0-Windows-x64"
-# Optional: Make it permanent
-[System.Environment]::SetEnvironmentVariable("PILLAR_SDK_DIR", $env:PILLAR_SDK_DIR, "User")
+
+# Build Release (default)
+.\build.ps1
+
+# Build Debug
+.\build.ps1 -Config Debug
+
+# Build Release with debug symbols (for profiling)
+.\build.ps1 -Config RelWithDebInfo
+
+# Clean rebuild
+.\build.ps1 -Clean
 ```
 
-2. **Configure the project**:
+**Option 2: Manual CMake (from Developer PowerShell)**
+
+If you're already in Developer PowerShell for VS:
+
 ```powershell
 cmake --preset default
-```
-
-3. **Build**:
-```powershell
 cmake --build --preset default
 ```
 
-4. **Run**:
+**Option 3: Clang (Alternative Compiler)**
+
+If you have LLVM installed and in PATH (no vcvars needed):
+
+```powershell
+cmake --preset clang-release
+cmake --build --preset clang-release
+```
+
+### Running Your Game
+
 ```powershell
 .\build\Release\EmptyPillarProject.exe
 ```
 
-> **Note:** The Pillar SDK is built in Release mode. The `default` preset uses Release configuration to match.
+## Available Build Presets
+
+| Preset | Compiler | Description |
+|--------|----------|-------------|
+| `default` | MSVC | **Recommended.** Release build. Use `build.ps1` for auto-setup. |
+| `debug` | MSVC | Debug build (requires Debug SDK libraries). |
+| `relwithdebinfo` | MSVC | Release with debug symbols for profiling. |
+| `clang-release` | Clang | Alternative compiler. Requires LLVM in PATH. |
+| `clang-debug` | Clang | Debug with Clang. |
+
+**Build preset usage:**
+```powershell
+# Using build.ps1 (recommended - handles environment automatically)
+.\build.ps1                         # Release (default)
+.\build.ps1 -Config Debug           # Debug build
+.\build.ps1 -Config RelWithDebInfo  # Release with debug symbols
+
+# Or manually (requires Developer PowerShell or MSVC in PATH)
+cmake --preset default
+cmake --build --preset default
+```
 
 ### Project Structure
 
@@ -109,24 +153,34 @@ auto clip = Pillar::AudioClip::Create("explosion.wav");
 
 ### Building Configurations
 
-The Pillar SDK is distributed with **Release** libraries only. Your game must be built in Release mode to link correctly.
+The SDK includes both **Debug** and **Release** libraries.
 
+**Visual Studio generator (multi-config):**
 ```powershell
-# Release (default) - optimized, matches SDK
-cmake --preset default
-cmake --build --preset default
+cmake --preset default                    # Configure once
+cmake --build --preset default            # Build Release
+cmake --build --preset default-debug      # Build Debug
+```
 
-# RelWithDebInfo - optimized with debug symbols
-cmake --preset relwithdebinfo
-cmake --build --preset relwithdebinfo
+**Ninja (single-config presets):**
+```powershell
+# Release
+.\build.ps1                               # Uses build.ps1 wrapper
+# or
+cmake --preset ninja-release && cmake --build --preset ninja-release
 
-# Clean rebuild
+# Debug
+.\build.ps1 -Config Debug
+# or
+cmake --preset ninja-debug && cmake --build --preset ninja-debug
+```
+
+**Clean rebuild:**
+```powershell
 Remove-Item -Recurse -Force build
 cmake --preset default
 cmake --build --preset default
 ```
-
-> **Important:** Debug builds (`--preset debug`) require a Debug-built SDK, which is not included in the standard distribution. If you need Debug builds, build the SDK from source with `-Config Debug`.
 
 ## Documentation
 
@@ -152,12 +206,13 @@ If you need Debug builds for development, build the Pillar SDK from source with 
 
 ### "Pillar SDK requires Microsoft Visual C++ (MSVC) compiler"
 
-The Pillar SDK is built with MSVC and requires MSVC for linking due to ABI compatibility.
+The Pillar SDK is built with MSVC and requires MSVC-compatible compiler for linking.
 
 **Solutions:**
-1. Open **Developer PowerShell for VS 2022** and run cmake from there
-2. Use `cmake --preset default` (the preset forces MSVC)
-3. Set compiler explicitly: `-DCMAKE_CXX_COMPILER=cl`
+1. **Use Visual Studio generator (easiest):** `cmake --preset default`
+2. **Use the build script:** `.\build.ps1` (auto-configures MSVC)
+3. **Use Developer PowerShell for VS 2022** then run ninja presets
+4. **Use Clang:** `cmake --preset clang-release` (requires LLVM installed)
 
 ### "Could not find Pillar" error
 
@@ -168,10 +223,13 @@ $env:PILLAR_SDK_DIR = "C:\path\to\PillarSDK"
 
 ### Build fails with "cl.exe not found"
 
-**Solution:** Use Developer PowerShell for VS 2022, or run:
-```powershell
-& "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\Tools\Launch-VsDevShell.ps1"
-```
+This happens when using Ninja presets from a regular PowerShell.
+
+**Solutions:**
+1. **Use the build script:** `.\build.ps1` (auto-detects and configures MSVC)
+2. **Use Visual Studio preset:** `cmake --preset default` (no cl.exe needed)
+3. **Open Developer PowerShell for VS 2022** and run ninja presets from there
+4. **Use Clang:** Install LLVM, add to PATH, use `cmake --preset clang-release`
 
 ### Assets not found at runtime
 

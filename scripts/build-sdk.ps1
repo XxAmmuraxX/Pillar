@@ -22,6 +22,75 @@ param(
 $ErrorActionPreference = "Stop"
 
 # ============================================================================
+# MSVC Environment Setup
+# ============================================================================
+
+function Find-VsWhere {
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (Test-Path $vswhere) {
+        return $vswhere
+    }
+    return $null
+}
+
+function Setup-MSVCEnvironment {
+    # Check if cl.exe is already available
+    $cl = Get-Command cl.exe -ErrorAction SilentlyContinue
+    if ($cl) {
+        Write-Host "[OK] MSVC compiler found: $($cl.Source)" -ForegroundColor Green
+        return $true
+    }
+
+    Write-Host "Setting up MSVC environment..." -ForegroundColor Yellow
+
+    $vswhere = Find-VsWhere
+    if (-not $vswhere) {
+        Write-Host "[ERROR] Visual Studio not found. Install VS 2022+ with C++ workload." -ForegroundColor Red
+        return $false
+    }
+
+    # Find VS installation path
+    $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if (-not $vsPath) {
+        Write-Host "[ERROR] Visual Studio C++ tools not found." -ForegroundColor Red
+        Write-Host "        Install 'Desktop development with C++' workload." -ForegroundColor Gray
+        return $false
+    }
+
+    # Find vcvarsall.bat
+    $vcvarsall = Join-Path $vsPath "VC\Auxiliary\Build\vcvarsall.bat"
+    if (-not (Test-Path $vcvarsall)) {
+        Write-Host "[ERROR] vcvarsall.bat not found at: $vcvarsall" -ForegroundColor Red
+        return $false
+    }
+
+    Write-Host "Found Visual Studio at: $vsPath" -ForegroundColor Gray
+
+    # Run vcvarsall and capture environment
+    $envOutput = cmd /c "`"$vcvarsall`" x64 >nul 2>&1 && set"
+    foreach ($line in $envOutput) {
+        if ($line -match "^([^=]+)=(.*)$") {
+            [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], "Process")
+        }
+    }
+
+    # Verify cl.exe is now available
+    $cl = Get-Command cl.exe -ErrorAction SilentlyContinue
+    if ($cl) {
+        Write-Host "[OK] MSVC environment configured: $($cl.Source)" -ForegroundColor Green
+        return $true
+    }
+
+    Write-Host "[ERROR] Failed to configure MSVC environment" -ForegroundColor Red
+    return $false
+}
+
+# Setup MSVC before doing anything else
+if (-not (Setup-MSVCEnvironment)) {
+    exit 1
+}
+
+# ============================================================================
 # Configuration
 # ============================================================================
 
@@ -109,7 +178,9 @@ foreach ($cfg in $configs) {
     $buildDir = "build\$preset"
 
     Write-Host "Installing $cfg libraries..." -ForegroundColor Yellow
-    cmake --install $buildDir --prefix $installDir --config $cfg
+    # For single-config generators (Ninja), don't use --config flag
+    # The build type is baked into the build directory
+    cmake --install $buildDir --prefix $installDir
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[ERROR] SDK installation failed for $cfg!" -ForegroundColor Red
         exit 1

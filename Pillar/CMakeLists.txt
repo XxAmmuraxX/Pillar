@@ -120,14 +120,6 @@ add_library(Pillar STATIC
     src/Pillar/Utils/AnimationLoader.h
 )
 
-# Override for all configurations
-foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)
-    string(TOUPPER ${CONFIG} CONFIG_UPPER)
-    set_target_properties(Pillar PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${LIBRARY_OUTPUT_DIR}
-    )
-endforeach()
-
 # Set output directories
 set_target_properties(Pillar PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${LIBRARY_OUTPUT_DIR}
