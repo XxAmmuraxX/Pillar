@@ -25,16 +25,9 @@ add_executable(PillarEditor
     src/Utils/AnimationLibraryManager.cpp
 )
 
-# Override output directory for all configurations
-foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)
-    string(TOUPPER ${CONFIG} CONFIG_UPPER)
-    set_target_properties(PillarEditor PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${CMAKE_SOURCE_DIR}/bin/Debug-x64/PillarEditor
-    )
-endforeach()
-
+# Set output directory based on build configuration
 set_target_properties(PillarEditor PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/Debug-x64/PillarEditor
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}-x64/PillarEditor
     OUTPUT_NAME "PillarEditor"
 )
 

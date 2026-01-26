@@ -104,14 +104,6 @@ set_target_properties(PillarTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${BINARY_OUTPUT_DIR}/Tests
 )
 
-# Override for all configurations
-foreach(CONFIG Debug Release RelWithDebInfo MinSizeRel)
-    string(TOUPPER ${CONFIG} CONFIG_UPPER)
-    set_target_properties(PillarTests PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY_${CONFIG_UPPER} ${BINARY_OUTPUT_DIR}/Tests
-    )
-endforeach()
-
 # Link libraries
 target_link_libraries(PillarTests
     PRIVATE

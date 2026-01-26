@@ -11,8 +11,12 @@ if (WIN32)
     add_definitions(-DPIL_WINDOWS)
 endif()
 
-# Set output structure
-set(BINARY_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/bin/Debug-x64)
+# Set output structure based on build configuration
+# For single-config generators (Ninja), use CMAKE_BUILD_TYPE
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug")
+endif()
+set(BINARY_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}-x64)
 set(LIBRARY_OUTPUT_DIR ${BINARY_OUTPUT_DIR}/Pillar)
 set(EXECUTABLE_OUTPUT_DIR ${BINARY_OUTPUT_DIR}/Sandbox)
 
