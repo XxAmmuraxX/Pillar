@@ -13,6 +13,7 @@
 #include "AnimationDemoLayer.h"
 #include "Lighting2DDemoLayer.h"
 #include "DemoMenuLayer.h"
+#include "TopDownShooterLayer.h"
 #include "Pillar/ImGuiLayer.h"
 
 class Sandbox : public Pillar::Application
@@ -38,7 +39,7 @@ public:
 		
 
 		// Option 3: Heavy Entity Performance Demo
-		PushLayer(new HeavyEntityPerfDemo());
+		//PushLayer(new HeavyEntityPerfDemo());
 
 		// Option 4: Object Pool Demo
 		//PushLayer(new ObjectPoolDemo());
@@ -54,6 +55,9 @@ public:
 
 		// Option 8: 2D Lighting + Shadows Demo
 		// PushLayer(new Lighting2DDemoLayer());
+
+		// Option 9: Top Down Shooter (Swarm Slayer)
+		PushLayer(new TopDownShooterLayer());
 
 		// PushLayer(new RenderingDemo::RenderingDemoLayer());
 	}
