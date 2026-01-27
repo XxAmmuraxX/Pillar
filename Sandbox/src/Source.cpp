@@ -56,7 +56,7 @@ public:
 		// Option 8: 2D Lighting + Shadows Demo
 		// PushLayer(new Lighting2DDemoLayer());
 
-		// Option 9: Top Down Shooter (Swarm Slayer - Ported from Raylib)
+		// Option 9: Top Down Shooter (Swarm Slayer)
 		PushLayer(new TopDownShooterLayer());
 
 		// PushLayer(new RenderingDemo::RenderingDemoLayer());
