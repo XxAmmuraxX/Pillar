@@ -1,7 +1,7 @@
 # Top-Down Shooter Implementation Context
 
 **Last Updated**: 2026-01-27
-**Status**: Phase 5 Complete - Polish & Effects Implemented
+**Status**: Phase 5 Complete - Core Game Complete (Movement, Combat, Game Over)
 
 ---
 
@@ -44,6 +44,7 @@ Implement a complete top-down survivor-shooter game following the TDD document a
 - CreateEnemy in EntityFactory
 - DamageSystem for bullet-enemy collisions
 - Heavy enemies (Box2D) and light enemies (VelocityComponent)
+- Shooter enemies fire red projectiles at player
 
 ### Phase 4: Wave System & Power-ups - ✅ COMPLETE
 - WaveManager with escalating difficulty
@@ -61,7 +62,11 @@ Implement a complete top-down survivor-shooter game following the TDD document a
 - Muzzle flash on weapon fire
 - Hit particles on bullet impact
 - Death particles when enemies die
-- DamageSystem callbacks for effect integration
+- **BulletCollisionSystem integration** - unified raycast + circle collision detection
+- DamageSystem refactored to use BulletCollisionSystem callbacks
+- **PhysicsSyncSystem integration (CRITICAL FIX)** - syncs Box2D positions to ECS
+- Game over screen with wave count display
+- Restart game functionality (clears entities, resets wave manager)
 
 ### Phase 6: Audio - 🔲 TODO
 - Add sound effects (shoot, hit, death, pickup)
@@ -85,7 +90,7 @@ Sandbox/src/TopDownShooter/
 │   ├── WeaponSystem.h             [COMPLETE] - Firing, bullet spawning, muzzle flash
 │   ├── BulletLifetimeSystem.h     [COMPLETE] - Bullet cleanup
 │   ├── EnemyAISystem.h            [COMPLETE] - Chaser, Shooter, Swarm AI
-│   ├── DamageSystem.h             [COMPLETE] - Collisions, damage, callbacks
+│   ├── DamageSystem.h             [COMPLETE] - Damage application via callbacks, invulnerability, death
 │   ├── PowerUpSystem.h            [COMPLETE] - Collection, buff application
 │   └── EffectSystems.h            [COMPLETE] - FlashSystem, TemporaryCleanupSystem
 └── Utilities/
@@ -189,8 +194,9 @@ entity.AddComponent<RigidbodyComponent>(b2_dynamicBody);
 | System | Purpose |
 |--------|---------|
 | PhysicsSystem | Box2D world stepping, body creation |
+| PhysicsSyncSystem | **CRITICAL** - Syncs Box2D positions back to ECS transforms |
 | VelocityIntegrationSystem | Euler integration for light entities |
-| BulletCollisionSystem | Raycast hit detection |
+| BulletCollisionSystem | **IN USE** - Raycast (Box2D) + circle collision (lightweight entities) |
 | AnimationSystem | Frame updates, clip management |
 | SpriteRenderSystem | Batch rendering with sorting |
 | ParticleEmitterSystem | Emission logic |
@@ -201,37 +207,42 @@ entity.AddComponent<RigidbodyComponent>(b2_dynamicBody);
 ## Current GameLayer Update Order
 
 **OnAttach**:
-1. Create Scene
-2. Physics (zero gravity)
-3. PlayerMovementSystem
-4. WeaponSystem
-5. VelocityIntegrationSystem
-6. BulletLifetimeSystem
-7. EnemyAISystem
-8. DamageSystem (with callbacks for effects)
-9. PowerUpSystem
-10. FlashSystem
-11. TemporaryCleanupSystem
-12. Create arena bounds
-13. Create player
+1. Create PhysicsSystem (zero gravity)
+2. Create PhysicsSyncSystem (syncs Box2D → ECS transforms)
+3. Initialize Camera
+4. PlayerMovementSystem
+5. WeaponSystem
+6. VelocityIntegrationSystem
+7. BulletLifetimeSystem
+8. **BulletCollisionSystem** (raycast + circle collision)
+9. EnemyAISystem
+10. DamageSystem (subscribes to BulletCollisionSystem callbacks)
+11. PowerUpSystem
+12. FlashSystem
+13. TemporaryCleanupSystem
 14. Initialize WaveManager (with spawn callbacks)
-15. Initialize CameraShake
-
+15. Set up DamageSystem callbacks for effects + game over
+16. Create arena bounds
+17. Create player
+18. Initialize CameraShake
 **OnUpdate**:
-1. WaveManager update (spawn enemies on timer)
-2. CameraShake update (apply/decay shake)
+1. **Check game over state** (skip updates if dead, only render)
+2. WaveManager update (spawn enemies on timer)
 3. PlayerMovementSystem (input + aiming)
-4. WeaponSystem (firing, bullet spawning, muzzle flash)
-5. EnemyAISystem (AI behavior, movement)
-6. PhysicsSystem (Box2D for heavy entities)
-7. VelocityIntegrationSystem (for bullets/light entities/swarm)
-8. DamageSystem (collisions, damage, death + effect callbacks)
-9. PowerUpSystem (collection, buff timers)
-10. FlashSystem (damage flash effect)
-11. TemporaryCleanupSystem (auto-destroy effects)
-12. BulletLifetimeSystem (cleanup expired bullets)
-13. Camera update (follow player + shake offset)
-14. Render (all sprites + particles)
+4. EnemyAISystem (AI behavior, movement, shooter firing)
+5. WeaponSystem (firing, bullet spawning, muzzle flash)
+6. PhysicsSystem (Box2D world step for heavy entities)
+7. **PhysicsSyncSystem** (sync Box2D positions → ECS transforms) **CRITICAL**
+8. VelocityIntegrationSystem (for bullets/light entities/swarm)
+9. **BulletCollisionSystem** (raycast + circle collision detection)
+10. DamageSystem (damage application, invulnerability timers, death processing)
+11. PowerUpSystem (collection, buff timers)
+12. FlashSystem (damage flash effect)
+13. BulletLifetimeSystem (cleanup expired bullets)
+14. TemporaryCleanupSystem (auto-destroy effects)
+15. CameraShake update (apply/decay shake)
+16. Camera update (follow player + shake offset)
+17. Render (all sprites + particles)
 
 ---
 
@@ -383,17 +394,42 @@ namespace EffectFactory {
     void SpawnDashTrail(Scene& scene, const glm::vec2& pos);
 }
 ```
+Critical Implementation Notes
 
----
+### PhysicsSyncSystem is MANDATORY
+The `PhysicsSyncSystem` **must** be called after `PhysicsSystem::OnUpdate()` to sync Box2D body positions back to ECS `TransformComponent`. Without this:
+- Entities with `RigidbodyComponent` will not move visually
+- Physics simulation runs but transforms never update
+- Rendering shows entities at their spawn positions
+
+**Correct Order:**
+```cpp
+m_PhysicsSystem->OnUpdate(dt);        // Step Box2D world
+m_PhysicsSyncSystem->OnUpdate(dt);    // Sync positions to ECS
+// Now transforms are updated for rendering
+```
+
+### Game Over Implementation
+When player dies:
+1. `DamageSystem` detects player death via `PlayerTagComponent`
+2. Triggers `OnGameOver` callback
+3. `GameLayer` sets `m_IsGameOver = true`
+4. Game loop skips all updates except camera and rendering
+5. ImGui displays centered game over modal with:
+   - Wave number reached
+   - Restart button (destroys all entities, recreates arena/player, resets WaveManager)
+   - Quit button (closes application)
 
 ## Next Steps (Phase 6: Audio)
 
 1. **Add Shoot SFX**
    - Load WAV file in OnAttach
    - Play in WeaponSystem when firing
+   - Play enemy shoot SFX in EnemyAISystem
 
 2. **Add Hit/Death SFX**
    - Play in DamageSystem callbacks
+   - Different sounds for enemy hit vs enemy death
 
 3. **Add Pickup SFX**
    - Play in PowerUpSystem on collection
@@ -401,8 +437,43 @@ namespace EffectFactory {
 4. **Add Background Music**
    - Looping music in OnAttach
    - Volume control in debug panel
+   - Fade out on game over
+4. **Add Background Music**
+   - Looping music in OnAttach
+   - Volume control in debug panel
 
 ---
+
+## Collision System Architecture
+
+### BulletCollisionSystem Integration
+The game now uses Pillar's `BulletCollisionSystem` for unified bullet hit detection:
+
+**Features:**
+- **Raycast collision** for heavy entities (with `RigidbodyComponent`)
+- **Circle-circle collision** for lightweight entities (without `RigidbodyComponent`)
+- Automatic owner filtering (bullets don't hit their shooter)
+- Callback-based architecture for damage application
+- Handles both player bullets → enemies and enemy bullets → player
+
+**Architecture:**
+```
+Bullet Movement (VelocityComponent)
+    ↓
+BulletCollisionSystem detects hits:
+  - Try raycast (Box2D bodies: Player, Chaser, Shooter)
+  - Fall back to circle collision (lightweight: Swarm)
+    ↓
+Callback fired: (bullet, target, damage, hitPoint)
+    ↓
+DamageSystem applies damage and triggers effects
+```
+
+**Benefits:**
+- ~150 lines of collision code removed from game
+- Engine-optimized raycast queries via Box2D
+- Single source of truth for all bullet collisions
+- Easy to extend for new entity types
 
 ## Code Patterns Reference
 
@@ -452,15 +523,20 @@ static Pillar::Entity CreatePowerUp(Pillar::Scene& scene, const glm::vec2& posit
 
 ### DamageSystem Callback Pattern
 ```cpp
-// In DamageSystem.h
-using HitCallback = std::function<void(entt::entity enemy, const glm::vec2& pos)>;
-using DeathCallback = std::function<void(entt::entity enemy, const glm::vec2& pos)>;
-using PlayerHitCallback = std::function<void(float damage)>;
+// In DamageSystem.h (subscribes to BulletCollisionSystem)
+using OnEnemyHitCallback = std::function<void(const glm::vec2& pos, const glm::vec2& bulletDir)>;
+using OnEnemyKilledCallback = std::function<void(const glm::vec2& pos, const glm::vec4& color)>;
+using OnPlayerHitCallback = std::function<void()>;
+using OnGameOverCallback = std::function<void()>;
 
 class DamageSystem : public Pillar::System {
-    HitCallback OnEnemyHit;
-    DeathCallback OnEnemyKilled;
-    PlayerHitCallback OnPlayerHit;
+public:
+    DamageSystem(Pillar::BulletCollisionSystem* bulletCollisionSystem);
+    // Callbacks for game effects
+    OnEnemyHitCallback m_OnEnemyHit;
+    OnEnemyKilledCallback m_OnEnemyKilled;
+    OnPlayerHitCallback m_OnPlayerHit;
+    OnGameOverCallback m_OnGameOver;
 };
 
 // In GameLayer OnAttach
@@ -494,6 +570,8 @@ m_WaveManager.StartWave(1);
 // In GameLayer OnUpdate
 m_WaveManager.Update(dt);
 
+4. **Entities not moving**: Missing `PhysicsSyncSystem` after `PhysicsSystem` in update order
+5. **Shooter enemies not firing**: Check `EnemyAISystem::FireProjectile()` is implemented and called in `UpdateShooter()`
 if (m_WaveManager.IsWaveComplete()) {
     // Check if all enemies dead
     auto enemyView = m_Scene.GetRegistry().view<EnemyComponent>();

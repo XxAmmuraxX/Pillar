@@ -6,6 +6,7 @@
 #include <Pillar/ECS/Systems/PhysicsSystem.h>
 #include <Pillar/ECS/Systems/PhysicsSyncSystem.h>
 #include <Pillar/ECS/Systems/VelocityIntegrationSystem.h>
+#include <Pillar/ECS/Systems/BulletCollisionSystem.h>
 #include <Pillar/Renderer/Renderer2D.h>
 #include <Pillar/Renderer/OrthographicCameraController.h>
 #include <Pillar/Application.h>
@@ -92,31 +93,35 @@ namespace Game {
             m_BulletLifetimeSystem = new BulletLifetimeSystem();
             m_BulletLifetimeSystem->OnAttach(m_Scene.get());
 
-            // 8. Initialize Enemy AI System
+            // 8. Initialize Bullet Collision System (for hit detection)
+            m_BulletCollisionSystem = new Pillar::BulletCollisionSystem(m_PhysicsSystem);
+            m_BulletCollisionSystem->OnAttach(m_Scene.get());
+
+            // 9. Initialize Enemy AI System
             m_EnemyAISystem = new EnemyAISystem();
             m_EnemyAISystem->OnAttach(m_Scene.get());
 
-            // 9. Initialize Damage System
-            m_DamageSystem = new DamageSystem();
+            // 10. Initialize Damage System (connects to BulletCollisionSystem)
+            m_DamageSystem = new DamageSystem(m_BulletCollisionSystem);
             m_DamageSystem->OnAttach(m_Scene.get());
 
-            // 10. Initialize Power-Up System
+            // 11. Initialize Power-Up System
             m_PowerUpSystem = new PowerUpSystem();
             m_PowerUpSystem->OnAttach(m_Scene.get());
 
-            // 11. Initialize Effect Systems
+            // 12. Initialize Effect Systems
             m_FlashSystem = new FlashSystem();
             m_FlashSystem->OnAttach(m_Scene.get());
             m_TemporaryCleanupSystem = new TemporaryCleanupSystem();
             m_TemporaryCleanupSystem->OnAttach(m_Scene.get());
 
-            // 12. Initialize Wave Manager
+            // 13. Initialize Wave Manager
             m_WaveManager.Init(30.0f, 16.0f);
             m_WaveManager.SetSpawnCallback([this](const glm::vec2& pos, EnemyType type) {
                 EntityFactory::CreateEnemy(*m_Scene, pos, type);
             });
 
-            // 13. Set up DamageSystem callbacks for effects
+            // 14. Set up DamageSystem callbacks for effects
             m_DamageSystem->SetOnEnemyHit([this](const glm::vec2& pos, const glm::vec2& bulletDir) {
                 EffectFactory::SpawnHitParticles(*m_Scene, pos, bulletDir);
                 m_CameraShake.ShakeSmall();
@@ -134,10 +139,10 @@ namespace Game {
                 PIL_INFO("Wave Reached: {}", m_WaveManager.GetCurrentWave());
             });
 
-            // 14. Create Arena Bounds
+            // 15. Create Arena Bounds
             CreateArenaBounds(30.0f, 16.0f);
 
-            // 15. Create Player
+            // 16. Create Player
             m_PlayerEntity = EntityFactory::CreatePlayer(*m_Scene, glm::vec2(0.0f, 0.0f));
 
             // Waves will spawn enemies automatically
@@ -184,6 +189,13 @@ namespace Game {
                 m_EnemyAISystem->OnDetach();
                 delete m_EnemyAISystem;
                 m_EnemyAISystem = nullptr;
+            }
+
+            if (m_BulletCollisionSystem)
+            {
+                m_BulletCollisionSystem->OnDetach();
+                delete m_BulletCollisionSystem;
+                m_BulletCollisionSystem = nullptr;
             }
 
             if (m_BulletLifetimeSystem)
@@ -263,28 +275,31 @@ namespace Game {
             // 6. Velocity Integration (for light entities like bullets)
             m_VelocitySystem->OnUpdate(dt);
 
-            // 7. Damage System (collision detection, damage application)
+            // 7. Bullet Collision System (raycast + circle collision detection)
+            m_BulletCollisionSystem->OnUpdate(dt);
+
+            // 8. Damage System (invulnerability timers, death processing)
             m_DamageSystem->OnUpdate(dt);
 
-            // 8. Power-Up System (collection, effects)
+            // 9. Power-Up System (collection, effects)
             m_PowerUpSystem->OnUpdate(dt);
 
-            // 9. Flash System (damage flash effects)
+            // 10. Flash System (damage flash effects)
             m_FlashSystem->OnUpdate(dt);
 
-            // 10. Bullet Lifetime (cleanup expired bullets)
+            // 11. Bullet Lifetime (cleanup expired bullets)
             m_BulletLifetimeSystem->OnUpdate(dt);
 
-            // 11. Temporary Cleanup (effect entities)
+            // 12. Temporary Cleanup (effect entities)
             m_TemporaryCleanupSystem->OnUpdate(dt);
 
-            // 12. Camera Shake
+            // 13. Camera Shake
             m_CameraShake.OnUpdate(dt);
 
-            // 13. Camera Update (follow player)
+            // 14. Camera Update (follow player)
             UpdateCamera(dt);
 
-            // 14. Rendering
+            // 15. Rendering
             RenderScene();
         }
 
@@ -569,6 +584,7 @@ namespace Game {
         Pillar::PhysicsSystem* m_PhysicsSystem = nullptr;
         Pillar::PhysicsSyncSystem* m_PhysicsSyncSystem = nullptr;
         Pillar::VelocityIntegrationSystem* m_VelocitySystem = nullptr;
+        Pillar::BulletCollisionSystem* m_BulletCollisionSystem = nullptr;
         PlayerMovementSystem* m_PlayerMovementSystem = nullptr;
         WeaponSystem* m_WeaponSystem = nullptr;
         BulletLifetimeSystem* m_BulletLifetimeSystem = nullptr;

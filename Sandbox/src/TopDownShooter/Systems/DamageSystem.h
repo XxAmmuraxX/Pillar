@@ -1,13 +1,12 @@
 #pragma once
 
 #include <Pillar/ECS/Systems/System.h>
+#include <Pillar/ECS/Systems/BulletCollisionSystem.h>
 #include <Pillar/ECS/Scene.h>
 #include <Pillar/ECS/Entity.h>
 #include <Pillar/ECS/Components/Core/TransformComponent.h>
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
-#include <Pillar/ECS/Components/Gameplay/BulletComponent.h>
 #include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
-#include <Pillar/ECS/Components/Physics/VelocityComponent.h>
 #include <Pillar/Logger.h>
 
 #include "../Components/EnemyComponent.h"
@@ -21,6 +20,10 @@
 
 namespace Game {
 
+    /**
+     * DamageSystem - Handles health updates, invulnerability, and death processing
+     * Now uses BulletCollisionSystem callbacks instead of manual collision checks
+     */
     class DamageSystem : public Pillar::System
     {
     public:
@@ -28,6 +31,20 @@ namespace Game {
         using OnEnemyKilledCallback = std::function<void(const glm::vec2& position, const glm::vec4& color)>;
         using OnPlayerHitCallback = std::function<void()>;
         using OnGameOverCallback = std::function<void()>;
+
+        DamageSystem(Pillar::BulletCollisionSystem* bulletCollisionSystem)
+            : m_BulletCollisionSystem(bulletCollisionSystem)
+        {
+            // Hook into bullet collision system
+            if (m_BulletCollisionSystem)
+            {
+                m_BulletCollisionSystem->SetOnBulletHit(
+                    [this](Pillar::Entity bullet, Pillar::Entity target, float damage, const glm::vec2& hitPos) {
+                        OnBulletHit(bullet, target, damage, hitPos);
+                    }
+                );
+            }
+        }
 
         void SetOnEnemyHit(OnEnemyHitCallback callback) { m_OnEnemyHit = callback; }
         void SetOnEnemyKilled(OnEnemyKilledCallback callback) { m_OnEnemyKilled = callback; }
@@ -38,109 +55,62 @@ namespace Game {
         {
             if (!m_Scene) return;
 
-            // 1. Check bullet-enemy collisions
-            ProcessBulletCollisions();
-
-            // 2. Update invulnerability timers
+            // 1. Update invulnerability timers
             UpdateInvulnerabilityTimers(dt);
 
-            // 3. Handle deaths
+            // 2. Handle deaths
             ProcessDeaths();
         }
 
     private:
+        Pillar::BulletCollisionSystem* m_BulletCollisionSystem = nullptr;
+
         OnEnemyHitCallback m_OnEnemyHit;
         OnEnemyKilledCallback m_OnEnemyKilled;
         OnPlayerHitCallback m_OnPlayerHit;
         OnGameOverCallback m_OnGameOver;
 
-        void ProcessBulletCollisions()
+        void OnBulletHit(Pillar::Entity bullet, Pillar::Entity target, float damage, const glm::vec2& hitPos)
         {
-            auto& registry = m_Scene->GetRegistry();
-
-            // Get all bullets
-            auto bulletView = registry.view<
-                Pillar::TransformComponent,
-                Pillar::BulletComponent
-            >();
-
-            // Get all enemies
-            auto enemyView = registry.view<
-                Pillar::TransformComponent,
-                Pillar::SpriteComponent,
-                Pillar::HealthComponent,
-                EnemyComponent
-            >();
-
-            std::vector<entt::entity> bulletsToDestroy;
-
-            // Check each bullet against each enemy
-            for (auto bulletEntity : bulletView)
+            // Apply damage to target
+            if (auto* health = target.TryGetComponent<Pillar::HealthComponent>())
             {
-                auto& bulletTransform = bulletView.get<Pillar::TransformComponent>(bulletEntity);
-                auto& bulletComp = bulletView.get<Pillar::BulletComponent>(bulletEntity);
+                float damageDealt = health->TakeDamage(damage);
 
-                if (bulletComp.HitsRemaining <= 0)
+                if (damageDealt > 0.0f)
                 {
-                    bulletsToDestroy.push_back(bulletEntity);
-                    continue;
-                }
-
-                // Check against all enemies
-                for (auto enemyEntity : enemyView)
-                {
-                    auto& enemyTransform = enemyView.get<Pillar::TransformComponent>(enemyEntity);
-                    auto& enemySprite = enemyView.get<Pillar::SpriteComponent>(enemyEntity);
-                    auto& enemyHealth = enemyView.get<Pillar::HealthComponent>(enemyEntity);
-
-                    // Simple circle-circle collision
-                    float bulletRadius = 0.15f;
-                    float enemyRadius = enemySprite.Size.x * 0.4f;
-                    float distanceSquared = glm::distance2(bulletTransform.Position, enemyTransform.Position);
-                    float radiusSum = bulletRadius + enemyRadius;
-
-                    if (distanceSquared < radiusSum * radiusSum)
+                    // Check if target is an enemy
+                    if (target.HasComponent<EnemyComponent>())
                     {
-                        // Collision detected!
-                        // Apply damage
-                        float damageDealt = enemyHealth.TakeDamage(bulletComp.Damage);
+                        PIL_INFO("Bullet hit enemy! Damage: {}, Enemy Health: {}/{}",
+                            damageDealt, health->CurrentHealth, health->MaxHealth);
 
-                        if (damageDealt > 0.0f)
+                        // Trigger hit effect callback
+                        if (m_OnEnemyHit)
                         {
-                            PIL_INFO("Bullet hit enemy! Damage: {}, Enemy Health: {}/{}",
-                                damageDealt, enemyHealth.CurrentHealth, enemyHealth.MaxHealth);
-
-                            // Trigger hit effect callback
-                            if (m_OnEnemyHit)
+                            // Get bullet direction from velocity if available
+                            glm::vec2 bulletDir(1.0f, 0.0f);
+                            if (auto* vel = bullet.TryGetComponent<Pillar::VelocityComponent>())
                             {
-                                // Get bullet direction from velocity if available
-                                glm::vec2 bulletDir(1.0f, 0.0f);
-                                Pillar::Entity bulletE(bulletEntity, m_Scene);
-                                if (auto* vel = bulletE.TryGetComponent<Pillar::VelocityComponent>())
-                                {
-                                    if (glm::length(vel->Velocity) > 0.01f)
-                                        bulletDir = glm::normalize(vel->Velocity);
-                                }
-                                m_OnEnemyHit(enemyTransform.Position, bulletDir);
+                                if (glm::length(vel->Velocity) > 0.01f)
+                                    bulletDir = glm::normalize(vel->Velocity);
                             }
+                            m_OnEnemyHit(hitPos, bulletDir);
                         }
+                    }
+                    // Check if target is player
+                    else if (target.HasComponent<PlayerTagComponent>())
+                    {
+                        PIL_WARN("Player hit! Damage: {}, Player Health: {}/{}",
+                            damageDealt, health->CurrentHealth, health->MaxHealth);
 
-                        // Decrement bullet hits
-                        bulletComp.HitsRemaining--;
-
-                        if (bulletComp.HitsRemaining <= 0)
+                        // Trigger player hit callback
+                        if (m_OnPlayerHit)
                         {
-                            bulletsToDestroy.push_back(bulletEntity);
-                            break;  // Stop checking this bullet
+                            m_OnPlayerHit();
                         }
                     }
                 }
-            }
-
-            // Destroy bullets that hit
-            for (auto entity : bulletsToDestroy)
-            {
-                m_Scene->DestroyEntity(Pillar::Entity(entity, m_Scene));
             }
         }
 

@@ -4,7 +4,10 @@
 #include "Pillar/ECS/Entity.h"
 #include "Pillar/ECS/Components/Core/TransformComponent.h"
 #include "Pillar/ECS/Components/Physics/VelocityComponent.h"
+#include "Pillar/ECS/Components/Physics/RigidbodyComponent.h"
+#include "Pillar/ECS/Components/Rendering/SpriteComponent.h"
 #include "Pillar/ECS/Components/Gameplay/BulletComponent.h"
+#include "Pillar/ECS/Components/Gameplay/HealthComponent.h"
 #include "Pillar/Logger.h"
 #include <box2d/box2d.h>
 #include <vector>
@@ -41,7 +44,7 @@ namespace Pillar {
 	};
 
 	BulletCollisionSystem::BulletCollisionSystem(PhysicsSystem* physicsSystem)
-		: m_PhysicsSystem(physicsSystem)
+		: m_PhysicsSystem(physicsSystem), m_OnBulletHit(nullptr)
 	{
 	}
 
@@ -79,6 +82,7 @@ namespace Pillar {
 	void BulletCollisionSystem::ProcessBullets(float deltaTime)
 	{
 		auto view = m_Scene->GetRegistry().view<TransformComponent, VelocityComponent, BulletComponent>();
+		std::vector<entt::entity> bulletsToDestroy;
 
 		for (auto entity : view)
 		{
@@ -86,27 +90,57 @@ namespace Pillar {
 			auto& velocity = view.get<VelocityComponent>(entity);
 			auto& bullet = view.get<BulletComponent>(entity);
 
+			Entity bulletEntity(entity, m_Scene);
+
 			// Calculate raycast start and end points
 			glm::vec2 start = transform.Position;
 			glm::vec2 end = transform.Position + velocity.Velocity * deltaTime;
 
-			// Perform raycast
+			// Try raycast first (for heavy entities with Box2D bodies)
 			Entity hitEntity;
-			if (RaycastBullet(Entity(entity, m_Scene), start, end, hitEntity))
+			glm::vec2 hitPoint;
+			bool hitDetected = false;
+
+			if (RaycastBullet(bulletEntity, start, end, hitEntity, hitPoint))
 			{
-				// Hit detected!
-				PIL_CORE_TRACE("Bullet hit entity!");
+				hitDetected = true;
+			}
+			else
+			{
+				// Check circle collision against light entities (no Box2D body)
+				if (CheckCircleCollision(bulletEntity, hitEntity, hitPoint))
+				{
+					hitDetected = true;
+				}
+			}
+
+			if (hitDetected)
+			{
+				// Trigger callback
+				if (m_OnBulletHit)
+				{
+					m_OnBulletHit(bulletEntity, hitEntity, bullet.Damage, hitPoint);
+				}
 
 				// Decrement hits remaining
 				bullet.HitsRemaining--;
 
-				// TODO: Apply damage to hit entity (Phase 6: Health System)
-				// For now, just log the hit
+				if (bullet.HitsRemaining <= 0)
+				{
+					bulletsToDestroy.push_back(entity);
+				}
 			}
+		}
+
+		// Destroy bullets that hit and ran out of hits
+		for (auto entity : bulletsToDestroy)
+		{
+			Entity e(entity, m_Scene);
+			m_Scene->DestroyEntity(e);
 		}
 	}
 
-	bool BulletCollisionSystem::RaycastBullet(Entity bulletEntity, const glm::vec2& start, const glm::vec2& end, Entity& hitEntity)
+	bool BulletCollisionSystem::RaycastBullet(Entity bulletEntity, const glm::vec2& start, const glm::vec2& end, Entity& hitEntity, glm::vec2& hitPoint)
 	{
 		BulletRaycastCallback callback;
 
@@ -133,7 +167,53 @@ namespace Pillar {
 				return false;
 			}
 
+			// Store hit point
+			hitPoint = glm::vec2(callback.m_Point.x, callback.m_Point.y);
+
 			return true;
+		}
+
+		return false;
+	}
+
+	bool BulletCollisionSystem::CheckCircleCollision(Entity bulletEntity, Entity& targetEntity, glm::vec2& hitPoint)
+	{
+		auto& bulletTransform = bulletEntity.GetComponent<TransformComponent>();
+		auto& bulletComp = bulletEntity.GetComponent<BulletComponent>();
+
+		// Get all entities with transform and health that DON'T have a rigidbody (light entities)
+		auto view = m_Scene->GetRegistry().view<TransformComponent, HealthComponent>(entt::exclude<RigidbodyComponent>);
+
+		const float bulletRadius = 0.15f;
+
+		for (auto entity : view)
+		{
+			Entity target(entity, m_Scene);
+
+			// Don't hit ourselves (bullet owner)
+			if (target == bulletComp.Owner)
+				continue;
+
+			auto& targetTransform = view.get<TransformComponent>(entity);
+
+			// Determine target radius
+			float targetRadius = 0.5f; // Default
+			if (auto* sprite = target.TryGetComponent<SpriteComponent>())
+			{
+				targetRadius = sprite->Size.x * 0.4f;
+			}
+
+			// Circle-circle collision
+			float distanceSquared = glm::distance2(bulletTransform.Position, targetTransform.Position);
+			float radiusSum = bulletRadius + targetRadius;
+
+			if (distanceSquared < radiusSum * radiusSum)
+			{
+				// Hit detected!
+				targetEntity = target;
+				hitPoint = targetTransform.Position;
+				return true;
+			}
 		}
 
 		return false;
