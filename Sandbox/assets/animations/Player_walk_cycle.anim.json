@@ -1,0 +1,80 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/character_walk_cycle.png",
+      "uvMax": [
+        0.1666666716337204,
+        1.0
+      ],
+      "uvMin": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/character_walk_cycle.png",
+      "uvMax": [
+        0.3333333432674408,
+        1.0
+      ],
+      "uvMin": [
+        0.1666666716337204,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/character_walk_cycle.png",
+      "uvMax": [
+        0.5,
+        1.0
+      ],
+      "uvMin": [
+        0.3333333432674408,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/character_walk_cycle.png",
+      "uvMax": [
+        0.6666666865348816,
+        1.0
+      ],
+      "uvMin": [
+        0.5,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/character_walk_cycle.png",
+      "uvMax": [
+        0.8333333134651184,
+        1.0
+      ],
+      "uvMin": [
+        0.6666666865348816,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/character_walk_cycle.png",
+      "uvMax": [
+        1.0,
+        1.0
+      ],
+      "uvMin": [
+        0.8333333134651184,
+        0.0
+      ]
+    }
+  ],
+  "loop": true,
+  "name": "Player_walk_cycle",
+  "playbackSpeed": 1.0
+}

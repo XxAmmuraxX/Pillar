@@ -202,7 +202,9 @@ namespace Pillar {
 			if (it == s_TextureCache.end())
 			{
 				// Load and cache new texture
+				PIL_CORE_INFO("AnimationSystem: Loading texture from path: '{0}'", frame.TexturePath);
 				auto texture = Texture2D::Create(frame.TexturePath);
+				PIL_CORE_INFO("AnimationSystem: Texture loaded - Width: {0}, Height: {1}", texture->GetWidth(), texture->GetHeight());
 				s_TextureCache[frame.TexturePath] = texture;
 				sprite.Texture = texture;
 			}
@@ -217,6 +219,8 @@ namespace Pillar {
 		{
 			sprite.TexCoordMin = frame.UVMin;
 			sprite.TexCoordMax = frame.UVMax;
+			PIL_CORE_INFO("AnimationSystem: Set UVs - Min: ({0}, {1}), Max: ({2}, {3})", 
+				frame.UVMin.x, frame.UVMin.y, frame.UVMax.x, frame.UVMax.y);
 		}
 	}
 

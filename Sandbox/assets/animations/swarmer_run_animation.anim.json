@@ -1,0 +1,92 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.05000000074505806,
+      "texturePath": "textures/e_run.png",
+      "uvMax": [
+        0.25,
+        1.0
+      ],
+      "uvMin": [
+        0.125,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.05000000074505806,
+      "texturePath": "textures/e_run.png",
+      "uvMax": [
+        0.375,
+        1.0
+      ],
+      "uvMin": [
+        0.25,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.05000000074505806,
+      "texturePath": "textures/e_run.png",
+      "uvMax": [
+        0.5,
+        1.0
+      ],
+      "uvMin": [
+        0.375,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.05000000074505806,
+      "texturePath": "textures/e_run.png",
+      "uvMax": [
+        0.625,
+        1.0
+      ],
+      "uvMin": [
+        0.5,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.05000000074505806,
+      "texturePath": "textures/e_run.png",
+      "uvMax": [
+        0.75,
+        1.0
+      ],
+      "uvMin": [
+        0.625,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.05000000074505806,
+      "texturePath": "textures/e_run.png",
+      "uvMax": [
+        0.875,
+        1.0
+      ],
+      "uvMin": [
+        0.75,
+        0.0
+      ]
+    },
+    {
+      "duration": 0.05000000074505806,
+      "texturePath": "textures/e_run.png",
+      "uvMax": [
+        1.0,
+        1.0
+      ],
+      "uvMin": [
+        0.875,
+        0.0
+      ]
+    }
+  ],
+  "loop": true,
+  "name": "swarmer_run_animation",
+  "playbackSpeed": 1.100000023841858
+}

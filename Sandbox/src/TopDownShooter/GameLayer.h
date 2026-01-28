@@ -7,6 +7,7 @@
 #include <Pillar/ECS/Systems/PhysicsSyncSystem.h>
 #include <Pillar/ECS/Systems/VelocityIntegrationSystem.h>
 #include <Pillar/ECS/Systems/BulletCollisionSystem.h>
+#include <Pillar/ECS/Systems/AnimationSystem.h>
 #include <Pillar/Renderer/Renderer2D.h>
 #include <Pillar/Renderer/OrthographicCameraController.h>
 #include <Pillar/Application.h>
@@ -24,6 +25,7 @@
 #include "Utilities/WaveManager.h"
 #include "Utilities/CameraShake.h"
 #include "Utilities/EffectFactory.h"
+#include "Utilities/AudioManager.h"
 #include "Components/EnemyComponent.h"
 #include "Components/PowerUpComponent.h"
 #include "Components/EffectComponents.h"
@@ -82,7 +84,10 @@ namespace Game {
             m_PlayerMovementSystem->OnAttach(m_Scene.get());
 
             // 5. Initialize Weapon System
-            m_WeaponSystem = new WeaponSystem();
+            m_WeaponSystem = new WeaponSystem(
+                &m_CameraController->GetCamera(),
+                m_WindowWidth, m_WindowHeight
+            );
             m_WeaponSystem->OnAttach(m_Scene.get());
 
             // 6. Initialize Velocity Integration System (for bullets)
@@ -115,6 +120,17 @@ namespace Game {
             m_TemporaryCleanupSystem = new TemporaryCleanupSystem();
             m_TemporaryCleanupSystem->OnAttach(m_Scene.get());
 
+            // 12b. Initialize Animation System
+            m_AnimationSystem = new Pillar::AnimationSystem();
+            m_AnimationSystem->OnAttach(m_Scene.get());
+            
+            // Load animation clips (prepend 'animations/' subdirectory)
+            m_AnimationSystem->LoadAnimationClip("animations/hoodzy_chaser_enemy_animation.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/floaty_enemy_animation.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/swarmer_run_animation.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/Player_walk_cycle.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/Player_standing.anim.json");
+
             // 13. Initialize Wave Manager
             m_WaveManager.Init(30.0f, 16.0f);
             m_WaveManager.SetSpawnCallback([this](const glm::vec2& pos, EnemyType type) {
@@ -135,6 +151,7 @@ namespace Game {
             });
             m_DamageSystem->SetOnGameOver([this]() {
                 m_IsGameOver = true;
+                AudioManager::Instance().StopMusic();
                 PIL_INFO("===== GAME OVER =====");
                 PIL_INFO("Wave Reached: {}", m_WaveManager.GetCurrentWave());
             });
@@ -144,6 +161,10 @@ namespace Game {
 
             // 16. Create Player
             m_PlayerEntity = EntityFactory::CreatePlayer(*m_Scene, glm::vec2(0.0f, 0.0f));
+
+            // 17. Initialize Audio
+            AudioManager::Instance().Init();
+            AudioManager::Instance().StartMusic();
 
             // Waves will spawn enemies automatically
             // SpawnTestEnemies();  // Disabled - using wave system now
@@ -155,7 +176,17 @@ namespace Game {
         {
             PIL_INFO("GameLayer::OnDetach");
 
+            // Shutdown audio
+            AudioManager::Instance().Shutdown();
+
             // Clean up systems (reverse order of creation)
+            if (m_AnimationSystem)
+            {
+                m_AnimationSystem->OnDetach();
+                delete m_AnimationSystem;
+                m_AnimationSystem = nullptr;
+            }
+
             if (m_TemporaryCleanupSystem)
             {
                 m_TemporaryCleanupSystem->OnDetach();
@@ -287,6 +318,9 @@ namespace Game {
             // 10. Flash System (damage flash effects)
             m_FlashSystem->OnUpdate(dt);
 
+            // 10b. Animation System (sprite frame updates)
+            m_AnimationSystem->OnUpdate(dt);
+
             // 11. Bullet Lifetime (cleanup expired bullets)
             m_BulletLifetimeSystem->OnUpdate(dt);
 
@@ -296,10 +330,17 @@ namespace Game {
             // 13. Camera Shake
             m_CameraShake.OnUpdate(dt);
 
-            // 14. Camera Update (follow player)
+            // 14. Update Audio Listener (follow player)
+            if (m_PlayerEntity.IsValid())
+            {
+                auto& playerTransform = m_PlayerEntity.GetComponent<Pillar::TransformComponent>();
+                Pillar::AudioEngine::SetListenerPosition(glm::vec3(playerTransform.Position, 0.0f));
+            }
+
+            // 15. Camera Update (follow player)
             UpdateCamera(dt);
 
-            // 15. Rendering
+            // 16. Rendering
             RenderScene();
         }
 
@@ -408,6 +449,22 @@ namespace Game {
             ImGui::Separator();
             ImGui::Text("Total Entities: %zu", m_Scene->GetEntityCount());
             ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+
+            ImGui::Separator();
+            ImGui::Text("=== Audio ===");
+            bool musicPlaying = AudioManager::Instance().IsMusicPlaying();
+            if (ImGui::Button(musicPlaying ? "Pause Music" : "Play Music"))
+            {
+                if (musicPlaying)
+                    AudioManager::Instance().PauseMusic();
+                else
+                    AudioManager::Instance().ResumeMusic();
+            }
+            float musicVol = AudioManager::Instance().GetMusicVolume();
+            if (ImGui::SliderFloat("Music Volume", &musicVol, 0.0f, 1.0f))
+            {
+                AudioManager::Instance().SetMusicVolume(musicVol);
+            }
 
             ImGui::Separator();
             ImGui::Text("=== Controls ===");
@@ -531,13 +588,8 @@ namespace Game {
 
                 if (!sprite.Visible) continue;
 
-                // Render sprite
-                Pillar::Renderer2D::DrawRotatedQuad(
-                    transform.Position,
-                    sprite.Size,
-                    transform.Rotation,
-                    sprite.Color
-                );
+                // Render sprite using the proper DrawSprite method that handles texture/UVs
+                Pillar::Renderer2D::DrawSprite(transform, sprite);
             }
 
             // End scene
@@ -585,6 +637,7 @@ namespace Game {
         Pillar::PhysicsSyncSystem* m_PhysicsSyncSystem = nullptr;
         Pillar::VelocityIntegrationSystem* m_VelocitySystem = nullptr;
         Pillar::BulletCollisionSystem* m_BulletCollisionSystem = nullptr;
+        Pillar::AnimationSystem* m_AnimationSystem = nullptr;
         PlayerMovementSystem* m_PlayerMovementSystem = nullptr;
         WeaponSystem* m_WeaponSystem = nullptr;
         BulletLifetimeSystem* m_BulletLifetimeSystem = nullptr;
@@ -628,6 +681,9 @@ namespace Game {
 
             // Reset game state
             m_IsGameOver = false;
+
+            // Restart music
+            AudioManager::Instance().StartMusic();
 
             PIL_INFO("Game restarted");
         }

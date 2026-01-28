@@ -13,6 +13,7 @@
 #include "../Components/PlayerTagComponent.h"
 #include "../Components/PowerUpComponent.h"
 #include "../Utilities/EntityFactory.h"
+#include "../Utilities/AudioManager.h"
 
 #include <vector>
 #include <random>
@@ -85,6 +86,9 @@ namespace Game {
                         PIL_INFO("Bullet hit enemy! Damage: {}, Enemy Health: {}/{}",
                             damageDealt, health->CurrentHealth, health->MaxHealth);
 
+                        // Play hit sound
+                        AudioManager::Instance().PlaySound("hit", hitPos, 0.7f);
+
                         // Trigger hit effect callback
                         if (m_OnEnemyHit)
                         {
@@ -103,6 +107,9 @@ namespace Game {
                     {
                         PIL_WARN("Player hit! Damage: {}, Player Health: {}/{}",
                             damageDealt, health->CurrentHealth, health->MaxHealth);
+
+                        // Play player hurt sound (non-positional)
+                        AudioManager::Instance().PlaySound("player_hurt", 0.9f);
 
                         // Trigger player hit callback
                         if (m_OnPlayerHit)
@@ -154,6 +161,10 @@ namespace Game {
                     auto& transform = e.GetComponent<Pillar::TransformComponent>();
                     auto& sprite = e.GetComponent<Pillar::SpriteComponent>();
                     PIL_INFO("Enemy killed at ({:.1f}, {:.1f})!", transform.Position.x, transform.Position.y);
+
+                    // Play death sound with slight pitch variation
+                    float pitch = 0.9f + (static_cast<float>(rand()) / RAND_MAX) * 0.2f;
+                    AudioManager::Instance().PlaySound("death", transform.Position, 0.8f, pitch);
                     
                     // Trigger death effect callback
                     if (m_OnEnemyKilled)
@@ -174,6 +185,10 @@ namespace Game {
                 if (e.HasComponent<PlayerTagComponent>())
                 {
                     PIL_WARN("Player died! Game Over");
+
+                    // Play player death sound (non-positional)
+                    AudioManager::Instance().PlaySound("player_death", 1.0f);
+
                     if (m_OnPlayerHit)
                     {
                         m_OnPlayerHit();

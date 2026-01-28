@@ -4,9 +4,12 @@
 #include <Pillar/ECS/Entity.h>
 #include <Pillar/ECS/Components/Core/TransformComponent.h>
 #include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
+#include <Pillar/ECS/Components/Rendering/AnimationComponent.h>
 #include <Pillar/ECS/Components/Physics/RigidbodyComponent.h>
 #include <Pillar/ECS/Components/Physics/ColliderComponent.h>
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
+#include <Pillar/Renderer/Texture.h>
+#include <Pillar/Utils/AssetManager.h>
 #include <box2d/b2_body.h>
 
 #include "../Components/PlayerTagComponent.h"
@@ -35,7 +38,8 @@ namespace Game {
             // Sprite - Use colored quad for now (no texture)
             auto& sprite = player.AddComponent<Pillar::SpriteComponent>();
             sprite.Size = glm::vec2(1.0f, 1.0f);
-            sprite.Color = glm::vec4(0.3f, 0.7f, 1.0f, 1.0f);  // Light blue
+            sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("character_walk_cycle.png"));
+            sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // White tint (no color change)
             sprite.Layer = "Player";
             sprite.OrderInLayer = 10;
 
@@ -67,6 +71,10 @@ namespace Game {
 
             // Player tag
             player.AddComponent<PlayerTagComponent>();
+
+            // Animation - start with standing animation
+            auto& anim = player.AddComponent<Pillar::AnimationComponent>();
+            anim.Play("Player_standing");
 
             return player;
         }
@@ -121,24 +129,44 @@ namespace Game {
             sprite.Layer = "Enemies";
             sprite.OrderInLayer = 5;
 
-            // Color-code enemy types
+            // Load textures and configure size/animation based on enemy type
             switch (type)
             {
                 case EnemyType::Chaser:
-                    sprite.Color = glm::vec4(1.0f, 0.3f, 0.3f, 1.0f);  // Red
-                    sprite.Size = glm::vec2(0.8f, 0.8f);
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("hoodzy.png"));
+                    sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                    sprite.Size = glm::vec2(1.0f, 1.0f);
                     break;
                 case EnemyType::Shooter:
-                    sprite.Color = glm::vec4(0.3f, 0.3f, 1.0f, 1.0f);  // Blue
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("p_ball.png"));
+                    sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
                     sprite.Size = glm::vec2(1.0f, 1.0f);
                     break;
                 case EnemyType::Swarm:
-                    sprite.Color = glm::vec4(0.3f, 1.0f, 0.3f, 1.0f);  // Green
-                    sprite.Size = glm::vec2(0.5f, 0.5f);
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("e_run.png"));
+                    sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+                    sprite.Size = glm::vec2(0.8f, 0.8f);
                     break;
                 default:
                     sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
                     sprite.Size = glm::vec2(1.0f, 1.0f);
+            }
+
+            // Add animations where available
+            if (type == EnemyType::Chaser)
+            {
+                auto& anim = enemy.AddComponent<Pillar::AnimationComponent>();
+                anim.Play("hoodzy_chaser_enemy_animation");
+            }
+            else if (type == EnemyType::Shooter)
+            {
+                auto& anim = enemy.AddComponent<Pillar::AnimationComponent>();
+                anim.Play("floaty_enemy_animation");
+            }
+            else if (type == EnemyType::Swarm)
+            {
+                auto& anim = enemy.AddComponent<Pillar::AnimationComponent>();
+                anim.Play("swarmer_run_animation");
             }
 
             // Physics setup depends on enemy type
@@ -220,7 +248,17 @@ namespace Game {
             auto& sprite = powerUp.AddComponent<Pillar::SpriteComponent>();
             float size = PowerUpComponent::GetSizeForType(type);
             sprite.Size = glm::vec2(size, size);
-            sprite.Color = PowerUpComponent::GetColorForType(type);
+            
+            // Use texture for certain power-ups
+            if (type == PowerUpType::Magnet)
+            {
+                sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("Coins.png"));
+                sprite.Color = glm::vec4(1.0f, 0.8f, 0.2f, 1.0f);  // Gold tint
+            }
+            else
+            {
+                sprite.Color = PowerUpComponent::GetColorForType(type);
+            }
             sprite.Layer = "PowerUps";
             sprite.OrderInLayer = 3;
 

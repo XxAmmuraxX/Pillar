@@ -1,0 +1,20 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/character_walk_cycle.png",
+      "uvMax": [
+        0.1666666716337204,
+        1.0
+      ],
+      "uvMin": [
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "loop": false,
+  "name": "Player_standing",
+  "playbackSpeed": 1.0
+}

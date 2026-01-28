@@ -3,6 +3,8 @@
 #include <Pillar/ECS/Systems/System.h>
 #include <Pillar/ECS/Components/Core/TransformComponent.h>
 #include <Pillar/ECS/Components/Physics/RigidbodyComponent.h>
+#include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
+#include <Pillar/ECS/Components/Rendering/AnimationComponent.h>
 #include <Pillar/Input.h>
 #include <Pillar/KeyCodes.h>
 #include <Pillar/Renderer/OrthographicCamera.h>
@@ -76,6 +78,34 @@ namespace Game {
                 b2Vec2 velocity(moveDir.x * speed, moveDir.y * speed);
                 rb.Body->SetLinearVelocity(velocity);
 
+                // Update animation based on movement
+                auto entityWrapper = Pillar::Entity(entity, m_Scene);
+                if (auto* anim = entityWrapper.TryGetComponent<Pillar::AnimationComponent>())
+                {
+                    bool isMoving = glm::length(moveDir) > 0.0f;
+                    if (isMoving && anim->CurrentClipName != "Player_walk_cycle")
+                    {
+                        anim->Play("Player_walk_cycle");
+                    }
+                    else if (!isMoving && anim->CurrentClipName != "Player_standing")
+                    {
+                        anim->Play("Player_standing");
+                    }
+                }
+
+                // Update sprite flip based on mouse direction (face left/right)
+                if (auto* sprite = entityWrapper.TryGetComponent<Pillar::SpriteComponent>())
+                {
+                    auto [mouseX, mouseY] = Pillar::Input::GetMousePosition();
+                    glm::vec2 mouseWorld = ScreenToWorld(
+                        mouseX, mouseY,
+                        m_WindowWidth, m_WindowHeight,
+                        *m_Camera
+                    );
+                    glm::vec2 toMouse = mouseWorld - transform.Position;
+                    sprite->FlipX = toMouse.x < 0.0f;  // Flip sprite when facing left
+                }
+
                 // Dash on Space
                 if (Pillar::Input::IsKeyJustPressed(PIL_KEY_SPACE) &&
                     player.DashCooldownTimer <= 0.0f &&
@@ -90,20 +120,8 @@ namespace Game {
                     rb.Body->SetLinearVelocity(dashVelocity);
                 }
 
-                // Rotate to face mouse cursor
-                auto [mouseX, mouseY] = Pillar::Input::GetMousePosition();
-                glm::vec2 mouseWorld = ScreenToWorld(
-                    mouseX, mouseY,
-                    m_WindowWidth, m_WindowHeight,
-                    *m_Camera
-                );
-                glm::vec2 direction = mouseWorld - transform.Position;
-
-                if (glm::length(direction) > 0.001f)
-                {
-                    float angle = std::atan2(direction.y, direction.x);
-                    transform.SetRotation(angle);
-                }
+                // Note: Player doesn't rotate - we use FlipX on the sprite to face left/right
+                // The rotation code below is removed to keep the player sprite upright
             }
         }
 

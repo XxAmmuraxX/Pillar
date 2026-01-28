@@ -7,6 +7,8 @@
 #include <Pillar/ECS/Components/Physics/VelocityComponent.h>
 #include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
 #include <Pillar/ECS/Components/Gameplay/BulletComponent.h>
+#include <Pillar/Renderer/Texture.h>
+#include <Pillar/Utils/AssetManager.h>
 #include <Pillar/Input.h>
 #include <Pillar/KeyCodes.h>
 #include <glm/glm.hpp>
@@ -17,13 +19,23 @@
 #include "../Utilities/CollisionCategories.h"
 #include "../Utilities/GameUtils.h"
 #include "../Utilities/EffectFactory.h"
+#include "../Utilities/AudioManager.h"
 
 namespace Game {
 
     class WeaponSystem : public Pillar::System
     {
     public:
-        WeaponSystem() = default;
+        WeaponSystem(
+            const Pillar::OrthographicCamera* camera,
+            float windowWidth,
+            float windowHeight)
+            : m_Camera(camera)
+            , m_WindowWidth(windowWidth)
+            , m_WindowHeight(windowHeight)
+        {
+        }
+        
         ~WeaponSystem() override = default;
 
         void OnAttach(Pillar::Scene* scene) override
@@ -34,6 +46,13 @@ namespace Game {
         void OnDetach() override
         {
             m_Scene = nullptr;
+        }
+        
+        void SetCamera(const Pillar::OrthographicCamera* camera) { m_Camera = camera; }
+        void SetWindowSize(float width, float height)
+        {
+            m_WindowWidth = width;
+            m_WindowHeight = height;
         }
 
         void OnUpdate(float dt) override
@@ -71,11 +90,15 @@ namespace Game {
             const Pillar::TransformComponent& transform,
             WeaponComponent& weapon)
         {
-            // Calculate firing direction from rotation
-            glm::vec2 direction(
-                std::cos(transform.Rotation),
-                std::sin(transform.Rotation)
+            // Calculate firing direction towards mouse cursor
+            auto [mouseX, mouseY] = Pillar::Input::GetMousePosition();
+            glm::vec2 mouseWorld = ScreenToWorld(
+                mouseX, mouseY,
+                m_WindowWidth, m_WindowHeight,
+                *m_Camera
             );
+            glm::vec2 toMouse = mouseWorld - transform.Position;
+            glm::vec2 direction = glm::length(toMouse) > 0.001f ? glm::normalize(toMouse) : glm::vec2(1.0f, 0.0f);
 
             // Spawn position slightly ahead of player
             glm::vec2 spawnPos = transform.Position + direction * 0.6f;
@@ -103,6 +126,9 @@ namespace Game {
             // Spawn muzzle flash effect
             EffectFactory::SpawnMuzzleFlash(*m_Scene, spawnPos, direction);
 
+            // Play shoot sound (positional)
+            AudioManager::Instance().PlaySound("shoot", spawnPos, 0.8f);
+
             weapon.ResetCooldown();
         }
 
@@ -125,8 +151,9 @@ namespace Game {
 
             // Small bright sprite
             auto& sprite = bullet.AddComponent<Pillar::SpriteComponent>();
-            sprite.Size = glm::vec2(0.3f, 0.15f);
-            sprite.Color = glm::vec4(1.0f, 1.0f, 0.5f, 1.0f);  // Yellow tint
+            sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("Soul_Orb.png"));
+            sprite.Size = glm::vec2(0.4f, 0.4f);
+            sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // White (no tint)
             sprite.Layer = "Projectiles";
             sprite.OrderInLayer = 5;
 
@@ -144,6 +171,9 @@ namespace Game {
         }
 
     private:
+        const Pillar::OrthographicCamera* m_Camera = nullptr;
+        float m_WindowWidth = 1280.0f;
+        float m_WindowHeight = 720.0f;
         Pillar::Scene* m_Scene = nullptr;
     };
 

@@ -111,12 +111,20 @@ namespace Pillar {
     void OpenGLBatchRenderer2D::BeginScene(const OrthographicCamera& camera)
     {
         m_ViewProjectionMatrix = camera.GetViewProjectionMatrix();
+        
+        // Disable depth writes for 2D rendering to fix transparent sprite overlap
+        // Sprites with alpha will not block sprites behind them
+        glDepthMask(GL_FALSE);
+        
         StartBatch();
     }
 
     void OpenGLBatchRenderer2D::EndScene()
     {
         Flush();
+        
+        // Re-enable depth writes for any 3D rendering that follows
+        glDepthMask(GL_TRUE);
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, 

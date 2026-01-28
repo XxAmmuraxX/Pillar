@@ -13,6 +13,7 @@
 
 #include "../Components/EnemyComponent.h"
 #include "../Components/PlayerTagComponent.h"
+#include "../Utilities/AudioManager.h"
 
 namespace Game {
 
@@ -82,11 +83,13 @@ namespace Game {
                         break;
                 }
 
-                // Face movement direction
-                if (distanceToPlayer > 0.1f)
+                // Note: Enemies don't rotate - their sprites are designed to face a specific direction
+                // FlipX on the SpriteComponent can be used to face left/right if needed
+                auto entityWrapper = Pillar::Entity(entity, m_Scene);
+                if (auto* sprite = entityWrapper.TryGetComponent<Pillar::SpriteComponent>())
                 {
-                    float angle = std::atan2(toPlayer.y, toPlayer.x);
-                    transform.SetRotation(angle);
+                    // Flip sprite to face player (flip when player is to the left)
+                    sprite->FlipX = toPlayer.x < 0.0f;
                 }
             }
         }
@@ -267,6 +270,9 @@ namespace Game {
             bulletComp.Pierce = false;
             bulletComp.MaxHits = 1;
             bulletComp.HitsRemaining = 1;
+
+            // Play enemy shoot sound
+            AudioManager::Instance().PlaySound("enemy_shoot", spawnPos, 0.6f, 1.2f);
         }
     };
 

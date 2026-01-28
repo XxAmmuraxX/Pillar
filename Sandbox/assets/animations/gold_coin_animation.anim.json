@@ -1,0 +1,92 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "C:\\dev\\Pillar\\bin\\Debug-x64\\PillarEditor\\assets\\textures\\Coins.png",
+      "uvMax": [
+        0.1428571492433548,
+        1.0
+      ],
+      "uvMin": [
+        0.0,
+        0.6666666269302368
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "C:\\dev\\Pillar\\bin\\Debug-x64\\PillarEditor\\assets\\textures\\Coins.png",
+      "uvMax": [
+        0.2857142984867096,
+        1.0
+      ],
+      "uvMin": [
+        0.1428571492433548,
+        0.6666666269302368
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "C:\\dev\\Pillar\\bin\\Debug-x64\\PillarEditor\\assets\\textures\\Coins.png",
+      "uvMax": [
+        0.4285714328289032,
+        1.0
+      ],
+      "uvMin": [
+        0.2857142984867096,
+        0.6666666269302368
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "C:\\dev\\Pillar\\bin\\Debug-x64\\PillarEditor\\assets\\textures\\Coins.png",
+      "uvMax": [
+        0.5714285969734192,
+        1.0
+      ],
+      "uvMin": [
+        0.4285714328289032,
+        0.6666666269302368
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "C:\\dev\\Pillar\\bin\\Debug-x64\\PillarEditor\\assets\\textures\\Coins.png",
+      "uvMax": [
+        0.7142857313156128,
+        1.0
+      ],
+      "uvMin": [
+        0.5714285969734192,
+        0.6666666269302368
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "C:\\dev\\Pillar\\bin\\Debug-x64\\PillarEditor\\assets\\textures\\Coins.png",
+      "uvMax": [
+        0.8571428656578064,
+        1.0
+      ],
+      "uvMin": [
+        0.7142857313156128,
+        0.6666666269302368
+      ]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "C:\\dev\\Pillar\\bin\\Debug-x64\\PillarEditor\\assets\\textures\\Coins.png",
+      "uvMax": [
+        1.0,
+        1.0
+      ],
+      "uvMin": [
+        0.8571428656578064,
+        0.6666666269302368
+      ]
+    }
+  ],
+  "loop": true,
+  "name": "gold_coin_animation",
+  "playbackSpeed": 1.0
+}

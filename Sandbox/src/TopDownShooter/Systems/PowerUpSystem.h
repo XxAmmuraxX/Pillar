@@ -13,6 +13,7 @@
 
 #include "../Components/PowerUpComponent.h"
 #include "../Components/PlayerTagComponent.h"
+#include "../Utilities/AudioManager.h"
 
 namespace Game {
 
@@ -74,6 +75,10 @@ namespace Game {
                 {
                     // Collect power-up!
                     ApplyPowerUp(playerEntity, powerUp);
+
+                    // Play pickup sound (non-positional, UI sound)
+                    AudioManager::Instance().PlaySound("pickup", 0.7f);
+
                     toDestroy.push_back(entity);
                 }
             }
