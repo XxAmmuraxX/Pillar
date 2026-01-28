@@ -11,10 +11,14 @@
 #include <Pillar/Renderer/Renderer2D.h>
 #include <Pillar/Renderer/OrthographicCameraController.h>
 #include <Pillar/Application.h>
+#include <Pillar/Events/ApplicationEvent.h>
+#include <Pillar/Events/Event.h>
 #include <Pillar/Input.h>
 #include <Pillar/KeyCodes.h>
 #include <imgui.h>
+#include <algorithm>
 #include <memory>
+#include <vector>
 
 // Game Systems
 #include "Systems/PlayerMovementSystem.h"
@@ -113,6 +117,8 @@ namespace Game {
 
         void OnUpdate(float dt) override
         {
+            SyncWindowSizeFromApplication();
+
             auto& gameState = GameState::Instance();
             auto currentState = gameState.GetState();
 
@@ -148,6 +154,12 @@ namespace Game {
 
         void OnEvent(Pillar::Event& event) override
         {
+            Pillar::EventDispatcher dispatcher(event);
+            dispatcher.Dispatch<Pillar::WindowResizeEvent>([this](Pillar::WindowResizeEvent& e) {
+                OnWindowResized(static_cast<float>(e.GetWidth()), static_cast<float>(e.GetHeight()));
+                return false;
+            });
+
             if (m_CameraController)
                 m_CameraController->OnEvent(event);
         }
@@ -184,9 +196,66 @@ namespace Game {
         // GAME LIFECYCLE
         // ===========================================
 
+        void CleanupGameWorld()
+        {
+            // Ensure we don't keep stale entity handles across runs
+            m_PlayerEntity = Pillar::Entity();
+
+            // Shutdown systems first (they may reference the scene)
+            ShutdownGameSystems();
+
+            // IMPORTANT: Scene has an on_destroy<RigidbodyComponent> hook that can call
+            // m_PhysicsSystem via Scene::m_PhysicsSystem. Clear these pointers before
+            // destroying entities / dropping the scene.
+            if (m_Scene)
+            {
+                m_Scene->SetPhysicsSystem(nullptr);
+                m_Scene->SetAnimationSystem(nullptr);
+
+                // Clear entities to avoid leaving registry state around between runs
+                auto allEntities = m_Scene->GetAllEntities();
+                for (auto entity : allEntities)
+                    m_Scene->DestroyEntity(entity);
+
+                m_Scene.reset();
+            }
+
+            // Reset per-run state
+            m_KillStreakCount = 0;
+            m_KillStreakTimer = 0.0f;
+        }
+
+        void SyncWindowSizeFromApplication()
+        {
+            auto& window = Pillar::Application::Get().GetWindow();
+            const float width = static_cast<float>(window.GetWidth());
+            const float height = static_cast<float>(window.GetHeight());
+
+            if (width <= 0.0f || height <= 0.0f)
+                return;
+
+            if (width != m_WindowWidth || height != m_WindowHeight)
+                OnWindowResized(width, height);
+        }
+
+        void OnWindowResized(float width, float height)
+        {
+            m_WindowWidth = width;
+            m_WindowHeight = height;
+
+            if (m_PlayerMovementSystem)
+                m_PlayerMovementSystem->SetWindowSize(width, height);
+            if (m_WeaponSystem)
+                m_WeaponSystem->SetWindowSize(width, height);
+        }
+
         void StartGame()
         {
             PIL_INFO("Starting new game!");
+
+            // If a previous run exists (e.g. Play Again from GameOver), tear it down first.
+            if (m_Scene || m_PhysicsSystem || m_PlayerMovementSystem || m_WeaponSystem)
+                CleanupGameWorld();
 
             // Reset game state
             GameState::Instance().Reset();
@@ -213,16 +282,7 @@ namespace Game {
         {
             PIL_INFO("Restarting game!");
 
-            // Clean up old game
-            ShutdownGameSystems();
-            if (m_Scene)
-            {
-                auto allEntities = m_Scene->GetAllEntities();
-                for (auto entity : allEntities)
-                    m_Scene->DestroyEntity(entity);
-            }
-
-            // Start fresh
+            CleanupGameWorld();
             StartGame();
         }
 
@@ -386,6 +446,7 @@ namespace Game {
             // Animation System
             m_AnimationSystem = new Pillar::AnimationSystem();
             m_AnimationSystem->OnAttach(m_Scene.get());
+            m_Scene->SetAnimationSystem(m_AnimationSystem);
             LoadAnimations();
 
             // Wave Manager
@@ -464,8 +525,15 @@ namespace Game {
             m_AnimationSystem->LoadAnimationClip("animations/hoodzy_chaser_enemy_animation.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/floaty_enemy_animation.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/swarmer_run_animation.anim.json");
-            m_AnimationSystem->LoadAnimationClip("animations/Player_walk_cycle.anim.json");
-            m_AnimationSystem->LoadAnimationClip("animations/Player_standing.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_south.anim.json");
+            // Player + bosses (used by EntityFactory in SwarmSlayer)
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_fireball_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_south.anim.json");
         }
 
         void CreateArenaBounds(float width, float height)
@@ -717,16 +785,36 @@ namespace Game {
             if (m_BulletTrailSystem)
                 m_BulletTrailSystem->RenderTrails();
 
-            // Render all sprites
+            // Render all sprites (sorted: Layer, then OrderInLayer)
             auto& registry = m_Scene->GetRegistry();
             auto view = registry.view<Pillar::TransformComponent, Pillar::SpriteComponent>();
 
+            std::vector<entt::entity> renderables;
+            renderables.reserve(static_cast<size_t>(view.size_hint()));
+
             for (auto entity : view)
+            {
+                const auto& sprite = view.get<Pillar::SpriteComponent>(entity);
+                if (!sprite.Visible)
+                    continue;
+
+                renderables.push_back(entity);
+            }
+
+            std::sort(renderables.begin(), renderables.end(), [&](entt::entity a, entt::entity b) {
+                const auto& spriteA = view.get<Pillar::SpriteComponent>(a);
+                const auto& spriteB = view.get<Pillar::SpriteComponent>(b);
+
+                if (spriteA.Layer != spriteB.Layer)
+                    return spriteA.Layer < spriteB.Layer;
+
+                return spriteA.OrderInLayer < spriteB.OrderInLayer;
+            });
+
+            for (auto entity : renderables)
             {
                 auto& transform = view.get<Pillar::TransformComponent>(entity);
                 auto& sprite = view.get<Pillar::SpriteComponent>(entity);
-
-                if (!sprite.Visible) continue;
 
                 // Apply hazard pulsing effect if this entity has a hazard component
                 Pillar::Entity ent(entity, m_Scene.get());

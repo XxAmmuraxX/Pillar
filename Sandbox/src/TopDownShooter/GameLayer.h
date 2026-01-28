@@ -128,8 +128,14 @@ namespace Game {
             m_AnimationSystem->LoadAnimationClip("animations/hoodzy_chaser_enemy_animation.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/floaty_enemy_animation.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/swarmer_run_animation.anim.json");
-            m_AnimationSystem->LoadAnimationClip("animations/Player_walk_cycle.anim.json");
-            m_AnimationSystem->LoadAnimationClip("animations/Player_standing.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_fireball_south.anim.json");
 
             // 13. Initialize Wave Manager
             m_WaveManager.Init(30.0f, 16.0f);

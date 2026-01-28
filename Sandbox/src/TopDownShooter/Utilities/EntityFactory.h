@@ -38,10 +38,10 @@ namespace Game {
             transform.SetPosition(position);
             transform.SetScale(glm::vec2(1.0f, 1.0f));
 
-            // Sprite - Use colored quad for now (no texture)
+            // Sprite - Red mage player character
             auto& sprite = player.AddComponent<Pillar::SpriteComponent>();
             sprite.Size = glm::vec2(1.0f, 1.0f);
-            sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("character_walk_cycle.png"));
+            sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("red_mage_wearing_a_hood/rotations/south.png"));
             sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // White tint (no color change)
             sprite.Layer = "Player";
             sprite.OrderInLayer = 10;
@@ -75,9 +75,9 @@ namespace Game {
             // Player tag
             player.AddComponent<PlayerTagComponent>();
 
-            // Animation - start with standing animation
+            // Animation - start with red mage run animation
             auto& anim = player.AddComponent<Pillar::AnimationComponent>();
-            anim.Play("Player_standing");
+            anim.Play("red_mage_idle_south");
 
             return player;
         }
@@ -141,12 +141,12 @@ namespace Game {
                     sprite.Size = glm::vec2(1.0f, 1.0f);
                     break;
                 case EnemyType::Shooter:
-                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("p_ball.png"));
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("evil_archer/rotations/south.png"));
                     sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
                     sprite.Size = glm::vec2(1.0f, 1.0f);
                     break;
                 case EnemyType::Swarm:
-                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("e_run.png"));
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("goblin_with_a_sword/rotations/south.png"));
                     sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
                     sprite.Size = glm::vec2(0.8f, 0.8f);
                     break;
@@ -164,12 +164,12 @@ namespace Game {
             else if (type == EnemyType::Shooter)
             {
                 auto& anim = enemy.AddComponent<Pillar::AnimationComponent>();
-                anim.Play("floaty_enemy_animation");
+                anim.Play("evil_archer_run_south");
             }
             else if (type == EnemyType::Swarm)
             {
                 auto& anim = enemy.AddComponent<Pillar::AnimationComponent>();
-                anim.Play("swarmer_run_animation");
+                anim.Play("goblin_with_sword_run_south");
             }
 
             // Physics setup depends on enemy type
@@ -386,20 +386,35 @@ namespace Game {
             switch (type)
             {
                 case BossType::Behemoth:
-                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("hoodzy.png"));
-                    sprite.Color = glm::vec4(0.8f, 0.3f, 0.3f, 1.0f);  // Reddish tint
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("Large_Behemoth/rotations/south.png"));
+                    sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // No tint needed
                     break;
                 case BossType::Swarm_Queen:
-                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("e_run.png"));
-                    sprite.Color = glm::vec4(0.5f, 0.2f, 0.8f, 1.0f);  // Purple tint
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("goblin_queen_with_a_staff/rotations/south.png"));
+                    sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // No tint needed
                     break;
                 case BossType::Devastator:
-                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("p_ball.png"));
-                    sprite.Color = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);  // Dark tint
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("monster_with_a_bow/rotations/south.png"));
+                    sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // No tint needed
                     break;
             }
             sprite.Layer = "Bosses";
             sprite.OrderInLayer = 20;
+
+            // Add boss animations
+            auto& anim = boss.AddComponent<Pillar::AnimationComponent>();
+            switch (type)
+            {
+                case BossType::Behemoth:
+                    anim.Play("large_behemoth_walk_south");
+                    break;
+                case BossType::Swarm_Queen:
+                    anim.Play("goblin_queen_walk_south");
+                    break;
+                case BossType::Devastator:
+                    anim.Play("monster_with_bow_run_south");
+                    break;
+            }
 
             // Physics - Dynamic body, heavy
             auto& rb = boss.AddComponent<Pillar::RigidbodyComponent>(b2_dynamicBody);

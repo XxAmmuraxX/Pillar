@@ -87,7 +87,8 @@ namespace Game {
                 ImGuiWindowFlags_NoCollapse |
                 ImGuiWindowFlags_NoNav |
                 ImGuiWindowFlags_NoBackground |
-                ImGuiWindowFlags_NoBringToFrontOnFocus);
+                ImGuiWindowFlags_NoBringToFrontOnFocus |
+                ImGuiWindowFlags_NoDocking);
 
             ImDrawList* drawList = ImGui::GetWindowDrawList();
             
@@ -335,7 +336,8 @@ namespace Game {
                 ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove |
                 ImGuiWindowFlags_NoScrollbar |
-                ImGuiWindowFlags_NoInputs);
+                ImGuiWindowFlags_NoInputs |
+                ImGuiWindowFlags_NoDocking);
             ImGui::End();
 
             // Center window
@@ -347,7 +349,8 @@ namespace Game {
                 ImGuiWindowFlags_NoTitleBar |
                 ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_NoScrollbar);
+                ImGuiWindowFlags_NoScrollbar |
+                ImGuiWindowFlags_NoDocking);
 
             // Title
             ImGui::SetCursorPosX((400 - ImGui::CalcTextSize("SWARM SLAYER").x * 2.5f) * 0.5f);
@@ -443,7 +446,8 @@ namespace Game {
                 ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove |
                 ImGuiWindowFlags_NoScrollbar |
-                ImGuiWindowFlags_NoInputs);
+                ImGuiWindowFlags_NoInputs |
+                ImGuiWindowFlags_NoDocking);
             ImGui::End();
 
             // Pause window
@@ -455,7 +459,8 @@ namespace Game {
                 ImGuiWindowFlags_NoTitleBar |
                 ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_NoScrollbar);
+                ImGuiWindowFlags_NoScrollbar |
+                ImGuiWindowFlags_NoDocking);
 
             ImGui::SetCursorPosX((300 - ImGui::CalcTextSize("PAUSED").x * 2.0f) * 0.5f);
             ImGui::SetWindowFontScale(2.0f);
@@ -505,7 +510,8 @@ namespace Game {
                 ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove |
                 ImGuiWindowFlags_NoScrollbar |
-                ImGuiWindowFlags_NoInputs);
+                ImGuiWindowFlags_NoInputs |
+                ImGuiWindowFlags_NoDocking);
             ImGui::End();
 
             // Get random perks if not already generated
@@ -523,7 +529,8 @@ namespace Game {
                 ImGuiWindowFlags_NoTitleBar |
                 ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_NoScrollbar);
+                ImGuiWindowFlags_NoScrollbar |
+                ImGuiWindowFlags_NoDocking);
 
             ImGui::SetCursorPosX((600 - ImGui::CalcTextSize("CHOOSE A PERK").x * 1.8f) * 0.5f);
             ImGui::SetWindowFontScale(1.8f);
@@ -613,7 +620,8 @@ namespace Game {
                 ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove |
                 ImGuiWindowFlags_NoScrollbar |
-                ImGuiWindowFlags_NoInputs);
+                ImGuiWindowFlags_NoInputs |
+                ImGuiWindowFlags_NoDocking);
             ImGui::End();
 
             // Game over window
@@ -625,7 +633,8 @@ namespace Game {
                 ImGuiWindowFlags_NoTitleBar |
                 ImGuiWindowFlags_NoResize |
                 ImGuiWindowFlags_NoMove |
-                ImGuiWindowFlags_NoScrollbar);
+                ImGuiWindowFlags_NoScrollbar |
+                ImGuiWindowFlags_NoDocking);
 
             // Title
             ImGui::SetCursorPosX((450 - ImGui::CalcTextSize("GAME OVER").x * 2.5f) * 0.5f);

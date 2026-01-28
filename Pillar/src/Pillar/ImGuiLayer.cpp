@@ -38,8 +38,13 @@ namespace Pillar {
         // Enable Docking
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
         
-        // Enable Multi-Viewport / Platform Windows
+        // Multi-Viewport / Platform Windows
+        // This makes ImGui windows able to detach into separate OS windows.
+        // For games (Sandbox) this is usually undesirable because HUD/menu UI can appear as a separate window.
+        // Keep it opt-in (used by the Editor).
+        #if defined(PIL_IMGUI_ENABLE_VIEWPORTS)
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+        #endif
 
         // Configure ImGui ini file for docking layout persistence
         io.IniFilename = "imgui.ini";
@@ -47,7 +52,7 @@ namespace Pillar {
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();
 
-        // When viewports are enabled we tweak WindowRounding/WindowBg 
+        // When viewports are enabled we tweak WindowRounding/WindowBg
         // so platform windows can look identical to regular ones.
         ImGuiStyle& style = ImGui::GetStyle();
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)

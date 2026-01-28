@@ -116,13 +116,13 @@ namespace Game {
                 if (auto* anim = entityWrapper.TryGetComponent<Pillar::AnimationComponent>())
                 {
                     bool isMoving = glm::length(moveDir) > 0.0f;
-                    if (isMoving && anim->CurrentClipName != "Player_walk_cycle")
+                    if (isMoving && anim->CurrentClipName != "red_mage_run_south")
                     {
-                        anim->Play("Player_walk_cycle");
+                        anim->Play("red_mage_run_south");
                     }
-                    else if (!isMoving && anim->CurrentClipName != "Player_standing")
+                    else if (!isMoving && anim->CurrentClipName != "red_mage_idle_south")
                     {
-                        anim->Play("Player_standing");
+                        anim->Play("red_mage_idle_south");
                     }
                 }
 
