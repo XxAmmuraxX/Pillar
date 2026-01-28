@@ -10,9 +10,16 @@
 #include <cmath>
 
 #include "../Components/EffectComponents.h"
+#include "ParticleManager.h"
 
 namespace Game {
 
+    /**
+     * EffectFactory - Spawns visual effects using the native particle system
+     * 
+     * All methods now use ParticleManager for pooled, efficient particle spawning.
+     * Falls back to entity-based effects if ParticleManager is not initialized.
+     */
     class EffectFactory
     {
     public:
@@ -22,19 +29,8 @@ namespace Game {
             const glm::vec2& position,
             const glm::vec2& direction)
         {
-            auto flash = scene.CreateEntity("MuzzleFlash");
-
-            auto& transform = flash.GetComponent<Pillar::TransformComponent>();
-            transform.SetPosition(position + direction * 0.3f);
-            transform.SetRotation(std::atan2(direction.y, direction.x));
-
-            auto& sprite = flash.AddComponent<Pillar::SpriteComponent>();
-            sprite.Size = glm::vec2(0.4f, 0.25f);
-            sprite.Color = glm::vec4(1.0f, 0.9f, 0.3f, 1.0f);  // Bright yellow
-            sprite.Layer = "Effects";
-            sprite.OrderInLayer = 100;
-
-            flash.AddComponent<TemporaryComponent>(0.05f);  // Very short-lived
+            // Use native particle system
+            ParticleManager::Instance().SpawnMuzzleFlash(position, direction);
         }
 
         // Spawn death particles when enemy dies
@@ -42,37 +38,10 @@ namespace Game {
             Pillar::Scene& scene,
             const glm::vec2& position,
             const glm::vec4& color,
-            int count = 8)
+            int count = 12)
         {
-            static std::mt19937 rng{ std::random_device{}() };
-            std::uniform_real_distribution<float> angleDist(0.0f, 6.28318f);
-            std::uniform_real_distribution<float> speedDist(2.0f, 6.0f);
-            std::uniform_real_distribution<float> sizeDist(0.1f, 0.25f);
-            std::uniform_real_distribution<float> lifeDist(0.3f, 0.6f);
-
-            for (int i = 0; i < count; i++)
-            {
-                auto particle = scene.CreateEntity("DeathParticle");
-
-                auto& transform = particle.GetComponent<Pillar::TransformComponent>();
-                transform.SetPosition(position);
-
-                auto& sprite = particle.AddComponent<Pillar::SpriteComponent>();
-                float size = sizeDist(rng);
-                sprite.Size = glm::vec2(size, size);
-                sprite.Color = color;
-                sprite.Layer = "Effects";
-                sprite.OrderInLayer = 50;
-
-                // Random velocity outward
-                float angle = angleDist(rng);
-                float speed = speedDist(rng);
-                auto& velocity = particle.AddComponent<Pillar::VelocityComponent>();
-                velocity.Velocity = glm::vec2(std::cos(angle), std::sin(angle)) * speed;
-                velocity.Drag = 5.0f;
-
-                particle.AddComponent<TemporaryComponent>(lifeDist(rng));
-            }
+            // Use native particle system
+            ParticleManager::Instance().SpawnDeathExplosion(position, color, count);
         }
 
         // Spawn hit particles when bullet hits enemy
@@ -80,37 +49,55 @@ namespace Game {
             Pillar::Scene& scene,
             const glm::vec2& position,
             const glm::vec2& direction,
-            int count = 4)
+            int count = 6)
         {
-            static std::mt19937 rng{ std::random_device{}() };
-            std::uniform_real_distribution<float> spreadDist(-0.5f, 0.5f);
-            std::uniform_real_distribution<float> speedDist(3.0f, 5.0f);
-
-            for (int i = 0; i < count; i++)
-            {
-                auto particle = scene.CreateEntity("HitParticle");
-
-                auto& transform = particle.GetComponent<Pillar::TransformComponent>();
-                transform.SetPosition(position);
-
-                auto& sprite = particle.AddComponent<Pillar::SpriteComponent>();
-                sprite.Size = glm::vec2(0.08f, 0.08f);
-                sprite.Color = glm::vec4(1.0f, 0.8f, 0.2f, 1.0f);  // Orange sparks
-                sprite.Layer = "Effects";
-                sprite.OrderInLayer = 60;
-
-                // Velocity in opposite direction of bullet with spread
-                glm::vec2 dir = glm::normalize(-direction + glm::vec2(spreadDist(rng), spreadDist(rng)));
-                float speed = speedDist(rng);
-                auto& velocity = particle.AddComponent<Pillar::VelocityComponent>();
-                velocity.Velocity = dir * speed;
-                velocity.Drag = 8.0f;
-
-                particle.AddComponent<TemporaryComponent>(0.15f);
-            }
+            // Use native particle system
+            ParticleManager::Instance().SpawnHitSparks(position, direction, count);
         }
 
-        // Spawn XP gem when enemy dies
+        // Spawn boss death explosion (much bigger)
+        static void SpawnBossDeathParticles(
+            Pillar::Scene& scene,
+            const glm::vec2& position,
+            int count = 40)
+        {
+            ParticleManager::Instance().SpawnBossDeathExplosion(position, count);
+        }
+
+        // Spawn XP collect sparkle
+        static void SpawnXPCollectEffect(
+            Pillar::Scene& scene,
+            const glm::vec2& position)
+        {
+            ParticleManager::Instance().SpawnXPCollectEffect(position);
+        }
+
+        // Spawn power-up collect effect
+        static void SpawnPowerUpCollectEffect(
+            Pillar::Scene& scene,
+            const glm::vec2& position,
+            const glm::vec4& color)
+        {
+            ParticleManager::Instance().SpawnPowerUpCollectEffect(position, color);
+        }
+
+        // Spawn level up celebration
+        static void SpawnLevelUpEffect(
+            Pillar::Scene& scene,
+            const glm::vec2& position)
+        {
+            ParticleManager::Instance().SpawnLevelUpEffect(position);
+        }
+
+        // Spawn player damage flash
+        static void SpawnPlayerDamageEffect(
+            Pillar::Scene& scene,
+            const glm::vec2& position)
+        {
+            ParticleManager::Instance().SpawnPlayerDamageEffect(position);
+        }
+
+        // Spawn XP gem when enemy dies (still uses entity for collection logic)
         static Pillar::Entity SpawnXPGem(
             Pillar::Scene& scene,
             const glm::vec2& position,
@@ -133,24 +120,14 @@ namespace Game {
             return gem;
         }
 
-        // Spawn dash trail effect
+        // Spawn dash trail effect using native particles
         static void SpawnDashTrail(
             Pillar::Scene& scene,
             const glm::vec2& position,
             const glm::vec4& color)
         {
-            auto trail = scene.CreateEntity("DashTrail");
-
-            auto& transform = trail.GetComponent<Pillar::TransformComponent>();
-            transform.SetPosition(position);
-
-            auto& sprite = trail.AddComponent<Pillar::SpriteComponent>();
-            sprite.Size = glm::vec2(0.6f, 0.6f);
-            sprite.Color = glm::vec4(color.r, color.g, color.b, 0.5f);  // Semi-transparent
-            sprite.Layer = "Effects";
-            sprite.OrderInLayer = -5;
-
-            trail.AddComponent<TemporaryComponent>(0.2f);
+            // Use native particle system for dash trail
+            ParticleManager::Instance().SpawnDashTrail(position, color);
         }
     };
 

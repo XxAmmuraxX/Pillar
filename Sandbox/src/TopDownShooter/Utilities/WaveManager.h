@@ -10,6 +10,7 @@
 #include <cmath>
 
 #include "../Components/EnemyComponent.h"
+#include "../Components/BossComponent.h"
 
 namespace Game {
 
@@ -21,12 +22,16 @@ namespace Game {
         int SwarmCount = 0;
         float SpawnDelay = 0.5f;        // Delay between spawns
         float TimeBetweenWaves = 3.0f;  // Rest time before next wave
+        bool IsBossWave = false;        // Boss spawns every 5 waves
+        BossType BossToSpawn = BossType::Behemoth;
     };
 
     class WaveManager
     {
     public:
         using SpawnCallback = std::function<void(const glm::vec2&, EnemyType)>;
+        using BossSpawnCallback = std::function<void(const glm::vec2&, BossType, int waveNumber)>;
+        using WaveCompleteCallback = std::function<void(int waveNumber, bool wasBossWave)>;
 
     public:
         void Init(float arenaWidth, float arenaHeight)
@@ -43,6 +48,16 @@ namespace Game {
         void SetSpawnCallback(SpawnCallback callback)
         {
             m_SpawnCallback = callback;
+        }
+
+        void SetBossSpawnCallback(BossSpawnCallback callback)
+        {
+            m_BossSpawnCallback = callback;
+        }
+
+        void SetWaveCompleteCallback(WaveCompleteCallback callback)
+        {
+            m_WaveCompleteCallback = callback;
         }
 
         void OnUpdate(float dt, int currentEnemyCount)
@@ -88,6 +103,7 @@ namespace Game {
         int GetCurrentWave() const { return m_CurrentWave; }
         bool IsSpawning() const { return m_State == WaveState::Spawning; }
         bool IsWaveInProgress() const { return m_State == WaveState::InProgress; }
+        bool IsBossWave() const { return m_CurrentConfig.IsBossWave; }
         float GetTimeUntilNextWave() const 
         { 
             return m_State == WaveState::WaveComplete ? m_Timer : 0.0f; 
@@ -119,10 +135,28 @@ namespace Game {
             m_State = WaveState::Spawning;
             m_Timer = 0.0f;
 
-            // Calculate total enemies to spawn
-            m_EnemiesToSpawn = m_CurrentConfig.ChaserCount + 
-                               m_CurrentConfig.ShooterCount + 
-                               m_CurrentConfig.SwarmCount;
+            // Boss waves have special handling
+            if (m_CurrentConfig.IsBossWave)
+            {
+                PIL_INFO("=== BOSS WAVE {} ===", m_CurrentWave);
+                
+                // Spawn boss at center-top of arena
+                if (m_BossSpawnCallback)
+                {
+                    glm::vec2 bossPos(0.0f, m_ArenaHeight * 0.3f);
+                    m_BossSpawnCallback(bossPos, m_CurrentConfig.BossToSpawn, m_CurrentWave);
+                }
+                
+                // Boss waves also have some minions
+                m_EnemiesToSpawn = m_CurrentConfig.SwarmCount;
+            }
+            else
+            {
+                // Calculate total enemies to spawn
+                m_EnemiesToSpawn = m_CurrentConfig.ChaserCount + 
+                                   m_CurrentConfig.ShooterCount + 
+                                   m_CurrentConfig.SwarmCount;
+            }
 
             // Build spawn queue
             m_SpawnQueue.clear();
@@ -136,11 +170,21 @@ namespace Game {
             // Shuffle spawn queue for variety
             std::shuffle(m_SpawnQueue.begin(), m_SpawnQueue.end(), m_RandomEngine);
 
-            PIL_INFO("Wave {} starting! Chasers: {}, Shooters: {}, Swarm: {}",
-                m_CurrentWave, 
-                m_CurrentConfig.ChaserCount,
-                m_CurrentConfig.ShooterCount,
-                m_CurrentConfig.SwarmCount);
+            if (m_CurrentConfig.IsBossWave)
+            {
+                PIL_INFO("BOSS WAVE {} starting! Boss: {}, Minions: {}",
+                    m_CurrentWave,
+                    static_cast<int>(m_CurrentConfig.BossToSpawn),
+                    m_CurrentConfig.SwarmCount);
+            }
+            else
+            {
+                PIL_INFO("Wave {} starting! Chasers: {}, Shooters: {}, Swarm: {}",
+                    m_CurrentWave, 
+                    m_CurrentConfig.ChaserCount,
+                    m_CurrentConfig.ShooterCount,
+                    m_CurrentConfig.SwarmCount);
+            }
         }
 
         void SpawnNextEnemy()
@@ -160,6 +204,12 @@ namespace Game {
             m_State = WaveState::WaveComplete;
             m_Timer = m_CurrentConfig.TimeBetweenWaves;
 
+            // Notify callback (for perk selection, etc.)
+            if (m_WaveCompleteCallback)
+            {
+                m_WaveCompleteCallback(m_CurrentWave, m_CurrentConfig.IsBossWave);
+            }
+
             PIL_INFO("Wave {} complete! Next wave in {:.1f}s", 
                 m_CurrentWave, m_CurrentConfig.TimeBetweenWaves);
         }
@@ -169,27 +219,47 @@ namespace Game {
             WaveConfig config;
             config.WaveNumber = waveNumber;
 
-            // Base enemy counts - scale with wave number
-            config.ChaserCount = 2 + waveNumber;
+            // Boss wave every 5 waves
+            config.IsBossWave = (waveNumber % 5 == 0);
 
-            // Introduce shooters at wave 3
-            if (waveNumber >= 3)
-                config.ShooterCount = (waveNumber - 2);
+            if (config.IsBossWave)
+            {
+                // Boss wave - less regular enemies, but has a boss
+                config.ChaserCount = 0;
+                config.ShooterCount = 0;
+                config.SwarmCount = waveNumber;  // Some minions with the boss
 
-            // Introduce swarm at wave 5
-            if (waveNumber >= 5)
-                config.SwarmCount = (waveNumber - 4) * 3;
+                // Rotate boss types
+                int bossIndex = (waveNumber / 5) % 3;
+                config.BossToSpawn = static_cast<BossType>(bossIndex);
 
-            // Cap enemy counts for performance
-            config.ChaserCount = std::min(config.ChaserCount, 15);
-            config.ShooterCount = std::min(config.ShooterCount, 8);
-            config.SwarmCount = std::min(config.SwarmCount, 20);
+                // Longer rest after boss
+                config.TimeBetweenWaves = 5.0f;
+            }
+            else
+            {
+                // Regular wave - scale with wave number
+                config.ChaserCount = 2 + waveNumber;
 
-            // Spawn delay decreases as waves progress (faster spawning)
-            config.SpawnDelay = std::max(0.1f, 0.5f - (waveNumber * 0.03f));
+                // Introduce shooters at wave 3
+                if (waveNumber >= 3)
+                    config.ShooterCount = (waveNumber - 2);
 
-            // Rest time between waves
-            config.TimeBetweenWaves = std::max(2.0f, 5.0f - (waveNumber * 0.2f));
+                // Introduce swarm at wave 4
+                if (waveNumber >= 4)
+                    config.SwarmCount = (waveNumber - 3) * 3;
+
+                // Cap enemy counts for performance
+                config.ChaserCount = std::min(config.ChaserCount, 15);
+                config.ShooterCount = std::min(config.ShooterCount, 8);
+                config.SwarmCount = std::min(config.SwarmCount, 20);
+
+                // Spawn delay decreases as waves progress (faster spawning)
+                config.SpawnDelay = std::max(0.1f, 0.5f - (waveNumber * 0.03f));
+
+                // Rest time between waves
+                config.TimeBetweenWaves = std::max(2.0f, 4.0f - (waveNumber * 0.15f));
+            }
 
             return config;
         }
@@ -239,6 +309,8 @@ namespace Game {
         WaveConfig m_CurrentConfig;
         std::vector<EnemyType> m_SpawnQueue;
         SpawnCallback m_SpawnCallback;
+        BossSpawnCallback m_BossSpawnCallback;
+        WaveCompleteCallback m_WaveCompleteCallback;
 
         std::mt19937 m_RandomEngine{ std::random_device{}() };
     };

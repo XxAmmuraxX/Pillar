@@ -32,6 +32,13 @@ Entity ObjectPool::Acquire()
 		entity = m_AvailableEntities.back();
 		m_AvailableEntities.pop_back();
 
+		// Validate entity is still valid (could have been destroyed externally)
+		if (!entity.IsValid())
+		{
+			PIL_CORE_WARN("ObjectPool: Pooled entity was invalid/destroyed, creating new one");
+			entity = CreateEntity();
+		}
+
 		PIL_CORE_TRACE("ObjectPool: Reusing entity from pool (available: {0})", m_AvailableEntities.size());
 	}
 	else

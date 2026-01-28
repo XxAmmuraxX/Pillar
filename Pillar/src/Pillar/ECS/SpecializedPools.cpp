@@ -139,6 +139,23 @@ Entity ParticlePool::SpawnParticle(
 	// Acquire entity from pool
 	Entity particle = m_Pool.Acquire();
 
+	// Validate entity before use
+	if (!particle.IsValid())
+	{
+		PIL_CORE_ERROR("ParticlePool: Acquired invalid entity from pool!");
+		return Entity{};
+	}
+
+	// Verify required components exist (they should have been added during pool init)
+	if (!particle.HasComponent<TransformComponent>())
+	{
+		PIL_CORE_ERROR("ParticlePool: Entity missing TransformComponent! Re-adding components.");
+		particle.AddComponent<TransformComponent>();
+		particle.AddComponent<VelocityComponent>();
+		particle.AddComponent<SpriteComponent>();
+		particle.AddComponent<ParticleComponent>();
+	}
+
 	// Set transform
 	auto& transform = particle.GetComponent<TransformComponent>();
 	transform.Position = position;

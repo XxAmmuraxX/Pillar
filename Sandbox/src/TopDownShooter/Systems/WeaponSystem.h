@@ -15,7 +15,10 @@
 
 #include "../Components/WeaponComponent.h"
 #include "../Components/PlayerTagComponent.h"
+#include "../Components/PowerUpComponent.h"
 #include "../Components/EffectComponents.h"
+#include "../Components/BulletTrailComponent.h"
+#include "../Core/GameState.h"
 #include "../Utilities/CollisionCategories.h"
 #include "../Utilities/GameUtils.h"
 #include "../Utilities/EffectFactory.h"
@@ -66,19 +69,32 @@ namespace Game {
                 PlayerTagComponent
             >();
 
+            // Get perk-based fire rate multiplier
+            float perkFireRateMultiplier = GameState::Instance().GetPlayerStats().BaseFireRateMultiplier;
+
             for (auto entity : view)
             {
                 auto& transform = view.get<Pillar::TransformComponent>(entity);
                 auto& weapon = view.get<WeaponComponent>(entity);
+                
+                Pillar::Entity ownerEntity(entity, m_Scene);
+                
+                // Get power-up buff multiplier
+                float buffFireRateMultiplier = 1.0f;
+                if (auto* buffs = ownerEntity.TryGetComponent<PlayerBuffsComponent>())
+                {
+                    buffFireRateMultiplier = buffs->GetFireRateMultiplier();
+                }
+                
+                float totalFireRateMultiplier = perkFireRateMultiplier * buffFireRateMultiplier;
 
-                // Update cooldown
-                weapon.UpdateCooldown(dt);
+                // Update cooldown (faster with fire rate bonuses)
+                weapon.UpdateCooldown(dt * totalFireRateMultiplier);
 
                 // Fire on left mouse button
                 if (Pillar::Input::IsMouseButtonDown(PIL_MOUSE_BUTTON_LEFT) &&
                     weapon.CanFire())
                 {
-                    Pillar::Entity ownerEntity(entity, m_Scene);
                     Fire(ownerEntity, transform, weapon);
                 }
             }
@@ -90,6 +106,18 @@ namespace Game {
             const Pillar::TransformComponent& transform,
             WeaponComponent& weapon)
         {
+            // Get perk multipliers
+            auto& playerStats = GameState::Instance().GetPlayerStats();
+            float damageMultiplier = playerStats.BaseDamageMultiplier;
+            float bulletSpeedMultiplier = playerStats.BaseBulletSpeedMultiplier;
+            int extraPierce = playerStats.ExtraPierce;
+            
+            // Get power-up buff multipliers
+            if (auto* buffs = owner.TryGetComponent<PlayerBuffsComponent>())
+            {
+                damageMultiplier *= buffs->GetDamageMultiplier();
+            }
+
             // Calculate firing direction towards mouse cursor
             auto [mouseX, mouseY] = Pillar::Input::GetMousePosition();
             glm::vec2 mouseWorld = ScreenToWorld(
@@ -119,8 +147,10 @@ namespace Game {
                     );
                 }
 
-                // Create bullet
-                CreateBullet(owner, spawnPos, bulletDir, weapon.BulletSpeed, weapon.Damage);
+                // Create bullet with perk-enhanced stats
+                float finalDamage = weapon.Damage * damageMultiplier;
+                float finalSpeed = weapon.BulletSpeed * bulletSpeedMultiplier;
+                CreateBullet(owner, spawnPos, bulletDir, finalSpeed, finalDamage, extraPierce);
             }
 
             // Spawn muzzle flash effect
@@ -137,7 +167,8 @@ namespace Game {
             const glm::vec2& position,
             const glm::vec2& direction,
             float speed,
-            float damage)
+            float damage,
+            int extraPierce = 0)
         {
             auto bullet = m_Scene->CreateEntity("Bullet");
 
@@ -165,9 +196,33 @@ namespace Game {
             // Bullet data
             auto& bulletComp = bullet.AddComponent<Pillar::BulletComponent>(owner, damage);
             bulletComp.Lifetime = 3.0f;
-            bulletComp.Pierce = false;
-            bulletComp.MaxHits = 1;
-            bulletComp.HitsRemaining = 1;
+            bulletComp.Pierce = extraPierce > 0;
+            bulletComp.MaxHits = 1 + extraPierce;
+            bulletComp.HitsRemaining = 1 + extraPierce;
+
+            // Bullet trail for visual effect
+            glm::vec4 trailColor = GetTrailColorForWeapon();
+            bullet.AddComponent<BulletTrailComponent>(trailColor, 10);
+        }
+
+        glm::vec4 GetTrailColorForWeapon()
+        {
+            auto currentWeapon = GameState::Instance().GetCurrentWeapon();
+            switch (currentWeapon)
+            {
+                case WeaponType::Pistol:
+                    return { 1.0f, 0.9f, 0.5f, 0.7f };  // Yellow-gold
+                case WeaponType::Shotgun:
+                    return { 1.0f, 0.6f, 0.3f, 0.6f };  // Orange
+                case WeaponType::SMG:
+                    return { 0.8f, 1.0f, 0.5f, 0.7f };  // Yellow-green
+                case WeaponType::Rifle:
+                    return { 0.5f, 0.8f, 1.0f, 0.8f };  // Blue
+                case WeaponType::Laser:
+                    return { 1.0f, 0.3f, 0.3f, 0.9f };  // Red
+                default:
+                    return { 1.0f, 1.0f, 1.0f, 0.6f };  // White
+            }
         }
 
     private:

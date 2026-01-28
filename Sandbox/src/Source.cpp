@@ -1,8 +1,9 @@
 #include "Pillar.h"
 #include "Pillar/EntryPoint.h"
-#include "TopDownShooter/GameLayer.h"
+#include "TopDownShooter/SwarmSlayerLayer.h"
 
 // Demo Layers (commented out)
+// #include "TopDownShooter/GameLayer.h"
 // #include "PhysicsDemoLayer.h"
 // #include "LightEntityPerfDemo.h"
 // #include "HeavyEntityPerfDemo.h"
@@ -23,8 +24,8 @@ class Sandbox : public Pillar::Application
 public:
 	Sandbox()
 	{
-		// Top-Down Shooter Game
-		PushLayer(new Game::GameLayer());
+		// SWARM SLAYER - Top-Down Shooter Game
+		PushLayer(new Game::SwarmSlayerLayer());
 	}
 
 	~Sandbox()

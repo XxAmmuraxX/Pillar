@@ -14,6 +14,7 @@
 #include "../Components/PowerUpComponent.h"
 #include "../Components/PlayerTagComponent.h"
 #include "../Utilities/AudioManager.h"
+#include "../Utilities/EffectFactory.h"
 
 namespace Game {
 
@@ -75,6 +76,10 @@ namespace Game {
                 {
                     // Collect power-up!
                     ApplyPowerUp(playerEntity, powerUp);
+
+                    // Spawn power-up collect effect with matching color
+                    glm::vec4 color = PowerUpComponent::GetColorForType(powerUp.Type);
+                    EffectFactory::SpawnPowerUpCollectEffect(*m_Scene, transform.Position, color);
 
                     // Play pickup sound (non-positional, UI sound)
                     AudioManager::Instance().PlaySound("pickup", 0.7f);

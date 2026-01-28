@@ -13,6 +13,7 @@
 #include "../Components/PlayerTagComponent.h"
 #include "../Components/PowerUpComponent.h"
 #include "../Utilities/EntityFactory.h"
+#include "../Utilities/EffectFactory.h"
 #include "../Utilities/AudioManager.h"
 
 #include <vector>
@@ -107,6 +108,10 @@ namespace Game {
                     {
                         PIL_WARN("Player hit! Damage: {}, Player Health: {}/{}",
                             damageDealt, health->CurrentHealth, health->MaxHealth);
+
+                        // Spawn player damage particles
+                        auto& playerTransform = target.GetComponent<Pillar::TransformComponent>();
+                        EffectFactory::SpawnPlayerDamageEffect(*m_Scene, playerTransform.Position);
 
                         // Play player hurt sound (non-positional)
                         AudioManager::Instance().PlaySound("player_hurt", 0.9f);
