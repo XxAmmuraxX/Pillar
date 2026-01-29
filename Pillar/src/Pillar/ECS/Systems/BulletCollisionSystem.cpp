@@ -137,6 +137,13 @@ namespace Pillar {
 
 	bool BulletCollisionSystem::RaycastBullet(Entity bulletEntity, const glm::vec2& start, const glm::vec2& end, Entity& hitEntity, glm::vec2& hitPoint)
 	{
+		// Box2D asserts that raycast length > 0, so skip zero-length rays
+		glm::vec2 ray = end - start;
+		if (glm::dot(ray, ray) < 1e-8f)
+		{
+			return false;
+		}
+
 		BulletRaycastCallback callback;
 
 		b2Vec2 p1(start.x, start.y);
