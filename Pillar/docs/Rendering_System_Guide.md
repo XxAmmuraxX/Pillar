@@ -1097,10 +1097,8 @@ The Pillar Engine rendering system provides a powerful and flexible 2D rendering
 
 For more information, see:
 - [User's Guide](../../docs/USERS_GUIDE.md)
-- [BatchRenderer Usage](BatchRenderer_Usage.md)
 - [API Reference (Pillar.h)](../src/Pillar.h)
 
 ---
 
 *Last Updated: January 11, 2026*
-*Engine Version: Development Branch*

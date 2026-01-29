@@ -2,29 +2,50 @@
 
 #include "Pillar/Core.h"
 #include "System.h"
+#include "Pillar/ECS/Physics/SpatialHashGrid.h"
 #include <glm/glm.hpp>
 #include <vector>
+#include <functional>
 
 namespace Pillar {
 
 	class PhysicsSystem; // Forward declaration
 	class Entity;
+	class BulletPool;
 
 	// Uses Box2D Raycasts to detect bullet hits against Heavy Entities
-	// Does NOT use b2Bodies for bullets (they're Light Entities)
+	// Also performs circle-circle collision against Light Entities (VelocityComponent only)
+	// NOTE: This system ONLY detects hits and decrements HitsRemaining.
+	// Bullet cleanup (pool return) is handled by BulletLifetimeSystem.
 	class PIL_API BulletCollisionSystem : public System
 	{
 	public:
+		// Callback signature: (bullet, hitEntity, damage, hitPosition)
+		using OnBulletHitCallback = std::function<void(Entity, Entity, float, const glm::vec2&)>;
+
 		BulletCollisionSystem(PhysicsSystem* physicsSystem);
 
 		void OnUpdate(float deltaTime) override;
 
+		// Set callback for when a bullet hits something
+		void SetOnBulletHit(OnBulletHitCallback callback) { m_OnBulletHit = callback; }
+
+		// Set bullet pool for proper cleanup (optional - if not set, bullets won't be hidden on hit)
+		void SetBulletPool(BulletPool* pool) { m_BulletPool = pool; }
+
 	private:
 		PhysicsSystem* m_PhysicsSystem;
+		BulletPool* m_BulletPool = nullptr;
+		OnBulletHitCallback m_OnBulletHit;
+		
+		// Spatial hash for fast light entity collision detection
+		SpatialHashGrid m_LightEntityGrid;
+		bool m_GridNeedsRebuild = true;
 
 		void ProcessBullets(float deltaTime);
-		void ProcessBulletLifetime(float deltaTime);
-		bool RaycastBullet(Entity bulletEntity, const glm::vec2& start, const glm::vec2& end, Entity& hitEntity);
+		void RebuildLightEntityGrid();
+		bool RaycastBullet(Entity bulletEntity, const glm::vec2& start, const glm::vec2& end, Entity& hitEntity, glm::vec2& hitPoint);
+		bool CheckCircleCollision(Entity bulletEntity, Entity& targetEntity, glm::vec2& hitPoint);
 	};
 
 } // namespace Pillar

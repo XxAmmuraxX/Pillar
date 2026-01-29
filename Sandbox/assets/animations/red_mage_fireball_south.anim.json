@@ -1,0 +1,44 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.08000000119209290,
+      "texturePath": "textures/red_mage_wearing_a_hood/animations/fireball/south/frame_000.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.08000000119209290,
+      "texturePath": "textures/red_mage_wearing_a_hood/animations/fireball/south/frame_001.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.08000000119209290,
+      "texturePath": "textures/red_mage_wearing_a_hood/animations/fireball/south/frame_002.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.08000000119209290,
+      "texturePath": "textures/red_mage_wearing_a_hood/animations/fireball/south/frame_003.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.08000000119209290,
+      "texturePath": "textures/red_mage_wearing_a_hood/animations/fireball/south/frame_004.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.08000000119209290,
+      "texturePath": "textures/red_mage_wearing_a_hood/animations/fireball/south/frame_005.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    }
+  ],
+  "loop": false,
+  "name": "red_mage_fireball_south",
+  "playbackSpeed": 1.0
+}

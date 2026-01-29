@@ -60,12 +60,6 @@ cmake --build --preset windows-debug
 .\bin\Debug-x64\PillarEditor\PillarEditor.exe
 ```
 
-**Controls in Sandbox:**
-- **WASD** - Move camera
-- **Q/E** - Rotate camera
-- **Mouse Wheel** - Zoom in/out
-- **ESC** - Exit
-
 ---
 
 ## Development Workflow
@@ -214,18 +208,5 @@ Remove-Item -Recurse -Force build\windows-debug
 
 ## Next Steps
 
-- **Read the full documentation:** [docs/INSTALLATION_GUIDE.md](INSTALLATION_GUIDE.md)
 - **Explore the API:** [docs/API_REFERENCE.md](API_REFERENCE.md)
 - **Learn the Editor:** [docs/PILLAR_EDITOR_GUIDE.md](PILLAR_EDITOR_GUIDE.md)
-- **Understand the architecture:** [.github/copilot-instructions.md](../.github/copilot-instructions.md)
-
----
-
-## Support
-
-- **Issues:** [GitHub Issues](https://github.com/XxAmmuraxX/Pillar/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/XxAmmuraxX/Pillar/discussions)
-
----
-
-**Happy Coding! 🚀**

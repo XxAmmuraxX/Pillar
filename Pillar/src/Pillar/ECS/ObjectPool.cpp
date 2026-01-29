@@ -11,13 +11,17 @@ void ObjectPool::Init(Scene* scene, uint32_t initialCapacity)
 
 	// Pre-allocate entities
 	m_AvailableEntities.reserve(initialCapacity);
+	m_InPoolSet.reserve(initialCapacity);
 	for (uint32_t i = 0; i < initialCapacity; i++)
 	{
 		Entity entity = CreateEntity();
 		m_AvailableEntities.push_back(entity);
+		m_InPoolSet.insert(static_cast<uint32_t>(static_cast<entt::entity>(entity)));
 	}
 
+#ifdef PIL_DEBUG
 	PIL_CORE_TRACE("ObjectPool initialized with {0} entities", initialCapacity);
+#endif
 }
 
 Entity ObjectPool::Acquire()
@@ -31,8 +35,18 @@ Entity ObjectPool::Acquire()
 	{
 		entity = m_AvailableEntities.back();
 		m_AvailableEntities.pop_back();
+		m_InPoolSet.erase(static_cast<uint32_t>(static_cast<entt::entity>(entity)));
 
+		// Validate entity is still valid (could have been destroyed externally)
+		if (!entity.IsValid())
+		{
+			PIL_CORE_WARN("ObjectPool: Pooled entity was invalid/destroyed, creating new one");
+			entity = CreateEntity();
+		}
+
+#ifdef PIL_DEBUG
 		PIL_CORE_TRACE("ObjectPool: Reusing entity from pool (available: {0})", m_AvailableEntities.size());
+#endif
 	}
 	else
 	{
@@ -49,10 +63,14 @@ void ObjectPool::Release(Entity entity)
 	PIL_CORE_ASSERT(m_Scene, "ObjectPool not initialized!");
 	PIL_CORE_ASSERT(entity, "Cannot release invalid entity!");
 
-	// Check if entity is already in pool (avoid double-release)
-	if (IsInPool(entity))
+	uint32_t entityId = static_cast<uint32_t>(static_cast<entt::entity>(entity));
+
+	// O(1) check if entity is already in pool (avoid double-release)
+	if (m_InPoolSet.count(entityId) > 0)
 	{
-		PIL_CORE_WARN("ObjectPool: Attempted to release entity already in pool!");
+#ifdef PIL_DEBUG
+		PIL_CORE_WARN("ObjectPool: Attempted to release entity {0} already in pool!", entityId);
+#endif
 		return;
 	}
 
@@ -64,23 +82,25 @@ void ObjectPool::Release(Entity entity)
 
 	// Return entity to pool
 	m_AvailableEntities.push_back(entity);
+	m_InPoolSet.insert(entityId);
+
+#ifdef PIL_DEBUG
 	PIL_CORE_TRACE("ObjectPool: Released entity back to pool (available: {0})", m_AvailableEntities.size());
+#endif
 }
 
 bool ObjectPool::IsInPool(Entity entity) const
 {
-	// Check if entity is in the available list
-	for (const auto& pooledEntity : m_AvailableEntities)
-	{
-		if (pooledEntity == entity)
-			return true;
-	}
-	return false;
+	// O(1) lookup using hash set
+	uint32_t entityId = static_cast<uint32_t>(static_cast<entt::entity>(entity));
+	return m_InPoolSet.count(entityId) > 0;
 }
 
 void ObjectPool::Clear()
 {
+#ifdef PIL_DEBUG
 	PIL_CORE_TRACE("ObjectPool: Clearing all {0} entities", m_TotalEntities);
+#endif
 
 	// Destroy all entities in the pool
 	for (auto& entity : m_AvailableEntities)
@@ -92,6 +112,7 @@ void ObjectPool::Clear()
 	}
 
 	m_AvailableEntities.clear();
+	m_InPoolSet.clear();
 	m_TotalEntities = 0;
 }
 

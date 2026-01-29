@@ -42,6 +42,9 @@ target_include_directories(PillarEditor PRIVATE
 # Define static lib for Pillar
 target_compile_definitions(PillarEditor PRIVATE PIL_STATIC_LIB)
 
+# Enable ImGui multi-viewport for the Editor (allows panels to detach into OS windows)
+target_compile_definitions(PillarEditor PRIVATE PIL_IMGUI_ENABLE_VIEWPORTS)
+
 # Add /FS flag for parallel compilation on Windows
 if(MSVC)
     target_compile_options(PillarEditor PRIVATE /FS)

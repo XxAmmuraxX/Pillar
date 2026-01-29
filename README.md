@@ -217,6 +217,10 @@ cmake --preset windows-debug
 cmake --build --preset windows-debug
 ```
 
+## Asset Notice
+
+All art/audio assets included in this repository were AI-generated.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.txt](LICENSE.txt) file for details.

@@ -1,0 +1,14 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/evil_archer/rotations/north.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    }
+  ],
+  "loop": true,
+  "name": "evil_archer_run_north",
+  "playbackSpeed": 1.0
+}

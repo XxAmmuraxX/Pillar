@@ -2,7 +2,6 @@
 
 **Version:** 1.0  
 **Date:** December 8, 2025  
-**Status:** Production Ready
 
 ---
 
@@ -649,24 +648,5 @@ void main() {
 - Ignore draw call count warnings
 - Use > 32 unique textures in one scene
 - Call BeginScene/EndScene multiple times per frame
-
----
-
-## Further Reading
-
-- **Source Code:** `Pillar/src/Pillar/Renderer/BatchRenderer2D.h`
-- **Implementation:** `Platform/OpenGL/OpenGLBatchRenderer2D.cpp`
-- **Examples:** `Sandbox/src/LightEntityPerfDemo.h`
-- **Phase 5 Plan:** `PHASE_5_PLAN.md`
-- **Completion Summary:** `PHASE_5_COMPLETION_SUMMARY.md`
-
----
-
-## Support & Contribution
-
-For questions, issues, or contributions:
-- **Repository:** Pillar Engine
-- **Documentation:** `Pillar/docs/`
-- **Tests:** `Tests/src/`
 
 **Last Updated:** December 8, 2025

@@ -1,0 +1,44 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.15000000223517418,
+      "texturePath": "textures/Large_Behemoth/animations/walk-6-frames/south/frame_000.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.15000000223517418,
+      "texturePath": "textures/Large_Behemoth/animations/walk-6-frames/south/frame_001.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.15000000223517418,
+      "texturePath": "textures/Large_Behemoth/animations/walk-6-frames/south/frame_002.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.15000000223517418,
+      "texturePath": "textures/Large_Behemoth/animations/walk-6-frames/south/frame_003.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.15000000223517418,
+      "texturePath": "textures/Large_Behemoth/animations/walk-6-frames/south/frame_004.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.15000000223517418,
+      "texturePath": "textures/Large_Behemoth/animations/walk-6-frames/south/frame_005.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    }
+  ],
+  "loop": true,
+  "name": "large_behemoth_walk_south",
+  "playbackSpeed": 1.0
+}

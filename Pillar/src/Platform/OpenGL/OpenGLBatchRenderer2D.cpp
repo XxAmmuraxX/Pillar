@@ -111,12 +111,23 @@ namespace Pillar {
     void OpenGLBatchRenderer2D::BeginScene(const OrthographicCamera& camera)
     {
         m_ViewProjectionMatrix = camera.GetViewProjectionMatrix();
+        
+        // Disable depth testing entirely for 2D rendering
+        // This ensures draw order is respected (painter's algorithm)
+        // Sprites are rendered in the order they're submitted
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        
         StartBatch();
     }
 
     void OpenGLBatchRenderer2D::EndScene()
     {
         Flush();
+        
+        // Re-enable depth testing for any 3D rendering that follows
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
     }
 
     void OpenGLBatchRenderer2D::DrawQuad(const glm::vec2& position, const glm::vec2& size, 
@@ -185,7 +196,11 @@ namespace Pillar {
         // Clear all batches
         m_Batches.clear();
         
-        // Reset texture slot index (0 is white texture)
+        // Reset texture slots (keep slot 0 = white texture)
+        for (uint32_t i = 1; i < MaxTextureSlots; ++i)
+        {
+            m_TextureSlots[i] = nullptr;
+        }
         m_TextureSlotIndex = 1;
         
         // Clear stats

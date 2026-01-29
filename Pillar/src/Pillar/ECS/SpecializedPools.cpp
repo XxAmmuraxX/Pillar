@@ -21,7 +21,8 @@ void BulletPool::Init(Scene* scene, uint32_t initialCapacity)
 		entity.AddComponent<TransformComponent>();
 		entity.AddComponent<VelocityComponent>();
 		entity.AddComponent<BulletComponent>();
-		// Note: Sprite component will be added when rendering system is implemented
+		auto& sprite = entity.AddComponent<SpriteComponent>();
+		sprite.Visible = false; // Hidden when pooled
 	});
 
 	// Set up reset callback to reset bullet state when returned to pool
@@ -37,6 +38,10 @@ void BulletPool::Init(Scene* scene, uint32_t initialCapacity)
 		auto& bullet = entity.GetComponent<BulletComponent>();
 		bullet.TimeAlive = 0.0f;
 		bullet.HitsRemaining = bullet.MaxHits;
+
+		auto& sprite = entity.GetComponent<SpriteComponent>();
+		sprite.Visible = false;
+		sprite.Color = glm::vec4(1.0f);
 	});
 
 	// Initialize the underlying pool
@@ -75,7 +80,9 @@ Entity BulletPool::SpawnBullet(
 	bulletComp.TimeAlive = 0.0f;
 	bulletComp.HitsRemaining = bulletComp.MaxHits;
 
+#ifdef PIL_DEBUG
 	PIL_CORE_TRACE("BulletPool: Spawned bullet at ({0}, {1})", position.x, position.y);
+#endif
 
 	return bullet;
 }
@@ -99,7 +106,8 @@ void ParticlePool::Init(Scene* scene, uint32_t initialCapacity)
 	m_Pool.SetInitCallback([this](Entity entity) {
 		entity.AddComponent<TransformComponent>();
 		entity.AddComponent<VelocityComponent>();
-		entity.AddComponent<SpriteComponent>();
+		auto& sprite = entity.AddComponent<SpriteComponent>();
+		sprite.Visible = false; // Start hidden - particles are made visible when spawned
 		entity.AddComponent<ParticleComponent>();
 	});
 
@@ -121,6 +129,7 @@ void ParticlePool::Init(Scene* scene, uint32_t initialCapacity)
 
 		auto& sprite = entity.GetComponent<SpriteComponent>();
 		sprite.Color = glm::vec4(1.0f);
+		sprite.Visible = false; // Hide pooled particles to prevent rendering at origin
 	});
 
 	// Initialize the underlying pool
@@ -139,6 +148,23 @@ Entity ParticlePool::SpawnParticle(
 	// Acquire entity from pool
 	Entity particle = m_Pool.Acquire();
 
+	// Validate entity before use
+	if (!particle.IsValid())
+	{
+		PIL_CORE_ERROR("ParticlePool: Acquired invalid entity from pool!");
+		return Entity{};
+	}
+
+	// Verify required components exist (they should have been added during pool init)
+	if (!particle.HasComponent<TransformComponent>())
+	{
+		PIL_CORE_ERROR("ParticlePool: Entity missing TransformComponent! Re-adding components.");
+		particle.AddComponent<TransformComponent>();
+		particle.AddComponent<VelocityComponent>();
+		particle.AddComponent<SpriteComponent>();
+		particle.AddComponent<ParticleComponent>();
+	}
+
 	// Set transform
 	auto& transform = particle.GetComponent<TransformComponent>();
 	transform.Position = position;
@@ -154,6 +180,9 @@ Entity ParticlePool::SpawnParticle(
 	auto& sprite = particle.GetComponent<SpriteComponent>();
 	sprite.Color = color;
 	sprite.Size = glm::vec2(size);
+	sprite.Visible = true; // Make particle visible when spawned
+	sprite.Layer = "Particles"; // Render on top of most game elements
+	sprite.OrderInLayer = 10;
 
 	// Set particle properties
 	auto& particleComp = particle.GetComponent<ParticleComponent>();
@@ -168,7 +197,9 @@ Entity ParticlePool::SpawnParticle(
 	particleComp.ScaleOverTime = false;
 	particleComp.RotateOverTime = false;
 
+#ifdef PIL_DEBUG
 	PIL_CORE_TRACE("ParticlePool: Spawned particle at ({0}, {1})", position.x, position.y);
+#endif
 
 	return particle;
 }
