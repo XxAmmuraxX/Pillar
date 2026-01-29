@@ -398,4 +398,3 @@ private:
 - [Object Pool Pattern (Wikipedia)](https://en.wikipedia.org/wiki/Object_pool_pattern)
 - [Game Programming Patterns: Object Pool](https://gameprogrammingpatterns.com/object-pool.html)
 - [EnTT Documentation](https://github.com/skypjack/entt)
-- Phase 4 Summary: Performance Optimizations for Light Entities

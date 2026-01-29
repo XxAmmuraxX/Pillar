@@ -727,9 +727,3 @@ static AnimationClip LoadFromJSON(const std::string& filepath);
 - **Demo Layer**: See `Sandbox/src/AnimationDemoLayer.h` for complete working example
 - **Tests**: See `Tests/src/AnimationTests.cpp` for usage examples
 - **Asset Manager**: See `Pillar/docs/AssetManager.md` for path resolution details
-
----
-
-**Version**: 1.0  
-**Last Updated**: December 10, 2025  
-**Author**: Pillar Engine Team
