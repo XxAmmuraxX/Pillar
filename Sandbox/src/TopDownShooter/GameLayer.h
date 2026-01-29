@@ -128,13 +128,46 @@ namespace Game {
             m_AnimationSystem->LoadAnimationClip("animations/hoodzy_chaser_enemy_animation.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/floaty_enemy_animation.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/swarmer_run_animation.anim.json");
+            
+            // Evil Archer - all directions
             m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_west.anim.json");
+            
+            // Goblin with Sword - all directions
             m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_west.anim.json");
+            
+            // Goblin Queen Boss - all directions
             m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_west.anim.json");
+            
+            // Large Behemoth Boss - all directions
             m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_west.anim.json");
+            
+            // Monster with Bow Boss - all directions
             m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_west.anim.json");
+            
+            // Player (Red Mage) - all directions for run and idle
             m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_west.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_west.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/red_mage_fireball_south.anim.json");
 
             // 13. Initialize Wave Manager
@@ -576,8 +609,8 @@ namespace Game {
 
         void RenderScene()
         {
-            // Clear
-            Pillar::Renderer2D::SetClearColor(glm::vec4(0.05f, 0.05f, 0.1f, 1.0f));
+            // Clear with gritty charred black background (SCRAPYARD SALVATION palette)
+            Pillar::Renderer2D::SetClearColor(glm::vec4(0.04f, 0.04f, 0.05f, 1.0f)); // #0A0A0C adjusted
             Pillar::Renderer2D::Clear();
 
             // Begin scene

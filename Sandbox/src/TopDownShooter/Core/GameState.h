@@ -6,7 +6,10 @@
 #include <fstream>
 #include <algorithm>
 #include <random>
+#include <cmath>
 #include <Pillar/Logger.h>
+
+#include "../Components/EnemyComponent.h"
 
 namespace Game {
 
@@ -121,6 +124,14 @@ namespace Game {
         float PlayTime = 0.0f;
         int BossesKilled = 0;
 
+        // Combo system
+        int ComboCount = 0;
+        float ComboTimer = 0.0f;
+        static constexpr float ComboWindow = 2.0f;  // Seconds to chain kills
+
+        // Wave bonus tracking
+        bool NoDamageThisWave = true;
+
         void Reset()
         {
             Score = 0;
@@ -131,6 +142,9 @@ namespace Game {
             WaveReached = 1;
             PlayTime = 0.0f;
             BossesKilled = 0;
+            ComboCount = 0;
+            ComboTimer = 0.0f;
+            NoDamageThisWave = true;
         }
 
         void AddXP(int amount)
@@ -143,6 +157,67 @@ namespace Game {
                 XPToNextLevel = static_cast<int>(100 * std::pow(1.2f, PlayerLevel - 1));
                 PIL_INFO("Level Up! Now level {}", PlayerLevel);
             }
+        }
+
+        // Get base score for enemy type
+        static int GetScoreForEnemyType(EnemyType type)
+        {
+            switch (type)
+            {
+                case EnemyType::Chaser:  return 100;
+                case EnemyType::Shooter: return 150;
+                case EnemyType::Swarm:   return 50;
+                default:                 return 100;
+            }
+        }
+
+        // Add kill score with wave multiplier and combo bonus
+        int AddKillScore(EnemyType enemyType, int waveNumber)
+        {
+            int baseScore = GetScoreForEnemyType(enemyType);
+
+            // Wave multiplier: score * (1 + wave * 0.1)
+            float waveMultiplier = 1.0f + waveNumber * 0.1f;
+            int scaledScore = static_cast<int>(baseScore * waveMultiplier);
+
+            // Combo bonus
+            ComboCount++;
+            ComboTimer = ComboWindow;
+            int comboBonus = 0;
+            if (ComboCount > 1)
+            {
+                comboBonus = 50 * (ComboCount - 1);
+            }
+
+            int totalScore = scaledScore + comboBonus;
+            Score += totalScore;
+            TotalKills++;
+
+            return totalScore;
+        }
+
+        // Update combo timer (call every frame)
+        void UpdateCombo(float dt)
+        {
+            if (ComboTimer > 0.0f)
+            {
+                ComboTimer -= dt;
+                if (ComboTimer <= 0.0f)
+                {
+                    ComboCount = 0;
+                }
+            }
+        }
+
+        // Calculate wave completion bonus
+        int GetWaveCompletionBonus(int waveNumber)
+        {
+            int bonus = 500 * waveNumber;
+            if (NoDamageThisWave)
+            {
+                bonus += 1000 * waveNumber;  // No-damage bonus
+            }
+            return bonus;
         }
     };
 
@@ -376,29 +451,31 @@ namespace Game {
 
         void InitializeWeapons()
         {
+            // SCRAPYARD SALVATION themed weapons
             m_Weapons.clear();
-            m_Weapons.push_back({ WeaponType::Pistol, "Pistol", 10.0f, 5.0f, 20.0f, 2.0f, 1, 0, true });
-            m_Weapons.push_back({ WeaponType::Shotgun, "Shotgun", 8.0f, 2.0f, 15.0f, 25.0f, 5, 3, false });
-            m_Weapons.push_back({ WeaponType::SMG, "SMG", 6.0f, 12.0f, 18.0f, 8.0f, 1, 5, false });
-            m_Weapons.push_back({ WeaponType::Rifle, "Rifle", 35.0f, 1.5f, 30.0f, 0.5f, 1, 8, false });
-            m_Weapons.push_back({ WeaponType::Laser, "Laser", 15.0f, 8.0f, 40.0f, 0.0f, 1, 12, false });
+            m_Weapons.push_back({ WeaponType::Pistol, "Pipe Pistol", 10.0f, 5.0f, 20.0f, 2.0f, 1, 0, true });
+            m_Weapons.push_back({ WeaponType::Shotgun, "Nail Spreader", 8.0f, 2.0f, 15.0f, 25.0f, 5, 3, false });
+            m_Weapons.push_back({ WeaponType::SMG, "Spark Spitter", 6.0f, 12.0f, 18.0f, 8.0f, 1, 5, false });
+            m_Weapons.push_back({ WeaponType::Rifle, "Boom Pipe", 35.0f, 1.5f, 30.0f, 0.5f, 1, 8, false });
+            m_Weapons.push_back({ WeaponType::Laser, "Arc Welder", 15.0f, 8.0f, 40.0f, 0.0f, 1, 12, false });
         }
 
         void InitializePerks()
         {
+            // SCRAPYARD SALVATION themed perks
             m_AvailablePerks.clear();
-            m_AvailablePerks.push_back({ PerkType::DamageUp, "Damage Up", "+25% bullet damage", 5, 0 });
-            m_AvailablePerks.push_back({ PerkType::FireRateUp, "Fire Rate Up", "+20% fire rate", 5, 0 });
-            m_AvailablePerks.push_back({ PerkType::BulletSpeedUp, "Bullet Speed", "+30% bullet speed", 3, 0 });
-            m_AvailablePerks.push_back({ PerkType::PierceShot, "Pierce Shot", "Bullets pierce +1 enemy", 3, 0 });
-            m_AvailablePerks.push_back({ PerkType::ExplosiveRounds, "Explosive Rounds", "Bullets explode on impact", 1, 0 });
-            m_AvailablePerks.push_back({ PerkType::MaxHealthUp, "Max Health Up", "+25 max health", 5, 0 });
-            m_AvailablePerks.push_back({ PerkType::Regeneration, "Regeneration", "Heal 1 HP per second", 3, 0 });
-            m_AvailablePerks.push_back({ PerkType::DamageReduction, "Armor", "-15% damage taken", 4, 0 });
-            m_AvailablePerks.push_back({ PerkType::DodgeChance, "Dodge", "10% chance to avoid damage", 3, 0 });
-            m_AvailablePerks.push_back({ PerkType::MoveSpeedUp, "Swift", "+15% move speed", 4, 0 });
-            m_AvailablePerks.push_back({ PerkType::XPMagnet, "Magnet", "Larger pickup radius", 3, 0 });
-            m_AvailablePerks.push_back({ PerkType::LuckyDrops, "Lucky", "+25% drop chance", 3, 0 });
+            m_AvailablePerks.push_back({ PerkType::DamageUp, "Hollow Points", "+25% bullet damage", 5, 0 });
+            m_AvailablePerks.push_back({ PerkType::FireRateUp, "Overclock", "+20% fire rate", 5, 0 });
+            m_AvailablePerks.push_back({ PerkType::BulletSpeedUp, "Hot Load", "+30% bullet velocity", 3, 0 });
+            m_AvailablePerks.push_back({ PerkType::PierceShot, "Armor Piercing", "Bullets pierce +1 enemy", 3, 0 });
+            m_AvailablePerks.push_back({ PerkType::ExplosiveRounds, "Frag Rounds", "Bullets explode on impact", 1, 0 });
+            m_AvailablePerks.push_back({ PerkType::MaxHealthUp, "Scrap Plating", "+25 max health", 5, 0 });
+            m_AvailablePerks.push_back({ PerkType::Regeneration, "Med-Stim Drip", "Heal 1 HP per second", 3, 0 });
+            m_AvailablePerks.push_back({ PerkType::DamageReduction, "Salvaged Armor", "-15% damage taken", 4, 0 });
+            m_AvailablePerks.push_back({ PerkType::DodgeChance, "Quick Reflex", "10% chance to evade", 3, 0 });
+            m_AvailablePerks.push_back({ PerkType::MoveSpeedUp, "Adrenaline", "+15% move speed", 4, 0 });
+            m_AvailablePerks.push_back({ PerkType::XPMagnet, "Salvage Beacon", "Larger pickup radius", 3, 0 });
+            m_AvailablePerks.push_back({ PerkType::LuckyDrops, "Scavenger", "+25% drop chance", 3, 0 });
         }
 
     private:

@@ -6,11 +6,16 @@
 #include <Pillar/ECS/Components/Core/TransformComponent.h>
 #include <Pillar/ECS/Components/Physics/RigidbodyComponent.h>
 #include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
+#include <Pillar/ECS/Components/Rendering/AnimationComponent.h>
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
+#include <Pillar/ECS/Components/Gameplay/BulletComponent.h>
+#include <Pillar/ECS/Components/Physics/VelocityComponent.h>
 #include <Pillar/Renderer/Renderer2D.h>
 #include <box2d/b2_body.h>
 #include <glm/glm.hpp>
 #include <functional>
+#include <cmath>
+#include <string>
 
 #include "../Components/BossComponent.h"
 #include "../Components/EnemyComponent.h"
@@ -101,10 +106,19 @@ namespace Game {
                         break;
                 }
 
-                // Update sprite facing
+                // Update sprite facing and directional animation
+                std::string facingDir = GetFacingDirection(toPlayer);
+                
+                // Update directional animation
+                if (auto* anim = bossEntity.TryGetComponent<Pillar::AnimationComponent>())
+                {
+                    UpdateBossAnimation(boss.Type, *anim, facingDir);
+                }
+                
                 if (auto* sprite = bossEntity.TryGetComponent<Pillar::SpriteComponent>())
                 {
-                    sprite->FlipX = toPlayer.x < 0.0f;
+                    // No longer need FlipX since we have directional sprites
+                    sprite->FlipX = false;
 
                     // Flash red in later phases
                     if (boss.Phase == BossPhase::Phase3)
@@ -323,12 +337,22 @@ namespace Game {
             // Ranged attack
             if (boss.AttackTimer <= 0.0f && distance < 15.0f)
             {
-                // TODO: Spawn projectile toward player
-                // For now, just deal damage at range
-                if (distance < 10.0f)
+                // Spawn projectiles toward player based on phase
+                int projectileCount = 1;
+                if (boss.Phase == BossPhase::Phase2) projectileCount = 3;
+                else if (boss.Phase == BossPhase::Phase3) projectileCount = 5;
+
+                float spreadAngle = 0.3f;  // Radians between projectiles
+                float baseAngle = std::atan2(toPlayer.y, toPlayer.x);
+                float startAngle = baseAngle - (spreadAngle * (projectileCount - 1) / 2.0f);
+
+                for (int i = 0; i < projectileCount; ++i)
                 {
-                    DamagePlayer(boss.AttackDamage * 0.5f);  // Reduced damage for ranged
+                    float angle = startAngle + spreadAngle * i;
+                    glm::vec2 direction(std::cos(angle), std::sin(angle));
+                    SpawnBossProjectile(entity, transform.Position, direction, boss.AttackDamage * 0.5f);
                 }
+
                 boss.AttackTimer = boss.AttackCooldown;
                 AudioManager::Instance().PlaySound("enemy_shoot", transform.Position, 0.7f, 0.6f);
             }
@@ -346,6 +370,91 @@ namespace Game {
                 auto& health = playerView.get<Pillar::HealthComponent>(entity);
                 health.TakeDamage(damage);
                 break;
+            }
+        }
+
+        void SpawnBossProjectile(
+            Pillar::Entity owner,
+            const glm::vec2& position,
+            const glm::vec2& direction,
+            float damage)
+        {
+            // Create boss projectile
+            auto projectile = m_Scene->CreateEntity("BossProjectile");
+
+            // Position slightly ahead of boss
+            glm::vec2 spawnPos = position + direction * 1.0f;
+
+            auto& transform = projectile.GetComponent<Pillar::TransformComponent>();
+            transform.SetPosition(spawnPos);
+
+            // Rotate to face direction
+            float angle = std::atan2(direction.y, direction.x);
+            transform.SetRotation(angle);
+
+            // Large, menacing red/purple projectile
+            auto& sprite = projectile.AddComponent<Pillar::SpriteComponent>();
+            sprite.Size = glm::vec2(0.5f, 0.3f);
+            sprite.Color = glm::vec4(0.8f, 0.2f, 0.4f, 1.0f);  // Dark magenta
+            sprite.Layer = "Projectiles";
+            sprite.OrderInLayer = 6;
+
+            // Velocity-based movement (slower but larger)
+            auto& velocity = projectile.AddComponent<Pillar::VelocityComponent>();
+            velocity.Velocity = direction * 10.0f;  // Boss projectiles are slower but harder to dodge
+            velocity.MaxSpeed = 12.0f;
+
+            // Bullet component (owned by boss enemy, damages player)
+            auto& bulletComp = projectile.AddComponent<Pillar::BulletComponent>(owner, damage);
+            bulletComp.Lifetime = 6.0f;
+            bulletComp.Pierce = false;
+            bulletComp.MaxHits = 1;
+            bulletComp.HitsRemaining = 1;
+        }
+        
+        // Determine facing direction (north, south, east, west) from a direction vector
+        static std::string GetFacingDirection(const glm::vec2& direction)
+        {
+            if (glm::length(direction) < 0.001f)
+                return "south";  // Default to south when no direction
+            
+            // Get angle in degrees (0 = east, 90 = north, 180/-180 = west, -90 = south)
+            float angle = glm::degrees(std::atan2(direction.y, direction.x));
+            
+            // Determine quadrant based on angle
+            if (angle >= -45.0f && angle < 45.0f)
+                return "east";
+            else if (angle >= 45.0f && angle < 135.0f)
+                return "north";
+            else if (angle >= 135.0f || angle < -135.0f)
+                return "west";
+            else // angle >= -135 && angle < -45
+                return "south";
+        }
+        
+        // Update boss animation based on type and facing direction
+        void UpdateBossAnimation(BossType type, Pillar::AnimationComponent& anim, const std::string& facingDir)
+        {
+            std::string targetAnim;
+            
+            switch (type)
+            {
+                case BossType::Behemoth:
+                    targetAnim = "large_behemoth_walk_" + facingDir;
+                    break;
+                case BossType::Swarm_Queen:
+                    targetAnim = "goblin_queen_walk_" + facingDir;
+                    break;
+                case BossType::Devastator:
+                    targetAnim = "monster_with_bow_run_" + facingDir;
+                    break;
+                default:
+                    return;
+            }
+            
+            if (anim.CurrentClipName != targetAnim)
+            {
+                anim.Play(targetAnim);
             }
         }
     };

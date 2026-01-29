@@ -5,11 +5,12 @@
 
 namespace Game {
 
+    // SCRAPYARD SALVATION boss types - nightmares of the wastes
     enum class BossType
     {
-        Behemoth,       // Large, tanky, slow - melee attacks
-        Swarm_Queen,    // Spawns minions periodically
-        Devastator      // Ranged attacks, area denial
+        Behemoth,       // THE BEHEMOTH: Bloated horror, corrupted flesh mountain
+        Swarm_Queen,    // THE BROOD MOTHER: Spawns Swarm Rats from body
+        Devastator      // THE HARVESTER: Corrupted machine spider, hooks & saws
     };
 
     enum class BossPhase
@@ -36,7 +37,7 @@ namespace Game {
         float SpecialCooldown = 5.0f;
         float SpecialTimer = 0.0f;
 
-        // Minion spawning (for Swarm Queen)
+        // Minion spawning (for Brood Mother)
         int MinionsToSpawn = 0;
         float MinionSpawnTimer = 0.0f;
         float MinionSpawnDelay = 1.0f;
@@ -71,11 +72,23 @@ namespace Game {
             }
         }
 
+        // Get themed display name for boss type
+        static const char* GetDisplayName(BossType type)
+        {
+            switch (type)
+            {
+                case BossType::Behemoth:    return "THE BEHEMOTH";
+                case BossType::Swarm_Queen: return "THE BROOD MOTHER";
+                case BossType::Devastator:  return "THE HARVESTER";
+                default:                    return "UNKNOWN HORROR";
+            }
+        }
+
         static BossComponent CreateBehemoth(int waveNumber)
         {
             BossComponent boss;
             boss.Type = BossType::Behemoth;
-            boss.Name = "BEHEMOTH";
+            boss.Name = "THE BEHEMOTH";
             boss.MaxHealth = 300.0f + waveNumber * 50.0f;
             boss.MoveSpeed = 2.5f;
             boss.AttackDamage = 25.0f + waveNumber * 2.0f;
@@ -89,7 +102,7 @@ namespace Game {
         {
             BossComponent boss;
             boss.Type = BossType::Swarm_Queen;
-            boss.Name = "SWARM QUEEN";
+            boss.Name = "THE BROOD MOTHER";
             boss.MaxHealth = 250.0f + waveNumber * 40.0f;
             boss.MoveSpeed = 2.0f;
             boss.AttackDamage = 15.0f + waveNumber * 1.5f;
@@ -104,7 +117,7 @@ namespace Game {
         {
             BossComponent boss;
             boss.Type = BossType::Devastator;
-            boss.Name = "DEVASTATOR";
+            boss.Name = "THE HARVESTER";
             boss.MaxHealth = 350.0f + waveNumber * 45.0f;
             boss.MoveSpeed = 1.5f;
             boss.AttackDamage = 35.0f + waveNumber * 2.5f;

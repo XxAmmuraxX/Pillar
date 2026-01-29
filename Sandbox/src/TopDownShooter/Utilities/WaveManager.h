@@ -104,11 +104,28 @@ namespace Game {
         bool IsSpawning() const { return m_State == WaveState::Spawning; }
         bool IsWaveInProgress() const { return m_State == WaveState::InProgress; }
         bool IsBossWave() const { return m_CurrentConfig.IsBossWave; }
-        float GetTimeUntilNextWave() const 
-        { 
-            return m_State == WaveState::WaveComplete ? m_Timer : 0.0f; 
+        float GetTimeUntilNextWave() const
+        {
+            return m_State == WaveState::WaveComplete ? m_Timer : 0.0f;
         }
         int GetEnemiesToSpawn() const { return m_EnemiesToSpawn; }
+
+        // Returns the rest timer between waves (0 if not resting)
+        float GetRestTimer() const
+        {
+            return m_State == WaveState::WaveComplete ? m_Timer : 0.0f;
+        }
+
+        // Returns true for one frame when a new wave starts spawning
+        bool IsWaveJustStarted()
+        {
+            if (m_WaveJustStarted)
+            {
+                m_WaveJustStarted = false;
+                return true;
+            }
+            return false;
+        }
 
         void Reset()
         {
@@ -134,6 +151,7 @@ namespace Game {
             m_CurrentConfig = GenerateWaveConfig(m_CurrentWave);
             m_State = WaveState::Spawning;
             m_Timer = 0.0f;
+            m_WaveJustStarted = true;
 
             // Boss waves have special handling
             if (m_CurrentConfig.IsBossWave)
@@ -305,6 +323,7 @@ namespace Game {
         WaveState m_State = WaveState::WaveComplete;
         float m_Timer = 0.0f;
         int m_EnemiesToSpawn = 0;
+        bool m_WaveJustStarted = false;
 
         WaveConfig m_CurrentConfig;
         std::vector<EnemyType> m_SpawnQueue;

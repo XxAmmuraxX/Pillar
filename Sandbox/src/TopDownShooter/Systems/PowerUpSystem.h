@@ -13,6 +13,7 @@
 
 #include "../Components/PowerUpComponent.h"
 #include "../Components/PlayerTagComponent.h"
+#include "../Components/XPOrbComponent.h"
 #include "../Utilities/AudioManager.h"
 #include "../Utilities/EffectFactory.h"
 
@@ -40,6 +41,13 @@ namespace Game {
             }
 
             if (!playerEntity.IsValid()) return;
+
+            // Check if player has magnet buff active
+            float magnetRange = 0.0f;
+            if (auto* buffs = playerEntity.TryGetComponent<PlayerBuffsComponent>())
+            {
+                magnetRange = buffs->GetMagnetRange();
+            }
 
             // Update power-up bobbing and check for collection
             std::vector<entt::entity> toDestroy;
@@ -72,6 +80,21 @@ namespace Game {
                 float pickupRadius = 0.8f;
                 float distance = glm::distance(transform.Position, playerPos);
 
+                // Magnet attraction - pull power-ups toward player
+                if (magnetRange > 0.0f && distance < magnetRange && distance > pickupRadius)
+                {
+                    glm::vec2 toPlayer = playerPos - transform.Position;
+                    glm::vec2 direction = glm::normalize(toPlayer);
+                    float attractSpeed = 8.0f * dt;
+                    
+                    // Move original position toward player (bobbing is relative to this)
+                    powerUp.OriginalPosition += direction * attractSpeed;
+                    transform.SetPosition(glm::vec2(
+                        powerUp.OriginalPosition.x,
+                        powerUp.OriginalPosition.y + std::sin(powerUp.BobTimer) * powerUp.BobAmplitude
+                    ));
+                }
+
                 if (distance < pickupRadius)
                 {
                     // Collect power-up!
@@ -92,6 +115,39 @@ namespace Game {
             for (auto entity : toDestroy)
             {
                 m_Scene->DestroyEntity(Pillar::Entity(entity, m_Scene));
+            }
+
+            // Apply magnet attraction to XP orbs if magnet buff is active
+            if (magnetRange > 0.0f)
+            {
+                auto xpView = registry.view<
+                    Pillar::TransformComponent,
+                    XPOrbComponent
+                >();
+
+                for (auto entity : xpView)
+                {
+                    auto& transform = xpView.get<Pillar::TransformComponent>(entity);
+                    auto& xpOrb = xpView.get<XPOrbComponent>(entity);
+
+                    float distance = glm::distance(transform.Position, playerPos);
+
+                    // Override the orb's default magnet radius with our buff's range
+                    if (distance < magnetRange && distance > xpOrb.PickupRadius)
+                    {
+                        glm::vec2 toPlayer = playerPos - transform.Position;
+                        glm::vec2 direction = glm::normalize(toPlayer);
+                        float attractSpeed = xpOrb.MoveSpeed * dt;
+
+                        // Move original position toward player
+                        xpOrb.OriginalPosition += direction * attractSpeed;
+                        float bobOffset = std::sin(xpOrb.BobTimer) * xpOrb.BobAmplitude;
+                        transform.SetPosition(glm::vec2(
+                            xpOrb.OriginalPosition.x,
+                            xpOrb.OriginalPosition.y + bobOffset
+                        ));
+                    }
+                }
             }
 
             // Update player buff timers
@@ -144,8 +200,14 @@ namespace Game {
 
                 case PowerUpType::Magnet:
                 {
-                    // TODO: Implement magnet attraction
-                    PIL_INFO("Collected Magnet power-up");
+                    // Add magnet buff to player
+                    auto* buffs = player.TryGetComponent<PlayerBuffsComponent>();
+                    if (!buffs)
+                    {
+                        buffs = &player.AddComponent<PlayerBuffsComponent>();
+                    }
+                    buffs->AddEffect(PowerUpType::Magnet, powerUp.Duration, powerUp.Value);
+                    PIL_INFO("Collected Magnet: {:.1f}s duration, {:.0f} range", powerUp.Duration, powerUp.Value);
                     break;
                 }
             }

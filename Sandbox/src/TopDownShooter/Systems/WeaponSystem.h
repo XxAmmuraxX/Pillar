@@ -44,6 +44,8 @@ namespace Game {
         void OnAttach(Pillar::Scene* scene) override
         {
             m_Scene = scene;
+            // Cache bullet texture to avoid loading for every bullet
+            m_BulletTexture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("Soul_Orb.png"));
         }
 
         void OnDetach() override
@@ -182,7 +184,7 @@ namespace Game {
 
             // Small bright sprite
             auto& sprite = bullet.AddComponent<Pillar::SpriteComponent>();
-            sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("Soul_Orb.png"));
+            sprite.Texture = m_BulletTexture; // Use cached texture
             sprite.Size = glm::vec2(0.4f, 0.4f);
             sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // White (no tint)
             sprite.Layer = "Projectiles";
@@ -230,6 +232,7 @@ namespace Game {
         float m_WindowWidth = 1280.0f;
         float m_WindowHeight = 720.0f;
         Pillar::Scene* m_Scene = nullptr;
+        std::shared_ptr<Pillar::Texture2D> m_BulletTexture; // Cached bullet texture
     };
 
 } // namespace Game

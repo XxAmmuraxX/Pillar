@@ -217,8 +217,6 @@ namespace Pillar {
 		{
 			sprite.TexCoordMin = frame.UVMin;
 			sprite.TexCoordMax = frame.UVMax;
-			PIL_CORE_INFO("AnimationSystem: Set UVs - Min: ({0}, {1}), Max: ({2}, {3})", 
-				frame.UVMin.x, frame.UVMin.y, frame.UVMax.x, frame.UVMax.y);
 		}
 	}
 

@@ -64,6 +64,15 @@ namespace Game {
             ParticleManager::Instance().SpawnBossDeathExplosion(position, count);
         }
 
+        // Spawn elaborate barrel explosion with multiple stages
+        static void SpawnBarrelExplosion(
+            Pillar::Scene& scene,
+            const glm::vec2& position,
+            float radius = 3.5f)
+        {
+            ParticleManager::Instance().SpawnBarrelExplosion(position, radius);
+        }
+
         // Spawn XP collect sparkle
         static void SpawnXPCollectEffect(
             Pillar::Scene& scene,

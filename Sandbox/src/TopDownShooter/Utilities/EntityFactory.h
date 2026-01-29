@@ -82,7 +82,7 @@ namespace Game {
             return player;
         }
 
-        // Create wall entity
+        // Create wall entity - SCRAPYARD SALVATION industrial style
         static Pillar::Entity CreateWall(
             Pillar::Scene& scene,
             const glm::vec2& position,
@@ -94,10 +94,10 @@ namespace Game {
             auto& transform = wall.GetComponent<Pillar::TransformComponent>();
             transform.SetPosition(position);
 
-            // Sprite
+            // Sprite - Industrial gray with rust tint (#1A1A1E with rust hint)
             auto& sprite = wall.AddComponent<Pillar::SpriteComponent>();
             sprite.Size = size;
-            sprite.Color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);  // Dark gray
+            sprite.Color = glm::vec4(0.15f, 0.12f, 0.10f, 1.0f);  // Dark industrial gray-brown
             sprite.Layer = "Environment";
             sprite.OrderInLayer = -10;
 
@@ -115,13 +115,18 @@ namespace Game {
             return wall;
         }
 
-        // Create enemy entity
+        // Create enemy entity with wave-based difficulty scaling
         static Pillar::Entity CreateEnemy(
             Pillar::Scene& scene,
             const glm::vec2& position,
-            EnemyType type)
+            EnemyType type,
+            int waveNumber = 1)
         {
             auto enemy = scene.CreateEntity("Enemy");
+
+            // Difficulty scaling factors per wave
+            float healthScale = 1.0f + (waveNumber - 1) * 0.05f;   // +5% per wave
+            float speedScale = 1.0f + (waveNumber - 1) * 0.02f;    // +2% per wave
 
             // Transform
             auto& transform = enemy.GetComponent<Pillar::TransformComponent>();
@@ -133,26 +138,27 @@ namespace Game {
             sprite.OrderInLayer = 5;
 
             // Load textures and configure size/animation based on enemy type
+            // Sizes increased for better visibility
             switch (type)
             {
                 case EnemyType::Chaser:
                     sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("hoodzy.png"));
                     sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-                    sprite.Size = glm::vec2(1.0f, 1.0f);
+                    sprite.Size = glm::vec2(1.8f, 1.8f);  // Increased from 1.0
                     break;
                 case EnemyType::Shooter:
                     sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("evil_archer/rotations/south.png"));
                     sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-                    sprite.Size = glm::vec2(1.0f, 1.0f);
+                    sprite.Size = glm::vec2(1.8f, 1.8f);  // Increased from 1.0
                     break;
                 case EnemyType::Swarm:
                     sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("goblin_with_a_sword/rotations/south.png"));
                     sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-                    sprite.Size = glm::vec2(0.8f, 0.8f);
+                    sprite.Size = glm::vec2(1.4f, 1.4f);  // Increased from 0.8
                     break;
                 default:
                     sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-                    sprite.Size = glm::vec2(1.0f, 1.0f);
+                    sprite.Size = glm::vec2(1.8f, 1.8f);  // Increased from 1.0
             }
 
             // Add animations where available
@@ -173,12 +179,13 @@ namespace Game {
             }
 
             // Physics setup depends on enemy type
+            // Hitbox sizes increased proportionally with sprite sizes
             if (type == EnemyType::Swarm)
             {
                 // Lightweight enemies use VelocityComponent (no Box2D overhead)
                 auto& velocity = enemy.AddComponent<Pillar::VelocityComponent>();
                 velocity.Drag = 2.0f;
-                velocity.MaxSpeed = 8.0f;
+                velocity.MaxSpeed = 8.0f * speedScale;
             }
             else
             {
@@ -187,7 +194,7 @@ namespace Game {
                 rb.FixedRotation = true;
                 rb.LinearDamping = 4.0f;
 
-                auto collider = Pillar::ColliderComponent::Circle(sprite.Size.x * 0.4f);
+                auto collider = Pillar::ColliderComponent::Circle(sprite.Size.x * 0.35f);  // Hitbox proportional to new size
                 collider.CategoryBits = CollisionCategory::Enemy;
                 collider.MaskBits = CollisionCategory::Player |
                                    CollisionCategory::Wall |
@@ -195,7 +202,7 @@ namespace Game {
                 enemy.AddComponent<Pillar::ColliderComponent>(collider);
             }
 
-            // Health scaled by type
+            // Health scaled by type and wave
             float baseHealth = 30.0f;
             switch (type)
             {
@@ -203,7 +210,7 @@ namespace Game {
                 case EnemyType::Swarm: baseHealth = 10.0f; break;
                 default: break;
             }
-            auto& health = enemy.AddComponent<Pillar::HealthComponent>(baseHealth);
+            auto& health = enemy.AddComponent<Pillar::HealthComponent>(baseHealth * healthScale);
             health.DestroyOnDeath = false;  // Handle death effects first
 
             // Enemy behavior
@@ -211,22 +218,22 @@ namespace Game {
             enemyComp.Type = type;
             enemyComp.State = EnemyState::Idle;
 
-            // Configure stats by type
+            // Configure stats by type with wave scaling
             switch (type)
             {
                 case EnemyType::Chaser:
-                    enemyComp.MoveSpeed = 4.0f;
+                    enemyComp.MoveSpeed = 4.0f * speedScale;
                     enemyComp.AttackDamage = 15.0f;
                     enemyComp.XPValue = 10.0f;
                     break;
                 case EnemyType::Shooter:
-                    enemyComp.MoveSpeed = 2.0f;
+                    enemyComp.MoveSpeed = 2.0f * speedScale;
                     enemyComp.AttackDamage = 8.0f;
                     enemyComp.AttackRange = 10.0f;
                     enemyComp.XPValue = 25.0f;
                     break;
                 case EnemyType::Swarm:
-                    enemyComp.MoveSpeed = 6.0f;
+                    enemyComp.MoveSpeed = 6.0f * speedScale;
                     enemyComp.AttackDamage = 5.0f;
                     enemyComp.XPValue = 5.0f;
                     break;
@@ -247,20 +254,33 @@ namespace Game {
             auto& transform = powerUp.GetComponent<Pillar::TransformComponent>();
             transform.SetPosition(position);
 
-            // Sprite with color based on type
+            // Sprite with color based on type - SCRAPYARD SALVATION themed
             auto& sprite = powerUp.AddComponent<Pillar::SpriteComponent>();
             float size = PowerUpComponent::GetSizeForType(type);
             sprite.Size = glm::vec2(size, size);
             
-            // Use texture for certain power-ups
-            if (type == PowerUpType::Magnet)
+            // Use themed textures for power-ups
+            switch (type)
             {
-                sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("Coins.png"));
-                sprite.Color = glm::vec4(1.0f, 0.8f, 0.2f, 1.0f);  // Gold tint
-            }
-            else
-            {
-                sprite.Color = PowerUpComponent::GetColorForType(type);
+                case PowerUpType::Health:
+                    // MED-STIM: Cracked syringe with glowing green fluid
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("powerups/medstim.png"));
+                    sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // No tint, use texture colors
+                    break;
+                case PowerUpType::SpeedBoost:
+                    // ADRENALINE SHOT: Yellow auto-injector
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("powerups/adrenaline.png"));
+                    sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // No tint
+                    break;
+                case PowerUpType::Magnet:
+                    // SALVAGE BEACON: Blinking antenna
+                    sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("Coins.png"));
+                    sprite.Color = glm::vec4(0.6f, 0.2f, 0.8f, 1.0f);  // Toxic purple tint
+                    break;
+                default:
+                    // Other power-ups use solid colors until we have textures
+                    sprite.Color = PowerUpComponent::GetColorForType(type);
+                    break;
             }
             sprite.Layer = "PowerUps";
             sprite.OrderInLayer = 3;

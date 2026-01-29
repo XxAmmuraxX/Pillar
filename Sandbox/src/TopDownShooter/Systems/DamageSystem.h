@@ -7,11 +7,15 @@
 #include <Pillar/ECS/Components/Core/TransformComponent.h>
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
 #include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
+#include <Pillar/ECS/Components/Physics/RigidbodyComponent.h>
+#include <Pillar/ECS/Components/Physics/VelocityComponent.h>
 #include <Pillar/Logger.h>
+#include <box2d/b2_body.h>
 
 #include "../Components/EnemyComponent.h"
 #include "../Components/PlayerTagComponent.h"
 #include "../Components/PowerUpComponent.h"
+#include "../Components/HazardComponent.h"
 #include "../Utilities/EntityFactory.h"
 #include "../Utilities/EffectFactory.h"
 #include "../Utilities/AudioManager.h"
@@ -29,10 +33,11 @@ namespace Game {
     class DamageSystem : public Pillar::System
     {
     public:
-        using OnEnemyHitCallback = std::function<void(const glm::vec2& position, const glm::vec2& bulletDirection)>;
-        using OnEnemyKilledCallback = std::function<void(const glm::vec2& position, const glm::vec4& color)>;
+        using OnEnemyHitCallback = std::function<void(const glm::vec2& position, const glm::vec2& bulletDirection, float damageDealt)>;
+        using OnEnemyKilledCallback = std::function<void(const glm::vec2& position, const glm::vec4& color, EnemyType enemyType)>;
         using OnPlayerHitCallback = std::function<void()>;
         using OnGameOverCallback = std::function<void()>;
+        using OnBarrelHitCallback = std::function<void(entt::entity barrelEntity, float damage)>;
 
         DamageSystem(Pillar::BulletCollisionSystem* bulletCollisionSystem)
             : m_BulletCollisionSystem(bulletCollisionSystem)
@@ -52,6 +57,7 @@ namespace Game {
         void SetOnEnemyKilled(OnEnemyKilledCallback callback) { m_OnEnemyKilled = callback; }
         void SetOnPlayerHit(OnPlayerHitCallback callback) { m_OnPlayerHit = callback; }
         void SetOnGameOver(OnGameOverCallback callback) { m_OnGameOver = callback; }
+        void SetOnBarrelHit(OnBarrelHitCallback callback) { m_OnBarrelHit = callback; }
 
         void OnUpdate(float dt) override
         {
@@ -71,6 +77,7 @@ namespace Game {
         OnEnemyKilledCallback m_OnEnemyKilled;
         OnPlayerHitCallback m_OnPlayerHit;
         OnGameOverCallback m_OnGameOver;
+        OnBarrelHitCallback m_OnBarrelHit;
 
         void OnBulletHit(Pillar::Entity bullet, Pillar::Entity target, float damage, const glm::vec2& hitPos)
         {
@@ -100,7 +107,37 @@ namespace Game {
                                 if (glm::length(vel->Velocity) > 0.01f)
                                     bulletDir = glm::normalize(vel->Velocity);
                             }
-                            m_OnEnemyHit(hitPos, bulletDir);
+                            m_OnEnemyHit(hitPos, bulletDir, damageDealt);
+                        }
+
+                        // Apply knockback to enemy
+                        if (auto* rb = target.TryGetComponent<Pillar::RigidbodyComponent>())
+                        {
+                            if (rb->Body)
+                            {
+                                glm::vec2 knockDir(1.0f, 0.0f);
+                                if (auto* vel = bullet.TryGetComponent<Pillar::VelocityComponent>())
+                                {
+                                    if (glm::length(vel->Velocity) > 0.01f)
+                                        knockDir = glm::normalize(vel->Velocity);
+                                }
+                                // Higher force to overcome LinearDamping of 4.0
+                                float knockbackForce = 8.0f;
+                                rb->Body->ApplyLinearImpulseToCenter(
+                                    b2Vec2(knockDir.x * knockbackForce, knockDir.y * knockbackForce), true);
+                            }
+                        }
+                        else if (auto* vel = target.TryGetComponent<Pillar::VelocityComponent>())
+                        {
+                            // Knockback for velocity-based enemies (Swarm)
+                            glm::vec2 knockDir(1.0f, 0.0f);
+                            if (auto* bulletVel = bullet.TryGetComponent<Pillar::VelocityComponent>())
+                            {
+                                if (glm::length(bulletVel->Velocity) > 0.01f)
+                                    knockDir = glm::normalize(bulletVel->Velocity);
+                            }
+                            // Strong knockback push for lightweight swarm enemies
+                            vel->Velocity += knockDir * 10.0f;
                         }
                     }
                     // Check if target is player
@@ -121,6 +158,20 @@ namespace Game {
                         {
                             m_OnPlayerHit();
                         }
+                    }
+                }
+            }
+            // Check if target is an explosive barrel (no HealthComponent needed)
+            else if (target.HasComponent<HazardComponent>())
+            {
+                auto& hazard = target.GetComponent<HazardComponent>();
+                if (hazard.Type == HazardType::ExplosiveBarrel && !hazard.HasExploded)
+                {
+                    // Forward to HazardSystem for explosion handling
+                    // Use implicit conversion to entt::entity
+                    if (m_OnBarrelHit)
+                    {
+                        m_OnBarrelHit(static_cast<entt::entity>(target), damage);
                     }
                 }
             }
@@ -174,7 +225,7 @@ namespace Game {
                     // Trigger death effect callback
                     if (m_OnEnemyKilled)
                     {
-                        m_OnEnemyKilled(transform.Position, sprite.Color);
+                        m_OnEnemyKilled(transform.Position, sprite.Color, enemy->Type);
                     }
 
                     // Chance to drop power-up (30% chance)

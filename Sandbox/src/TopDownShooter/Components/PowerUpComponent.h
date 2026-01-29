@@ -26,33 +26,33 @@ namespace Game {
         float BobTimer = 0.0f;
         glm::vec2 OriginalPosition = { 0.0f, 0.0f };
 
-        // Helper to get color based on type
+        // Helper to get color based on type - SCRAPYARD SALVATION gritty palette
         static glm::vec4 GetColorForType(PowerUpType type)
         {
             switch (type)
             {
-                case PowerUpType::Health:     return { 0.2f, 1.0f, 0.2f, 1.0f }; // Green
-                case PowerUpType::SpeedBoost: return { 1.0f, 1.0f, 0.2f, 1.0f }; // Yellow
-                case PowerUpType::FireRateUp: return { 1.0f, 0.5f, 0.0f, 1.0f }; // Orange
-                case PowerUpType::DamageUp:   return { 1.0f, 0.2f, 0.2f, 1.0f }; // Red
-                case PowerUpType::Shield:     return { 0.2f, 0.5f, 1.0f, 1.0f }; // Blue
-                case PowerUpType::Magnet:     return { 1.0f, 0.2f, 1.0f, 1.0f }; // Magenta
+                case PowerUpType::Health:     return { 0.2f, 0.8f, 0.3f, 1.0f }; // MED-STIM: Muted toxic green
+                case PowerUpType::SpeedBoost: return { 1.0f, 0.85f, 0.0f, 1.0f }; // ADRENALINE: Electric yellow
+                case PowerUpType::FireRateUp: return { 1.0f, 0.4f, 0.0f, 1.0f }; // OVERCLOCKED: Hazard orange
+                case PowerUpType::DamageUp:   return { 0.55f, 0.0f, 0.0f, 1.0f }; // HOLLOW POINTS: Dried crimson
+                case PowerUpType::Shield:     return { 0.53f, 0.81f, 0.92f, 1.0f }; // SCRAP BARRIER: Welding blue
+                case PowerUpType::Magnet:     return { 0.6f, 0.2f, 0.8f, 1.0f }; // SALVAGE BEACON: Toxic purple
                 default:                      return { 1.0f, 1.0f, 1.0f, 1.0f }; // White
             }
         }
 
-        // Helper to get size based on type
+        // Helper to get size based on type (increased for visibility)
         static float GetSizeForType(PowerUpType type)
         {
             switch (type)
             {
-                case PowerUpType::Health:     return 0.5f;
-                case PowerUpType::SpeedBoost: return 0.4f;
-                case PowerUpType::FireRateUp: return 0.4f;
-                case PowerUpType::DamageUp:   return 0.4f;
-                case PowerUpType::Shield:     return 0.6f;
-                case PowerUpType::Magnet:     return 0.5f;
-                default:                      return 0.5f;
+                case PowerUpType::Health:     return 1.0f;   // Increased from 0.5
+                case PowerUpType::SpeedBoost: return 0.9f;   // Increased from 0.4
+                case PowerUpType::FireRateUp: return 0.9f;   // Increased from 0.4
+                case PowerUpType::DamageUp:   return 0.9f;   // Increased from 0.4
+                case PowerUpType::Shield:     return 1.1f;   // Increased from 0.6
+                case PowerUpType::Magnet:     return 1.0f;   // Increased from 0.5
+                default:                      return 1.0f;   // Increased from 0.5
             }
         }
     };
@@ -110,6 +110,22 @@ namespace Game {
                     return true;
             }
             return false;
+        }
+
+        // Returns magnet range if active, 0.0f otherwise
+        float GetMagnetRange() const
+        {
+            for (const auto& effect : ActiveEffects)
+            {
+                if (effect.Type == PowerUpType::Magnet)
+                    return effect.Value;
+            }
+            return 0.0f;
+        }
+
+        bool HasMagnet() const
+        {
+            return GetMagnetRange() > 0.0f;
         }
 
         void UpdateEffects(float dt)

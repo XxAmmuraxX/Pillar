@@ -11,6 +11,8 @@
 #include <Pillar/Renderer/OrthographicCamera.h>
 #include <box2d/b2_body.h>
 #include <glm/glm.hpp>
+#include <string>
+#include <cmath>
 
 #include "../Components/PlayerTagComponent.h"
 #include "../Components/PowerUpComponent.h"
@@ -112,31 +114,35 @@ namespace Game {
                 b2Vec2 velocity(moveDir.x * speed, moveDir.y * speed);
                 rb.Body->SetLinearVelocity(velocity);
 
-                // Update animation based on movement
+                // Determine facing direction based on mouse cursor
+                auto [mouseX, mouseY] = Pillar::Input::GetMousePosition();
+                glm::vec2 mouseWorld = ScreenToWorld(
+                    mouseX, mouseY,
+                    m_WindowWidth, m_WindowHeight,
+                    *m_Camera
+                );
+                glm::vec2 toMouse = mouseWorld - transform.Position;
+                std::string facingDir = GetFacingDirection(toMouse);
+
+                // Update animation based on movement and facing direction
                 if (auto* anim = entityWrapper.TryGetComponent<Pillar::AnimationComponent>())
                 {
                     bool isMoving = glm::length(moveDir) > 0.0f;
-                    if (isMoving && anim->CurrentClipName != "red_mage_run_south")
+                    std::string targetAnim = isMoving 
+                        ? "red_mage_run_" + facingDir 
+                        : "red_mage_idle_" + facingDir;
+                    
+                    if (anim->CurrentClipName != targetAnim)
                     {
-                        anim->Play("red_mage_run_south");
-                    }
-                    else if (!isMoving && anim->CurrentClipName != "red_mage_idle_south")
-                    {
-                        anim->Play("red_mage_idle_south");
+                        anim->Play(targetAnim);
                     }
                 }
 
-                // Update sprite flip based on mouse direction (face left/right)
+                // Update sprite flip - no longer needed since we have directional sprites
+                // Keep FlipX = false to use the directional animations as-is
                 if (auto* sprite = entityWrapper.TryGetComponent<Pillar::SpriteComponent>())
                 {
-                    auto [mouseX, mouseY] = Pillar::Input::GetMousePosition();
-                    glm::vec2 mouseWorld = ScreenToWorld(
-                        mouseX, mouseY,
-                        m_WindowWidth, m_WindowHeight,
-                        *m_Camera
-                    );
-                    glm::vec2 toMouse = mouseWorld - transform.Position;
-                    sprite->FlipX = toMouse.x < 0.0f;  // Flip sprite when facing left
+                    sprite->FlipX = false;
                 }
 
                 // Dash on Space (or Shift)
@@ -165,7 +171,7 @@ namespace Game {
                     AudioManager::Instance().PlaySound("pickup", 0.5f, 1.5f);  // Higher pitch whoosh
                 }
 
-                // Note: Player doesn't rotate - we use FlipX on the sprite to face left/right
+                // Note: Player uses directional animations based on mouse cursor position
             }
         }
 
@@ -177,6 +183,30 @@ namespace Game {
         }
 
     private:
+        // Determine facing direction (north, south, east, west) from a direction vector
+        static std::string GetFacingDirection(const glm::vec2& direction)
+        {
+            if (glm::length(direction) < 0.001f)
+                return "south";  // Default to south when no direction
+            
+            // Get angle in degrees (0 = east, 90 = north, 180/-180 = west, -90 = south)
+            float angle = glm::degrees(std::atan2(direction.y, direction.x));
+            
+            // Determine quadrant based on angle
+            // East: -45 to 45 degrees
+            // North: 45 to 135 degrees
+            // West: 135 to 180 or -180 to -135 degrees
+            // South: -135 to -45 degrees
+            if (angle >= -45.0f && angle < 45.0f)
+                return "east";
+            else if (angle >= 45.0f && angle < 135.0f)
+                return "north";
+            else if (angle >= 135.0f || angle < -135.0f)
+                return "west";
+            else // angle >= -135 && angle < -45
+                return "south";
+        }
+        
         const Pillar::OrthographicCamera* m_Camera = nullptr;
         float m_WindowWidth = 1280.0f;
         float m_WindowHeight = 720.0f;

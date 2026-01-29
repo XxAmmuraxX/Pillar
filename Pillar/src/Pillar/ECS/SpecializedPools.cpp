@@ -99,7 +99,8 @@ void ParticlePool::Init(Scene* scene, uint32_t initialCapacity)
 	m_Pool.SetInitCallback([this](Entity entity) {
 		entity.AddComponent<TransformComponent>();
 		entity.AddComponent<VelocityComponent>();
-		entity.AddComponent<SpriteComponent>();
+		auto& sprite = entity.AddComponent<SpriteComponent>();
+		sprite.Visible = false; // Start hidden - particles are made visible when spawned
 		entity.AddComponent<ParticleComponent>();
 	});
 
@@ -121,6 +122,7 @@ void ParticlePool::Init(Scene* scene, uint32_t initialCapacity)
 
 		auto& sprite = entity.GetComponent<SpriteComponent>();
 		sprite.Color = glm::vec4(1.0f);
+		sprite.Visible = false; // Hide pooled particles to prevent rendering at origin
 	});
 
 	// Initialize the underlying pool
@@ -171,6 +173,9 @@ Entity ParticlePool::SpawnParticle(
 	auto& sprite = particle.GetComponent<SpriteComponent>();
 	sprite.Color = color;
 	sprite.Size = glm::vec2(size);
+	sprite.Visible = true; // Make particle visible when spawned
+	sprite.Layer = "Particles"; // Render on top of most game elements
+	sprite.OrderInLayer = 10;
 
 	// Set particle properties
 	auto& particleComp = particle.GetComponent<ParticleComponent>();

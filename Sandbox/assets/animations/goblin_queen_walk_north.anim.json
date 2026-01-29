@@ -1,0 +1,56 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/goblin_queen_with_a_staff/animations/scary-walk/north/frame_000.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/goblin_queen_with_a_staff/animations/scary-walk/north/frame_001.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/goblin_queen_with_a_staff/animations/scary-walk/north/frame_002.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/goblin_queen_with_a_staff/animations/scary-walk/north/frame_003.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/goblin_queen_with_a_staff/animations/scary-walk/north/frame_004.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/goblin_queen_with_a_staff/animations/scary-walk/north/frame_005.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/goblin_queen_with_a_staff/animations/scary-walk/north/frame_006.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    },
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/goblin_queen_with_a_staff/animations/scary-walk/north/frame_007.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    }
+  ],
+  "loop": true,
+  "name": "goblin_queen_walk_north",
+  "playbackSpeed": 1.0
+}

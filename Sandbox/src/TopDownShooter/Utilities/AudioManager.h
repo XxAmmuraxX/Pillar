@@ -78,7 +78,11 @@ namespace Game {
             m_Initialized = false;
         }
 
+        void SetSFXVolume(float volume) { m_SFXVolume = volume; }
+        float GetSFXVolume() const { return m_SFXVolume; }
+
         // Play sound at world position (2D -> 3D with z=0)
+        // Automatically applies random pitch variation for natural feel
         void PlaySound(const std::string& name, const glm::vec2& position, float volume = 1.0f, float pitch = 1.0f)
         {
             auto it = m_Buffers.find(name);
@@ -88,34 +92,32 @@ namespace Game {
                 return;
             }
 
+            // Enforce max concurrent sound limit
+            CleanupFinishedSources();
+            if (m_ActiveSources.size() >= m_MaxConcurrentSounds)
+            {
+                return;  // Skip sound to prevent audio clutter
+            }
+
             auto source = Pillar::AudioEngine::CreateSource();
             if (source)
             {
+                // Apply random pitch variation for natural feel
+                float pitchVariation = pitch * RandomPitchVariation();
+
                 source->SetBuffer(it->second);
-                source->SetVolume(volume);
-                source->SetPitch(pitch);
+                source->SetVolume(volume * m_SFXVolume);
+                source->SetPitch(pitchVariation);
                 source->SetPosition(glm::vec3(position, 0.0f));
-                
+
                 // Configure 3D audio settings for better audibility
-                source->SetMinDistance(5.0f);   // Sound is full volume within 5 units
-                source->SetMaxDistance(50.0f);  // Sound can be heard up to 50 units away
-                source->SetRolloffFactor(1.0f); // Linear falloff
-                
+                source->SetMinDistance(5.0f);
+                source->SetMaxDistance(50.0f);
+                source->SetRolloffFactor(1.0f);
+
                 source->Play();
-                PIL_TRACE("AudioManager: Playing '{}' at ({:.1f}, {:.1f}) volume={:.2f}", name, position.x, position.y, volume);
-                
-                // Keep source alive until playback finishes
+
                 m_ActiveSources.push_back(source);
-                
-                // Periodically clean up finished sources
-                if (m_ActiveSources.size() > 10)
-                {
-                    CleanupFinishedSources();
-                }
-            }
-            else
-            {
-                PIL_WARN("AudioManager: Failed to create audio source for '{}'", name);
             }
         }
 
@@ -129,22 +131,23 @@ namespace Game {
                 return;
             }
 
+            CleanupFinishedSources();
+            if (m_ActiveSources.size() >= m_MaxConcurrentSounds)
+            {
+                return;
+            }
+
             auto source = Pillar::AudioEngine::CreateSource();
             if (source)
             {
+                float pitchVariation = pitch * RandomPitchVariation();
+
                 source->SetBuffer(it->second);
-                source->SetVolume(volume);
-                source->SetPitch(pitch);
+                source->SetVolume(volume * m_SFXVolume);
+                source->SetPitch(pitchVariation);
                 source->Play();
-                
-                // Keep source alive until playback finishes
+
                 m_ActiveSources.push_back(source);
-                
-                // Periodically clean up finished sources
-                if (m_ActiveSources.size() > 10)
-                {
-                    CleanupFinishedSources();
-                }
             }
         }
 
@@ -233,7 +236,15 @@ namespace Game {
             );
         }
 
+        // Random pitch variation (0.9 - 1.1) for natural sound
+        float RandomPitchVariation()
+        {
+            return 0.9f + static_cast<float>(rand()) / static_cast<float>(RAND_MAX) * 0.2f;
+        }
+
         bool m_Initialized = false;
+        float m_SFXVolume = 1.0f;
+        static constexpr size_t m_MaxConcurrentSounds = 16;
         std::unordered_map<std::string, std::shared_ptr<Pillar::AudioBuffer>> m_Buffers;
 
         // Active sound effect sources (kept alive until playback finishes)

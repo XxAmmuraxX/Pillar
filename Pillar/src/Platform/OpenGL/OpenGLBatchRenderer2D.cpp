@@ -112,8 +112,10 @@ namespace Pillar {
     {
         m_ViewProjectionMatrix = camera.GetViewProjectionMatrix();
         
-        // Disable depth writes for 2D rendering to fix transparent sprite overlap
-        // Sprites with alpha will not block sprites behind them
+        // Disable depth testing entirely for 2D rendering
+        // This ensures draw order is respected (painter's algorithm)
+        // Sprites are rendered in the order they're submitted
+        glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
         
         StartBatch();
@@ -123,7 +125,8 @@ namespace Pillar {
     {
         Flush();
         
-        // Re-enable depth writes for any 3D rendering that follows
+        // Re-enable depth testing for any 3D rendering that follows
+        glEnable(GL_DEPTH_TEST);
         glDepthMask(GL_TRUE);
     }
 
@@ -193,7 +196,11 @@ namespace Pillar {
         // Clear all batches
         m_Batches.clear();
         
-        // Reset texture slot index (0 is white texture)
+        // Reset texture slots (keep slot 0 = white texture)
+        for (uint32_t i = 1; i < MaxTextureSlots; ++i)
+        {
+            m_TextureSlots[i] = nullptr;
+        }
         m_TextureSlotIndex = 1;
         
         // Clear stats

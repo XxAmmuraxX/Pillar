@@ -84,81 +84,165 @@ namespace Game {
         // === Instant Burst Effects ===
 
         /**
-         * Muzzle flash - bright, quick burst at gun barrel
+         * Muzzle flash - SCRAPYARD SALVATION: Asymmetric harsh yellow-orange core
+         * Uses dirty industrial style with lingering smoke
          */
         void SpawnMuzzleFlash(const glm::vec2& position, const glm::vec2& direction)
         {
             if (!m_Initialized) return;
 
-            // Spawn 3-5 quick bright particles
+            // Core flash - bright harsh yellow-orange (4 particles)
             for (int i = 0; i < 4; i++)
             {
-                float spreadAngle = (RandomFloat(-15.0f, 15.0f)) * 0.0174533f; // degrees to radians
+                float spreadAngle = (RandomFloat(-15.0f, 15.0f)) * 0.0174533f;
                 float speed = RandomFloat(8.0f, 15.0f);
                 
                 glm::vec2 velocity = RotateVector(direction, spreadAngle) * speed;
                 
                 m_ParticlePool.SpawnParticle(
-                    position + direction * 0.3f,    // Slightly in front
+                    position + direction * 0.3f,
                     velocity,
-                    glm::vec4(1.0f, 0.9f, 0.4f, 1.0f),  // Bright yellow-orange
-                    RandomFloat(0.08f, 0.15f),          // Small
-                    RandomFloat(0.04f, 0.08f)           // Very short lifetime
+                    glm::vec4(1.0f, 0.85f, 0.3f, 1.0f),  // Harsh yellow-orange
+                    RandomFloat(0.1f, 0.18f),
+                    RandomFloat(0.04f, 0.08f)
+                );
+            }
+
+            // Smoke puff that lingers - gray industrial smoke
+            for (int i = 0; i < 2; i++)
+            {
+                float spreadAngle = (RandomFloat(-30.0f, 30.0f)) * 0.0174533f;
+                float speed = RandomFloat(1.5f, 3.0f);
+                
+                glm::vec2 velocity = RotateVector(direction, spreadAngle) * speed;
+                
+                float shade = RandomFloat(0.25f, 0.4f);
+                m_ParticlePool.SpawnParticle(
+                    position + direction * 0.2f,
+                    velocity,
+                    glm::vec4(shade, shade, shade, 0.6f),  // Gray smoke
+                    RandomFloat(0.12f, 0.2f),
+                    RandomFloat(0.15f, 0.3f)  // Lingers longer
+                );
+            }
+
+            // Sparks scattering - hot orange specks
+            for (int i = 0; i < 3; i++)
+            {
+                float spreadAngle = (RandomFloat(-45.0f, 45.0f)) * 0.0174533f;
+                float speed = RandomFloat(12.0f, 20.0f);
+                
+                glm::vec2 velocity = RotateVector(direction, spreadAngle) * speed;
+                
+                m_ParticlePool.SpawnParticle(
+                    position + direction * 0.25f,
+                    velocity,
+                    glm::vec4(1.0f, 0.6f, 0.1f, 1.0f),  // Hot orange spark
+                    RandomFloat(0.03f, 0.06f),  // Tiny
+                    RandomFloat(0.08f, 0.15f)
                 );
             }
         }
 
         /**
-         * Hit sparks - spray outward from impact point
+         * Hit sparks - SCRAPYARD SALVATION: Industrial metal impact sparks
+         * Spray outward with hot orange color
          */
         void SpawnHitSparks(const glm::vec2& position, const glm::vec2& impactDirection, int count = 6)
         {
             if (!m_Initialized) return;
 
+            // Hot orange metal sparks
             for (int i = 0; i < count; i++)
             {
-                // Spray in opposite direction of impact with spread
                 float spreadAngle = RandomFloat(-60.0f, 60.0f) * 0.0174533f;
-                float speed = RandomFloat(4.0f, 8.0f);
+                float speed = RandomFloat(5.0f, 10.0f);
                 
                 glm::vec2 velocity = RotateVector(-impactDirection, spreadAngle) * speed;
                 
                 m_ParticlePool.SpawnParticle(
                     position,
                     velocity,
-                    glm::vec4(1.0f, 0.7f, 0.2f, 1.0f),  // Orange sparks
-                    RandomFloat(0.05f, 0.1f),
+                    glm::vec4(1.0f, 0.55f, 0.1f, 1.0f),  // Hazard orange spark
+                    RandomFloat(0.04f, 0.08f),
                     RandomFloat(0.1f, 0.2f)
+                );
+            }
+
+            // Blood/ichor splatter - dark crimson almost black (#8B0000)
+            for (int i = 0; i < count / 2; i++)
+            {
+                float spreadAngle = RandomFloat(-45.0f, 45.0f) * 0.0174533f;
+                float speed = RandomFloat(2.0f, 5.0f);
+                
+                glm::vec2 velocity = RotateVector(-impactDirection, spreadAngle) * speed;
+                
+                m_ParticlePool.SpawnParticle(
+                    position,
+                    velocity,
+                    glm::vec4(0.35f, 0.0f, 0.0f, 0.9f),  // Dried crimson - almost black blood
+                    RandomFloat(0.06f, 0.12f),
+                    RandomFloat(0.2f, 0.4f)
                 );
             }
         }
 
         /**
-         * Death explosion - colored burst based on enemy color
+         * Death explosion - SCRAPYARD SALVATION: Dark blood & gore burst
+         * Uses dried crimson almost-black blood with chunky particles
          */
         void SpawnDeathExplosion(const glm::vec2& position, const glm::vec4& baseColor, int count = 12)
         {
             if (!m_Initialized) return;
 
+            // Main gore burst - dark crimson blood
             for (int i = 0; i < count; i++)
             {
-                float angle = RandomFloat(0.0f, 6.28318f);  // Full circle
+                float angle = RandomFloat(0.0f, 6.28318f);
                 float speed = RandomFloat(3.0f, 8.0f);
                 
                 glm::vec2 velocity(std::cos(angle) * speed, std::sin(angle) * speed);
                 
-                // Vary color slightly
-                glm::vec4 color = baseColor;
-                color.r = glm::clamp(color.r + RandomFloat(-0.1f, 0.1f), 0.0f, 1.0f);
-                color.g = glm::clamp(color.g + RandomFloat(-0.1f, 0.1f), 0.0f, 1.0f);
-                color.b = glm::clamp(color.b + RandomFloat(-0.1f, 0.1f), 0.0f, 1.0f);
+                // Mix base color with dark blood for gritty effect
+                glm::vec4 color;
+                if (RandomFloat(0.0f, 1.0f) < 0.6f)
+                {
+                    // Dried crimson blood - almost black
+                    color = glm::vec4(0.35f + RandomFloat(-0.1f, 0.1f), 0.0f, 0.0f, 0.95f);
+                }
+                else
+                {
+                    // Tinted with enemy color for variety
+                    color = baseColor;
+                    color.r = glm::clamp(color.r * 0.7f + RandomFloat(-0.1f, 0.1f), 0.0f, 1.0f);
+                    color.g = glm::clamp(color.g * 0.5f + RandomFloat(-0.1f, 0.1f), 0.0f, 1.0f);
+                    color.b = glm::clamp(color.b * 0.5f + RandomFloat(-0.1f, 0.1f), 0.0f, 1.0f);
+                }
                 
                 m_ParticlePool.SpawnParticle(
                     position + glm::vec2(RandomFloat(-0.2f, 0.2f), RandomFloat(-0.2f, 0.2f)),
                     velocity,
                     color,
-                    RandomFloat(0.1f, 0.25f),
-                    RandomFloat(0.3f, 0.6f)
+                    RandomFloat(0.12f, 0.28f),  // Chunky
+                    RandomFloat(0.4f, 0.7f)
+                );
+            }
+
+            // Chunky debris particles
+            for (int i = 0; i < count / 3; i++)
+            {
+                float angle = RandomFloat(0.0f, 6.28318f);
+                float speed = RandomFloat(2.0f, 5.0f);
+                
+                glm::vec2 velocity(std::cos(angle) * speed, std::sin(angle) * speed);
+                
+                float shade = RandomFloat(0.1f, 0.25f);
+                m_ParticlePool.SpawnParticle(
+                    position,
+                    velocity,
+                    glm::vec4(shade, shade * 0.8f, shade * 0.6f, 1.0f),  // Dark debris
+                    RandomFloat(0.08f, 0.15f),
+                    RandomFloat(0.3f, 0.5f)
                 );
             }
         }
@@ -204,6 +288,145 @@ namespace Game {
                     glm::vec4(0.3f, 0.3f, 0.3f, 0.7f),  // Gray smoke
                     RandomFloat(0.3f, 0.6f),
                     RandomFloat(0.8f, 1.5f)
+                );
+            }
+        }
+
+        /**
+         * Barrel explosion - massive, elaborate multi-stage explosion
+         * Features: initial flash, fire burst, debris, smoke plume, sparks
+         */
+        void SpawnBarrelExplosion(const glm::vec2& position, float radius = 3.5f)
+        {
+            if (!m_Initialized) return;
+
+            // Stage 1: Bright white/yellow flash at center (very short lifetime)
+            for (int i = 0; i < 8; i++)
+            {
+                float angle = RandomFloat(0.0f, 6.28318f);
+                float speed = RandomFloat(2.0f, 6.0f);
+                glm::vec2 velocity(std::cos(angle) * speed, std::sin(angle) * speed);
+                
+                m_ParticlePool.SpawnParticle(
+                    position,
+                    velocity,
+                    glm::vec4(1.0f, 1.0f, 0.9f, 1.0f),  // Bright white-yellow flash
+                    RandomFloat(0.4f, 0.7f),
+                    RandomFloat(0.05f, 0.1f)  // Very short - flash effect
+                );
+            }
+
+            // Stage 2: Core fire burst - orange/red fast expanding
+            for (int i = 0; i < 35; i++)
+            {
+                float angle = RandomFloat(0.0f, 6.28318f);
+                float speed = RandomFloat(8.0f, 18.0f);  // Fast expansion
+                glm::vec2 velocity(std::cos(angle) * speed, std::sin(angle) * speed);
+                
+                // Gradient from yellow center to red edges
+                float colorVar = RandomFloat(0.0f, 1.0f);
+                glm::vec4 color;
+                if (colorVar < 0.3f)
+                    color = glm::vec4(1.0f, 0.95f, 0.3f, 1.0f);  // Bright yellow
+                else if (colorVar < 0.6f)
+                    color = glm::vec4(1.0f, 0.6f, 0.1f, 1.0f);   // Orange
+                else
+                    color = glm::vec4(0.9f, 0.2f, 0.05f, 1.0f);  // Deep red
+                
+                m_ParticlePool.SpawnParticle(
+                    position + glm::vec2(RandomFloat(-0.3f, 0.3f), RandomFloat(-0.3f, 0.3f)),
+                    velocity,
+                    color,
+                    RandomFloat(0.2f, 0.5f),
+                    RandomFloat(0.3f, 0.6f)
+                );
+            }
+
+            // Stage 3: Secondary fire ring - slightly delayed feel
+            for (int i = 0; i < 20; i++)
+            {
+                float angle = RandomFloat(0.0f, 6.28318f);
+                float speed = RandomFloat(4.0f, 10.0f);
+                glm::vec2 velocity(std::cos(angle) * speed, std::sin(angle) * speed);
+                
+                m_ParticlePool.SpawnParticle(
+                    position,
+                    velocity,
+                    glm::vec4(1.0f, 0.4f, 0.1f, 0.9f),  // Orange-red
+                    RandomFloat(0.25f, 0.45f),
+                    RandomFloat(0.4f, 0.8f)
+                );
+            }
+
+            // Stage 4: Dark debris chunks - slower, larger
+            for (int i = 0; i < 15; i++)
+            {
+                float angle = RandomFloat(0.0f, 6.28318f);
+                float speed = RandomFloat(3.0f, 8.0f);
+                glm::vec2 velocity(std::cos(angle) * speed, std::sin(angle) * speed);
+                
+                // Dark metal/wood debris colors
+                float shade = RandomFloat(0.1f, 0.4f);
+                glm::vec4 color(shade, shade * 0.8f, shade * 0.6f, 1.0f);
+                
+                m_ParticlePool.SpawnParticle(
+                    position,
+                    velocity,
+                    color,
+                    RandomFloat(0.15f, 0.3f),
+                    RandomFloat(0.5f, 1.0f)
+                );
+            }
+
+            // Stage 5: Smoke plume - large, slow, rising slightly
+            for (int i = 0; i < 25; i++)
+            {
+                float angle = RandomFloat(0.0f, 6.28318f);
+                float speed = RandomFloat(1.0f, 4.0f);
+                // Add slight upward bias for smoke rising
+                glm::vec2 velocity(std::cos(angle) * speed, std::sin(angle) * speed + RandomFloat(1.0f, 3.0f));
+                
+                // Varying gray smoke
+                float shade = RandomFloat(0.15f, 0.4f);
+                glm::vec4 color(shade, shade, shade, RandomFloat(0.5f, 0.8f));
+                
+                m_ParticlePool.SpawnParticle(
+                    position + glm::vec2(RandomFloat(-0.8f, 0.8f), RandomFloat(-0.8f, 0.8f)),
+                    velocity,
+                    color,
+                    RandomFloat(0.4f, 0.8f),  // Large smoke particles
+                    RandomFloat(1.0f, 2.0f)   // Long-lasting
+                );
+            }
+
+            // Stage 6: Sparks/embers - tiny, fast, many
+            for (int i = 0; i < 30; i++)
+            {
+                float angle = RandomFloat(0.0f, 6.28318f);
+                float speed = RandomFloat(10.0f, 20.0f);  // Very fast
+                glm::vec2 velocity(std::cos(angle) * speed, std::sin(angle) * speed);
+                
+                m_ParticlePool.SpawnParticle(
+                    position,
+                    velocity,
+                    glm::vec4(1.0f, 0.8f, 0.2f, 1.0f),  // Bright spark
+                    RandomFloat(0.03f, 0.08f),  // Tiny
+                    RandomFloat(0.2f, 0.5f)
+                );
+            }
+
+            // Stage 7: Ground scorch marks - stationary dark particles
+            for (int i = 0; i < 10; i++)
+            {
+                glm::vec2 offset(RandomFloat(-radius * 0.6f, radius * 0.6f), 
+                                 RandomFloat(-radius * 0.6f, radius * 0.6f));
+                
+                m_ParticlePool.SpawnParticle(
+                    position + offset,
+                    glm::vec2(0.0f, 0.0f),  // Stationary
+                    glm::vec4(0.05f, 0.05f, 0.05f, 0.6f),  // Dark scorch
+                    RandomFloat(0.3f, 0.5f),
+                    RandomFloat(1.5f, 2.5f)  // Long-lasting ground marks
                 );
             }
         }

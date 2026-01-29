@@ -248,11 +248,11 @@ namespace Game {
             hazard.HasExploded = true;
             hazard.IsActive = false;
 
-            // Spawn explosion particles
-            EffectFactory::SpawnBossDeathParticles(*m_Scene, transform.Position, 30);
+            // Spawn elaborate multi-stage barrel explosion
+            EffectFactory::SpawnBarrelExplosion(*m_Scene, transform.Position, hazard.ExplosionRadius);
 
-            // Play explosion sound
-            AudioManager::Instance().PlaySound("explosion", transform.Position, 1.0f);
+            // Play explosion sound (using death sound with lower pitch for boom effect)
+            AudioManager::Instance().PlaySound("death", transform.Position, 1.2f, 0.6f);
 
             // Damage all entities in radius
             DealAreaDamage(transform.Position, hazard.ExplosionRadius, hazard.ExplosionDamage);

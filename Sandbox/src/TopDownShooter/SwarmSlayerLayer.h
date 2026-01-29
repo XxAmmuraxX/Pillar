@@ -17,6 +17,7 @@
 #include <Pillar/KeyCodes.h>
 #include <imgui.h>
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -40,6 +41,7 @@
 #include "Utilities/EffectFactory.h"
 #include "Utilities/AudioManager.h"
 #include "Utilities/ParticleManager.h"
+#include "Utilities/GameUtils.h"
 
 // Components
 #include "Components/EnemyComponent.h"
@@ -334,8 +336,16 @@ namespace Game {
 
         void OnWaveComplete(int waveNumber, bool wasBossWave)
         {
-            // Update stats
-            GameState::Instance().GetStats().WaveReached = waveNumber;
+            auto& stats = GameState::Instance().GetStats();
+            stats.WaveReached = waveNumber;
+
+            // Wave completion bonus
+            int waveBonus = stats.GetWaveCompletionBonus(waveNumber);
+            stats.Score += waveBonus;
+            m_MenuRenderer.TriggerWaveComplete(waveNumber, waveBonus, stats.NoDamageThisWave);
+
+            // Reset no-damage tracking for next wave
+            stats.NoDamageThisWave = true;
 
             // Trigger perk selection every 2 waves or after boss
             if (waveNumber % 2 == 0 || wasBossWave)
@@ -399,7 +409,7 @@ namespace Game {
                 OnBossDefeated(pos, xp, score);
             });
             m_BossSystem->SetOnSpawnMinion([this](const glm::vec2& pos, EnemyType type) {
-                EntityFactory::CreateEnemy(*m_Scene, pos, type);
+                EntityFactory::CreateEnemy(*m_Scene, pos, type, m_WaveManager.GetCurrentWave());
             });
 
             // Damage System
@@ -439,8 +449,11 @@ namespace Game {
             m_HazardSystem = new HazardSystem();
             m_HazardSystem->OnAttach(m_Scene.get());
             m_HazardSystem->SetExplosionCallback([this](const glm::vec2& pos, float radius, float damage) {
-                m_CameraShake.ShakeLarge();
-                // Could add more explosion effects here
+                // Big camera shake for barrel explosions
+                m_CameraShake.ShakeHuge();
+                
+                // Screen flash effect for dramatic impact
+                m_ScreenFlashTimer = 0.15f;
             });
 
             // Animation System
@@ -452,7 +465,7 @@ namespace Game {
             // Wave Manager
             m_WaveManager.Init(30.0f, 16.0f);
             m_WaveManager.SetSpawnCallback([this](const glm::vec2& pos, EnemyType type) {
-                EntityFactory::CreateEnemy(*m_Scene, pos, type);
+                EntityFactory::CreateEnemy(*m_Scene, pos, type, m_WaveManager.GetCurrentWave());
             });
             m_WaveManager.SetBossSpawnCallback([this](const glm::vec2& pos, BossType type, int wave) {
                 EntityFactory::CreateBoss(*m_Scene, pos, type, wave);
@@ -476,47 +489,68 @@ namespace Game {
 
         void SetupDamageSystemCallbacks()
         {
-            m_DamageSystem->SetOnEnemyHit([this](const glm::vec2& pos, const glm::vec2& bulletDir) {
+            m_DamageSystem->SetOnEnemyHit([this](const glm::vec2& pos, const glm::vec2& bulletDir, float damageDealt) {
                 EffectFactory::SpawnHitParticles(*m_Scene, pos, bulletDir);
                 m_CameraShake.ShakeSmall();
-                AudioManager::Instance().PlaySound("hit", pos, 0.5f);
+
+                // Spawn floating damage number
+                m_MenuRenderer.AddDamageNumber(pos, static_cast<int>(damageDealt));
             });
 
-            m_DamageSystem->SetOnEnemyKilled([this](const glm::vec2& pos, const glm::vec4& color) {
+            m_DamageSystem->SetOnEnemyKilled([this](const glm::vec2& pos, const glm::vec4& color, EnemyType enemyType) {
                 EffectFactory::SpawnDeathParticles(*m_Scene, pos, color);
                 m_CameraShake.ShakeMedium();
-                AudioManager::Instance().PlaySound("death", pos, 0.8f);
 
                 // Spawn XP orb
                 SpawnXPOrb(pos, 10);
 
-                // Update stats
-                GameState::Instance().GetStats().TotalKills++;
-                GameState::Instance().GetStats().Score += 100;
-                
+                // Enhanced scoring with enemy type, wave multiplier, and combo
+                auto& stats = GameState::Instance().GetStats();
+                int scoreGained = stats.AddKillScore(enemyType, stats.WaveReached);
+
                 // Track kill streak
                 m_KillStreakCount++;
-                m_KillStreakTimer = 3.0f;  // Reset streak timer
+                m_KillStreakTimer = 3.0f;
                 m_MenuRenderer.TriggerKillStreak(m_KillStreakCount);
+
+                // Show combo notification
+                if (stats.ComboCount > 1)
+                {
+                    m_MenuRenderer.TriggerCombo(stats.ComboCount, scoreGained);
+                }
             });
 
             m_DamageSystem->SetOnPlayerHit([this]() {
                 m_CameraShake.ShakeLarge();
                 AudioManager::Instance().PlaySound("player_hurt", 1.0f);
-                
+
                 // Spawn damage particles around player
                 if (m_PlayerEntity.IsValid())
                 {
                     auto& transform = m_PlayerEntity.GetComponent<Pillar::TransformComponent>();
                     EffectFactory::SpawnPlayerDamageEffect(*m_Scene, transform.Position);
                 }
-                
+
+                // Screen red flash on player damage
+                m_ScreenFlashTimer = 0.3f;
+
+                // Mark wave as damaged (no perfect wave bonus)
+                GameState::Instance().GetStats().NoDamageThisWave = false;
+
                 // Reset kill streak when hit
                 m_KillStreakCount = 0;
             });
 
             m_DamageSystem->SetOnGameOver([this]() {
                 OnGameOver();
+            });
+
+            // Wire up barrel hit detection to hazard system
+            m_DamageSystem->SetOnBarrelHit([this](entt::entity barrelEntity, float damage) {
+                if (m_HazardSystem)
+                {
+                    m_HazardSystem->OnBarrelHit(barrelEntity, damage);
+                }
             });
         }
 
@@ -525,15 +559,47 @@ namespace Game {
             m_AnimationSystem->LoadAnimationClip("animations/hoodzy_chaser_enemy_animation.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/floaty_enemy_animation.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/swarmer_run_animation.anim.json");
+            
+            // Evil Archer - all directions
             m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/evil_archer_run_west.anim.json");
+            
+            // Goblin with Sword - all directions
             m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_south.anim.json");
-            // Player + bosses (used by EntityFactory in SwarmSlayer)
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_with_sword_run_west.anim.json");
+            
+            // Player (Red Mage) - all directions for run and idle
             m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_run_west.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/red_mage_idle_west.anim.json");
             m_AnimationSystem->LoadAnimationClip("animations/red_mage_fireball_south.anim.json");
+            
+            // Goblin Queen Boss - all directions
             m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/goblin_queen_walk_west.anim.json");
+            
+            // Large Behemoth Boss - all directions
             m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/large_behemoth_walk_west.anim.json");
+            
+            // Monster with Bow Boss - all directions
             m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_south.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_north.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_east.anim.json");
+            m_AnimationSystem->LoadAnimationClip("animations/monster_with_bow_run_west.anim.json");
         }
 
         void CreateArenaBounds(float width, float height)
@@ -542,7 +608,38 @@ namespace Game {
             float halfWidth = width * 0.5f;
             float halfHeight = height * 0.5f;
 
-            // Top
+            // === SCRAPYARD SALVATION: Arena Floor Background ===
+            // Tile the floor texture across the arena
+            auto floorTexture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("levels/level_background.png"));
+            float tileSize = 8.0f;  // Size of each tile in world units
+            
+            // Calculate number of tiles needed
+            int tilesX = static_cast<int>(std::ceil(width / tileSize));
+            int tilesY = static_cast<int>(std::ceil(height / tileSize));
+            
+            // Create grid of floor tiles
+            for (int y = 0; y < tilesY; ++y)
+            {
+                for (int x = 0; x < tilesX; ++x)
+                {
+                    auto floor = m_Scene->CreateEntity("ArenaFloor");
+                    auto& floorTransform = floor.GetComponent<Pillar::TransformComponent>();
+                    
+                    // Position each tile, centered on arena
+                    float posX = -halfWidth + tileSize * 0.5f + x * tileSize;
+                    float posY = -halfHeight + tileSize * 0.5f + y * tileSize;
+                    floorTransform.SetPosition(glm::vec2(posX, posY));
+                    
+                    auto& floorSprite = floor.AddComponent<Pillar::SpriteComponent>();
+                    floorSprite.Size = glm::vec2(tileSize, tileSize);
+                    floorSprite.Texture = floorTexture;
+                    floorSprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // No tint
+                    floorSprite.Layer = "Background";  // Sorts first alphabetically
+                    floorSprite.OrderInLayer = -100;   // Rendered first within layer
+                }
+            }
+
+            // Top wall - Industrial gray with rust tint
             EntityFactory::CreateWall(*m_Scene,
                 glm::vec2(0.0f, halfHeight + wallThickness * 0.5f),
                 glm::vec2(width + wallThickness * 2, wallThickness)
@@ -562,6 +659,8 @@ namespace Game {
                 glm::vec2(halfWidth + wallThickness * 0.5f, 0.0f),
                 glm::vec2(wallThickness, height)
             );
+
+            PIL_INFO("Arena created with SCRAPYARD SALVATION floor texture");
         }
 
         void ShutdownGameSystems()
@@ -600,6 +699,9 @@ namespace Game {
             // Handle weapon switching (1-5 keys)
             HandleWeaponSwitch();
 
+            // Update combo timer
+            GameState::Instance().GetStats().UpdateCombo(dt);
+
             // Handle regeneration perk
             auto& playerStats = GameState::Instance().GetPlayerStats();
             if (playerStats.RegenPerSecond > 0.0f && m_PlayerEntity.IsValid())
@@ -611,6 +713,29 @@ namespace Game {
             // Wave Manager
             int enemyCount = CountEnemies();
             m_WaveManager.OnUpdate(dt, enemyCount);
+
+            // Feed enemies remaining and wave countdown to HUD
+            m_MenuRenderer.SetEnemiesRemaining(enemyCount);
+            m_MenuRenderer.SetWaveCountdown(m_WaveManager.GetRestTimer());
+
+            // Notify HUD of wave start
+            if (m_WaveManager.IsWaveJustStarted())
+            {
+                m_MenuRenderer.TriggerWaveStart(m_WaveManager.GetCurrentWave());
+            }
+
+            // Feed active buffs to HUD
+            if (m_PlayerEntity.IsValid())
+            {
+                if (auto* buffs = m_PlayerEntity.TryGetComponent<PlayerBuffsComponent>())
+                {
+                    m_MenuRenderer.SetActiveBuffs(buffs->ActiveEffects);
+                }
+                else
+                {
+                    m_MenuRenderer.ClearActiveBuffs();
+                }
+            }
 
             // Player Movement
             m_PlayerMovementSystem->OnUpdate(dt);
@@ -657,10 +782,14 @@ namespace Game {
 
             // Native Particle System
             ParticleManager::Instance().OnUpdate(dt);
-            
+
             // Update HUD timers
             m_MenuRenderer.UpdateTimers(dt);
-            
+
+            // Update screen flash
+            if (m_ScreenFlashTimer > 0.0f)
+                m_ScreenFlashTimer -= dt;
+
             // Update kill streak timer
             if (m_KillStreakTimer > 0.0f)
             {
@@ -734,16 +863,37 @@ namespace Game {
                 auto& playerTransform = m_PlayerEntity.GetComponent<Pillar::TransformComponent>();
                 auto& camera = m_CameraController->GetCamera();
 
+                // Camera lookahead - bias toward mouse cursor for better visibility
+                auto [mouseX, mouseY] = Pillar::Input::GetMousePosition();
+                glm::vec2 mouseWorld = ScreenToWorld(
+                    mouseX, mouseY,
+                    m_WindowWidth, m_WindowHeight,
+                    camera
+                );
+                glm::vec2 toMouse = mouseWorld - playerTransform.Position;
+                float mouseDistance = glm::length(toMouse);
+                glm::vec2 lookahead(0.0f);
+                if (mouseDistance > 0.5f)
+                {
+                    // Lookahead up to 2 units toward cursor
+                    lookahead = glm::normalize(toMouse) * std::min(mouseDistance * 0.2f, 2.0f);
+                }
+
+                // Smooth camera movement
                 glm::vec2 shakeOffset = m_CameraShake.GetOffset();
                 glm::vec3 targetPos(
-                    playerTransform.Position.x + shakeOffset.x,
-                    playerTransform.Position.y + shakeOffset.y,
+                    playerTransform.Position.x + lookahead.x + shakeOffset.x,
+                    playerTransform.Position.y + lookahead.y + shakeOffset.y,
                     0.0f
                 );
-                camera.SetPosition(targetPos);
-            }
 
-            m_CameraController->OnUpdate(dt);
+                // Smooth interpolation for camera
+                glm::vec3 currentPos = camera.GetPosition();
+                glm::vec3 smoothed = glm::mix(currentPos, targetPos, std::min(1.0f, dt * 8.0f));
+                camera.SetPosition(smoothed);
+            }
+            // Note: Do NOT call m_CameraController->OnUpdate(dt) here as it would overwrite
+            // the camera position we just set with lookahead. Keyboard controls are disabled anyway.
         }
 
         void ApplyPlayerPerks()
@@ -773,19 +923,13 @@ namespace Game {
 
         void RenderGame()
         {
-            // Clear with dark background
-            Pillar::Renderer2D::SetClearColor(glm::vec4(0.03f, 0.03f, 0.06f, 1.0f));
+            // Clear with gritty charred black background (SCRAPYARD SALVATION palette)
+            Pillar::Renderer2D::SetClearColor(glm::vec4(0.04f, 0.04f, 0.05f, 1.0f)); // #0A0A0C adjusted
             Pillar::Renderer2D::Clear();
 
             if (!m_Scene || !m_CameraController) return;
 
-            Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
-
-            // Render bullet trails first (behind everything)
-            if (m_BulletTrailSystem)
-                m_BulletTrailSystem->RenderTrails();
-
-            // Render all sprites (sorted: Layer, then OrderInLayer)
+            // Collect and sort all renderable sprites
             auto& registry = m_Scene->GetRegistry();
             auto view = registry.view<Pillar::TransformComponent, Pillar::SpriteComponent>();
 
@@ -811,16 +955,40 @@ namespace Game {
                 return spriteA.OrderInLayer < spriteB.OrderInLayer;
             });
 
-            for (auto entity : renderables)
+            // Render in layer-based batches to preserve draw order
+            // Each layer change triggers a new BeginScene/EndScene to flush
+            std::string currentLayer = "";
+            bool sceneActive = false;
+
+            // Render bullet trails first (behind everything)
+            Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
+            if (m_BulletTrailSystem)
+                m_BulletTrailSystem->RenderTrails();
+            Pillar::Renderer2D::EndScene();
+
+            // Render sorted sprites, flushing on layer changes
+            for (size_t i = 0; i < renderables.size(); ++i)
             {
+                auto entity = renderables[i];
                 auto& transform = view.get<Pillar::TransformComponent>(entity);
                 auto& sprite = view.get<Pillar::SpriteComponent>(entity);
+
+                // Check if layer changed - if so, end current scene and start new one
+                if (sprite.Layer != currentLayer)
+                {
+                    if (sceneActive)
+                    {
+                        Pillar::Renderer2D::EndScene();
+                    }
+                    Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
+                    sceneActive = true;
+                    currentLayer = sprite.Layer;
+                }
 
                 // Apply hazard pulsing effect if this entity has a hazard component
                 Pillar::Entity ent(entity, m_Scene.get());
                 if (auto* hazard = ent.TryGetComponent<HazardComponent>())
                 {
-                    // Create a copy of the sprite with pulsing color
                     Pillar::SpriteComponent pulsedSprite = sprite;
                     float pulse = hazard->GetPulseFactor();
                     pulsedSprite.Color = glm::mix(sprite.Color, glm::vec4(1.0f, 1.0f, 1.0f, sprite.Color.a), pulse * 0.3f);
@@ -832,9 +1000,59 @@ namespace Game {
                 }
             }
 
-            // Render boss health bars
+            // End the final scene
+            if (sceneActive)
+            {
+                Pillar::Renderer2D::EndScene();
+            }
+
+            // Render boss health bars (UI layer - separate scene)
+            Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
             if (m_BossSystem)
                 m_BossSystem->RenderBossHealthBars();
+
+            // Screen flash overlay (red tint on player damage)
+            if (m_ScreenFlashTimer > 0.0f)
+            {
+                float flashAlpha = m_ScreenFlashTimer / 0.3f * 0.3f;  // Fade from 0.3 to 0
+                auto& camera = m_CameraController->GetCamera();
+                glm::vec3 camPos = camera.GetPosition();
+                float zoom = m_CameraController->GetZoomLevel();
+
+                Pillar::TransformComponent flashTransform;
+                flashTransform.SetPosition(glm::vec2(camPos.x, camPos.y));
+                Pillar::SpriteComponent flashSprite;
+                flashSprite.Size = glm::vec2(zoom * 4.0f, zoom * 4.0f);
+                flashSprite.Color = glm::vec4(1.0f, 0.0f, 0.0f, flashAlpha);
+                flashSprite.Layer = "Overlay";
+                flashSprite.OrderInLayer = 100;
+                Pillar::Renderer2D::DrawSprite(flashTransform, flashSprite);
+            }
+
+            // Low health pulsing red vignette
+            if (m_PlayerEntity.IsValid())
+            {
+                auto& health = m_PlayerEntity.GetComponent<Pillar::HealthComponent>();
+                float healthPercent = health.CurrentHealth / health.MaxHealth;
+                if (healthPercent < 0.3f && healthPercent > 0.0f)
+                {
+                    float pulse = 0.1f + 0.1f * std::sin(GameState::Instance().GetStats().PlayTime * 6.0f);
+                    float intensity = (1.0f - healthPercent / 0.3f) * pulse;
+
+                    auto& camera = m_CameraController->GetCamera();
+                    glm::vec3 camPos = camera.GetPosition();
+                    float zoom = m_CameraController->GetZoomLevel();
+
+                    Pillar::TransformComponent vignetteTransform;
+                    vignetteTransform.SetPosition(glm::vec2(camPos.x, camPos.y));
+                    Pillar::SpriteComponent vignetteSprite;
+                    vignetteSprite.Size = glm::vec2(zoom * 4.0f, zoom * 4.0f);
+                    vignetteSprite.Color = glm::vec4(0.8f, 0.0f, 0.0f, intensity);
+                    vignetteSprite.Layer = "Overlay";
+                    vignetteSprite.OrderInLayer = 99;
+                    Pillar::Renderer2D::DrawSprite(vignetteTransform, vignetteSprite);
+                }
+            }
 
             Pillar::Renderer2D::EndScene();
         }
@@ -849,6 +1067,14 @@ namespace Game {
             ImGui::Text("Enemies: %d", CountEnemies());
             ImGui::Text("Total Kills: %d", stats.TotalKills);
             ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+            
+            // Render stats for debugging texture/batch issues
+            auto renderStats = Pillar::Renderer2D::GetStats();
+            ImGui::Separator();
+            ImGui::Text("Draw Calls: %u", renderStats.DrawCalls);
+            ImGui::Text("Quads: %u", renderStats.QuadCount);
+            ImGui::Text("Flush Count: %u", renderStats.FlushCount);
+            ImGui::Text("Buffer Uploads: %u", renderStats.BufferUploads);
 
             if (m_WaveManager.IsBossWave())
             {
@@ -976,6 +1202,9 @@ namespace Game {
         // Kill Streak Tracking
         int m_KillStreakCount = 0;
         float m_KillStreakTimer = 0.0f;
+
+        // Game feel
+        float m_ScreenFlashTimer = 0.0f;
 
         // Player
         Pillar::Entity m_PlayerEntity;

@@ -23,12 +23,12 @@ namespace Game {
         // Lifetime (orbs disappear after a while)
         float Lifetime = 30.0f;
         
-        // Helper to get size based on XP value
+        // Helper to get size based on XP value (increased for visibility)
         static float GetSizeForValue(int value)
         {
-            if (value >= 50) return 0.5f;      // Large orb
-            if (value >= 25) return 0.4f;      // Medium orb  
-            return 0.3f;                        // Small orb
+            if (value >= 50) return 1.0f;      // Large orb (increased from 0.5)
+            if (value >= 25) return 0.8f;      // Medium orb (increased from 0.4)
+            return 0.6f;                        // Small orb (increased from 0.3)
         }
         
         // Helper to get color based on XP value

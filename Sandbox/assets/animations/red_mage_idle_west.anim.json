@@ -1,0 +1,14 @@
+{
+  "events": [],
+  "frames": [
+    {
+      "duration": 0.10000000149011612,
+      "texturePath": "textures/red_mage_wearing_a_hood/rotations/west.png",
+      "uvMax": [1.0, 1.0],
+      "uvMin": [0.0, 0.0]
+    }
+  ],
+  "loop": true,
+  "name": "red_mage_idle_west",
+  "playbackSpeed": 1.0
+}

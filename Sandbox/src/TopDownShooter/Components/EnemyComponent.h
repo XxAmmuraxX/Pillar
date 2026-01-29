@@ -5,12 +5,13 @@
 
 namespace Game {
 
+    // SCRAPYARD SALVATION enemy types - horrors of the wastes
     enum class EnemyType
     {
-        Chaser,     // Moves directly toward player
-        Wanderer,   // Random movement, occasional charge
-        Shooter,    // Maintains distance, fires projectiles
-        Swarm       // Lightweight, spawns in groups
+        Chaser,     // CRAWLER: Feral mutants on all fours, relentless pursuit
+        Wanderer,   // SHAMBLING HUSK: Fungal corpses, slow then burst charge
+        Shooter,    // SCRAP SENTINEL: Corrupted drones, ranged toxic projectiles
+        Swarm       // SWARM RAT: Mutated vermin, overwhelming numbers
     };
 
     enum class EnemyState
@@ -40,6 +41,19 @@ namespace Game {
         Pillar::Entity TargetEntity;
         glm::vec2 WanderDirection = { 1.0f, 0.0f };
         float WanderTimer = 0.0f;
+
+        // Get themed display name for enemy type
+        static const char* GetDisplayName(EnemyType type)
+        {
+            switch (type)
+            {
+                case EnemyType::Chaser:   return "Crawler";
+                case EnemyType::Wanderer: return "Shambling Husk";
+                case EnemyType::Shooter:  return "Scrap Sentinel";
+                case EnemyType::Swarm:    return "Swarm Rat";
+                default:                  return "Unknown Horror";
+            }
+        }
     };
 
 } // namespace Game

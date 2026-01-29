@@ -9,7 +9,10 @@
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
 #include <Pillar/ECS/Components/Gameplay/BulletComponent.h>
 #include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
+#include <Pillar/ECS/Components/Rendering/AnimationComponent.h>
 #include <box2d/b2_body.h>
+#include <string>
+#include <cmath>
 
 #include "../Components/EnemyComponent.h"
 #include "../Components/PlayerTagComponent.h"
@@ -84,12 +87,20 @@ namespace Game {
                 }
 
                 // Note: Enemies don't rotate - their sprites are designed to face a specific direction
-                // FlipX on the SpriteComponent can be used to face left/right if needed
+                // Update animation based on movement direction toward player
                 auto entityWrapper = Pillar::Entity(entity, m_Scene);
+                std::string facingDir = GetFacingDirection(toPlayer);
+                
+                // Update directional animation for enemies with AnimationComponent
+                if (auto* anim = entityWrapper.TryGetComponent<Pillar::AnimationComponent>())
+                {
+                    UpdateEnemyAnimation(enemy.Type, *anim, facingDir);
+                }
+                
+                // No longer need FlipX since we have directional sprites
                 if (auto* sprite = entityWrapper.TryGetComponent<Pillar::SpriteComponent>())
                 {
-                    // Flip sprite to face player (flip when player is to the left)
-                    sprite->FlipX = toPlayer.x < 0.0f;
+                    sprite->FlipX = false;
                 }
             }
         }
@@ -273,6 +284,51 @@ namespace Game {
 
             // Play enemy shoot sound
             AudioManager::Instance().PlaySound("enemy_shoot", spawnPos, 0.6f, 1.2f);
+        }
+        
+        // Determine facing direction (north, south, east, west) from a direction vector
+        static std::string GetFacingDirection(const glm::vec2& direction)
+        {
+            if (glm::length(direction) < 0.001f)
+                return "south";  // Default to south when no direction
+            
+            // Get angle in degrees (0 = east, 90 = north, 180/-180 = west, -90 = south)
+            float angle = glm::degrees(std::atan2(direction.y, direction.x));
+            
+            // Determine quadrant based on angle
+            if (angle >= -45.0f && angle < 45.0f)
+                return "east";
+            else if (angle >= 45.0f && angle < 135.0f)
+                return "north";
+            else if (angle >= 135.0f || angle < -135.0f)
+                return "west";
+            else // angle >= -135 && angle < -45
+                return "south";
+        }
+        
+        // Update enemy animation based on type and facing direction
+        void UpdateEnemyAnimation(EnemyType type, Pillar::AnimationComponent& anim, const std::string& facingDir)
+        {
+            std::string targetAnim;
+            
+            switch (type)
+            {
+                case EnemyType::Shooter:
+                    targetAnim = "evil_archer_run_" + facingDir;
+                    break;
+                case EnemyType::Swarm:
+                    targetAnim = "goblin_with_sword_run_" + facingDir;
+                    break;
+                case EnemyType::Chaser:
+                default:
+                    // Hoodzy doesn't have directional animations yet, keep existing
+                    return;
+            }
+            
+            if (anim.CurrentClipName != targetAnim)
+            {
+                anim.Play(targetAnim);
+            }
         }
     };
 
