@@ -417,7 +417,8 @@ namespace Game {
             bulletComp.HitsRemaining = 1;
 
             // Boss projectiles glow with dark magenta light
-            auto& light = projectile.AddComponent<Pillar::Light2DComponent>();
+            // Use GetOrAddComponent since pooled bullets might already have this component
+            auto& light = projectile.GetOrAddComponent<Pillar::Light2DComponent>();
             light.Color = glm::vec3(0.8f, 0.2f, 0.4f);
             light.Intensity = 0.6f;
             light.Radius = 2.0f;
