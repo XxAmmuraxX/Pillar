@@ -157,6 +157,7 @@ namespace Game {
 
             // Spawn muzzle flash effect
             EffectFactory::SpawnMuzzleFlash(*m_Scene, spawnPos, direction);
+            EffectFactory::SpawnMuzzleFlashLight(*m_Scene, spawnPos);
 
             // Play shoot sound (positional)
             AudioManager::Instance().PlaySound("shoot", spawnPos, 0.8f);
@@ -172,39 +173,48 @@ namespace Game {
             float damage,
             int extraPierce = 0)
         {
-            auto bullet = m_Scene->CreateEntity("Bullet");
+            Pillar::Entity bullet;
+            if (m_BulletPool)
+            {
+                bullet = m_BulletPool->SpawnBullet(position, direction, speed, owner, damage, 3.0f);
+            }
+            else
+            {
+                bullet = m_Scene->CreateEntity("Bullet");
+                auto& transform = bullet.GetComponent<Pillar::TransformComponent>();
+                transform.SetPosition(position);
+                float angle = std::atan2(direction.y, direction.x);
+                transform.SetRotation(angle);
+                bullet.AddComponent<Pillar::VelocityComponent>().Velocity = direction * speed;
+                bullet.AddComponent<Pillar::BulletComponent>(owner, damage).Lifetime = 3.0f;
+                bullet.AddComponent<Pillar::SpriteComponent>();
+            }
 
-            // Transform
-            auto& transform = bullet.GetComponent<Pillar::TransformComponent>();
-            transform.SetPosition(position);
-
-            // Rotate to face direction
-            float angle = std::atan2(direction.y, direction.x);
-            transform.SetRotation(angle);
-
-            // Small bright sprite
-            auto& sprite = bullet.AddComponent<Pillar::SpriteComponent>();
-            sprite.Texture = m_BulletTexture; // Use cached texture
+            // Configure sprite
+            auto& sprite = bullet.GetComponent<Pillar::SpriteComponent>();
+            sprite.Texture = m_BulletTexture;
             sprite.Size = glm::vec2(0.4f, 0.4f);
-            sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // White (no tint)
+            sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
             sprite.Layer = "Projectiles";
             sprite.OrderInLayer = 5;
+            sprite.Visible = true;
 
-            // Velocity-based movement (no physics body - lightweight)
-            auto& velocity = bullet.AddComponent<Pillar::VelocityComponent>();
-            velocity.Velocity = direction * speed;
+            // Configure velocity max speed
+            auto& velocity = bullet.GetComponent<Pillar::VelocityComponent>();
             velocity.MaxSpeed = speed * 1.5f;
 
-            // Bullet data
-            auto& bulletComp = bullet.AddComponent<Pillar::BulletComponent>(owner, damage);
-            bulletComp.Lifetime = 3.0f;
+            // Configure pierce
+            auto& bulletComp = bullet.GetComponent<Pillar::BulletComponent>();
             bulletComp.Pierce = extraPierce > 0;
             bulletComp.MaxHits = 1 + extraPierce;
             bulletComp.HitsRemaining = 1 + extraPierce;
 
-            // Bullet trail for visual effect
+            // Bullet trail
             glm::vec4 trailColor = GetTrailColorForWeapon();
-            bullet.AddComponent<BulletTrailComponent>(trailColor, 10);
+            if (bullet.HasComponent<BulletTrailComponent>())
+                bullet.GetComponent<BulletTrailComponent>() = BulletTrailComponent(trailColor, 10);
+            else
+                bullet.AddComponent<BulletTrailComponent>(trailColor, 10);
         }
 
         glm::vec4 GetTrailColorForWeapon()
@@ -227,12 +237,16 @@ namespace Game {
             }
         }
 
+    public:
+        void SetBulletPool(Pillar::BulletPool* pool) { m_BulletPool = pool; }
+
     private:
         const Pillar::OrthographicCamera* m_Camera = nullptr;
         float m_WindowWidth = 1280.0f;
         float m_WindowHeight = 720.0f;
         Pillar::Scene* m_Scene = nullptr;
         std::shared_ptr<Pillar::Texture2D> m_BulletTexture; // Cached bullet texture
+        Pillar::BulletPool* m_BulletPool = nullptr;
     };
 
 } // namespace Game

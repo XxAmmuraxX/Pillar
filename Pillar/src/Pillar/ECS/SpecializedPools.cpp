@@ -21,7 +21,8 @@ void BulletPool::Init(Scene* scene, uint32_t initialCapacity)
 		entity.AddComponent<TransformComponent>();
 		entity.AddComponent<VelocityComponent>();
 		entity.AddComponent<BulletComponent>();
-		// Note: Sprite component will be added when rendering system is implemented
+		auto& sprite = entity.AddComponent<SpriteComponent>();
+		sprite.Visible = false; // Hidden when pooled
 	});
 
 	// Set up reset callback to reset bullet state when returned to pool
@@ -37,6 +38,10 @@ void BulletPool::Init(Scene* scene, uint32_t initialCapacity)
 		auto& bullet = entity.GetComponent<BulletComponent>();
 		bullet.TimeAlive = 0.0f;
 		bullet.HitsRemaining = bullet.MaxHits;
+
+		auto& sprite = entity.GetComponent<SpriteComponent>();
+		sprite.Visible = false;
+		sprite.Color = glm::vec4(1.0f);
 	});
 
 	// Initialize the underlying pool

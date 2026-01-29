@@ -8,7 +8,12 @@
 #include <Pillar/ECS/Systems/VelocityIntegrationSystem.h>
 #include <Pillar/ECS/Systems/BulletCollisionSystem.h>
 #include <Pillar/ECS/Systems/AnimationSystem.h>
+#include <Pillar/ECS/SpecializedPools.h>
 #include <Pillar/Renderer/Renderer2D.h>
+#include <Pillar/Renderer/Lighting2D.h>
+#include <Pillar/ECS/Systems/Lighting2DSystem.h>
+#include <Pillar/ECS/Components/Rendering/Light2DComponent.h>
+#include <Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h>
 #include <Pillar/Renderer/OrthographicCameraController.h>
 #include <Pillar/Application.h>
 #include <Pillar/Events/ApplicationEvent.h>
@@ -103,6 +108,12 @@ namespace Game {
             m_CameraController->SetZoomLevel(8.0f);
             m_CameraController->SetKeyboardControlEnabled(false);
 
+            // Initialize Lighting2D
+            Pillar::Lighting2D::Init();
+            m_LightingSettings.AmbientColor = glm::vec3(0.15f, 0.12f, 0.18f);
+            m_LightingSettings.AmbientIntensity = 0.2f;
+            m_LightingSettings.EnableShadows = true;
+
             PIL_INFO("SwarmSlayerLayer initialized - showing main menu");
         }
 
@@ -112,6 +123,9 @@ namespace Game {
 
             // Shutdown systems
             ShutdownGameSystems();
+
+            // Shutdown Lighting2D
+            Pillar::Lighting2D::Shutdown();
 
             // Shutdown audio
             AudioManager::Instance().Shutdown();
@@ -363,6 +377,9 @@ namespace Game {
             // Create Scene
             m_Scene = std::make_unique<Pillar::Scene>("SwarmSlayer");
 
+            // Initialize BulletPool
+            m_BulletPool.Init(m_Scene.get(), 300);
+
             // Initialize Physics (ZERO GRAVITY for top-down!)
             m_PhysicsSystem = new Pillar::PhysicsSystem(glm::vec2(0.0f, 0.0f));
             m_PhysicsSystem->OnAttach(m_Scene.get());
@@ -385,6 +402,7 @@ namespace Game {
                 m_WindowWidth, m_WindowHeight
             );
             m_WeaponSystem->OnAttach(m_Scene.get());
+            m_WeaponSystem->SetBulletPool(&m_BulletPool);
 
             // Velocity Integration System (for bullets)
             m_VelocitySystem = new Pillar::VelocityIntegrationSystem();
@@ -393,6 +411,7 @@ namespace Game {
             // Bullet Lifetime System
             m_BulletLifetimeSystem = new BulletLifetimeSystem();
             m_BulletLifetimeSystem->OnAttach(m_Scene.get());
+            m_BulletLifetimeSystem->SetBulletPool(&m_BulletPool);
 
             // Bullet Collision System
             m_BulletCollisionSystem = new Pillar::BulletCollisionSystem(m_PhysicsSystem);
@@ -401,10 +420,12 @@ namespace Game {
             // Enemy AI System
             m_EnemyAISystem = new EnemyAISystem();
             m_EnemyAISystem->OnAttach(m_Scene.get());
+            m_EnemyAISystem->SetBulletPool(&m_BulletPool);
 
             // Boss System
             m_BossSystem = new BossSystem();
             m_BossSystem->OnAttach(m_Scene.get());
+            m_BossSystem->SetBulletPool(&m_BulletPool);
             m_BossSystem->SetOnBossDefeated([this](const glm::vec2& pos, int xp, int score) {
                 OnBossDefeated(pos, xp, score);
             });
@@ -451,9 +472,12 @@ namespace Game {
             m_HazardSystem->SetExplosionCallback([this](const glm::vec2& pos, float radius, float damage) {
                 // Big camera shake for barrel explosions
                 m_CameraShake.ShakeHuge();
-                
+
                 // Screen flash effect for dramatic impact
                 m_ScreenFlashTimer = 0.15f;
+
+                // Spawn explosion light
+                EffectFactory::SpawnExplosionLight(*m_Scene, pos, radius);
             });
 
             // Animation System
@@ -461,6 +485,10 @@ namespace Game {
             m_AnimationSystem->OnAttach(m_Scene.get());
             m_Scene->SetAnimationSystem(m_AnimationSystem);
             LoadAnimations();
+
+            // Lighting2D System
+            m_Lighting2DSystem = new Pillar::Lighting2DSystem();
+            m_Lighting2DSystem->OnAttach(m_Scene.get());
 
             // Wave Manager
             m_WaveManager.Init(30.0f, 16.0f);
@@ -665,10 +693,14 @@ namespace Game {
 
         void ShutdownGameSystems()
         {
-            // Shutdown particle manager first
+            // Clear bullet pool first
+            m_BulletPool.Clear();
+
+            // Shutdown particle manager
             ParticleManager::Instance().Shutdown();
-            
+
             // Delete all systems in reverse order
+            if (m_Lighting2DSystem) { m_Lighting2DSystem->OnDetach(); delete m_Lighting2DSystem; m_Lighting2DSystem = nullptr; }
             if (m_HazardSystem) { m_HazardSystem->OnDetach(); delete m_HazardSystem; m_HazardSystem = nullptr; }
             if (m_BulletTrailSystem) { m_BulletTrailSystem->OnDetach(); delete m_BulletTrailSystem; m_BulletTrailSystem = nullptr; }
             if (m_AnimationSystem) { m_AnimationSystem->OnDetach(); delete m_AnimationSystem; m_AnimationSystem = nullptr; }
@@ -923,11 +955,15 @@ namespace Game {
 
         void RenderGame()
         {
-            // Clear with gritty charred black background (SCRAPYARD SALVATION palette)
-            Pillar::Renderer2D::SetClearColor(glm::vec4(0.04f, 0.04f, 0.05f, 1.0f)); // #0A0A0C adjusted
+            // Clear with gritty charred black background
+            Pillar::Renderer2D::SetClearColor(glm::vec4(0.04f, 0.04f, 0.05f, 1.0f));
             Pillar::Renderer2D::Clear();
 
             if (!m_Scene || !m_CameraController) return;
+
+            auto& window = Pillar::Application::Get().GetWindow();
+            uint32_t vpWidth = static_cast<uint32_t>(window.GetWidth());
+            uint32_t vpHeight = static_cast<uint32_t>(window.GetHeight());
 
             // Collect and sort all renderable sprites
             auto& registry = m_Scene->GetRegistry();
@@ -948,50 +984,50 @@ namespace Game {
             std::sort(renderables.begin(), renderables.end(), [&](entt::entity a, entt::entity b) {
                 const auto& spriteA = view.get<Pillar::SpriteComponent>(a);
                 const auto& spriteB = view.get<Pillar::SpriteComponent>(b);
-
                 if (spriteA.Layer != spriteB.Layer)
                     return spriteA.Layer < spriteB.Layer;
-
                 return spriteA.OrderInLayer < spriteB.OrderInLayer;
             });
 
-            // Render in layer-based batches to preserve draw order
-            // Each layer change triggers a new BeginScene/EndScene to flush
-            std::string currentLayer = "";
-            bool sceneActive = false;
+            // === LIT PASS ===
+            Pillar::Lighting2D::BeginScene(
+                m_CameraController->GetCamera(),
+                vpWidth, vpHeight,
+                m_LightingSettings
+            );
+            // Note: Lighting2D::BeginScene already called Renderer2D::BeginScene
 
-            // Render bullet trails first (behind everything)
-            Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
+            // Bullet trails first
             if (m_BulletTrailSystem)
                 m_BulletTrailSystem->RenderTrails();
-            Pillar::Renderer2D::EndScene();
 
-            // Render sorted sprites, flushing on layer changes
+            // Flush after trails before sprites
+            Pillar::Renderer2D::EndScene();
+            Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
+
+            // Render sorted sprites with mid-scene flushes on layer changes
+            std::string currentLayer = "";
             for (size_t i = 0; i < renderables.size(); ++i)
             {
                 auto entity = renderables[i];
                 auto& transform = view.get<Pillar::TransformComponent>(entity);
                 auto& sprite = view.get<Pillar::SpriteComponent>(entity);
 
-                // Check if layer changed - if so, end current scene and start new one
-                if (sprite.Layer != currentLayer)
+                if (sprite.Layer != currentLayer && !currentLayer.empty())
                 {
-                    if (sceneActive)
-                    {
-                        Pillar::Renderer2D::EndScene();
-                    }
+                    // Mid-scene flush: preserves draw order while staying in lit FBO
+                    Pillar::Renderer2D::EndScene();
                     Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
-                    sceneActive = true;
-                    currentLayer = sprite.Layer;
                 }
+                currentLayer = sprite.Layer;
 
-                // Apply hazard pulsing effect if this entity has a hazard component
                 Pillar::Entity ent(entity, m_Scene.get());
                 if (auto* hazard = ent.TryGetComponent<HazardComponent>())
                 {
                     Pillar::SpriteComponent pulsedSprite = sprite;
                     float pulse = hazard->GetPulseFactor();
-                    pulsedSprite.Color = glm::mix(sprite.Color, glm::vec4(1.0f, 1.0f, 1.0f, sprite.Color.a), pulse * 0.3f);
+                    pulsedSprite.Color = glm::mix(sprite.Color,
+                        glm::vec4(1.0f, 1.0f, 1.0f, sprite.Color.a), pulse * 0.3f);
                     Pillar::Renderer2D::DrawSprite(transform, pulsedSprite);
                 }
                 else
@@ -1000,13 +1036,20 @@ namespace Game {
                 }
             }
 
-            // End the final scene
-            if (sceneActive)
-            {
-                Pillar::Renderer2D::EndScene();
-            }
+            // Flush final sprite batch
+            Pillar::Renderer2D::EndScene();
 
-            // Render boss health bars (UI layer - separate scene)
+            // Submit lights and shadow casters
+            if (m_Lighting2DSystem)
+                m_Lighting2DSystem->OnUpdate(0.0f);
+
+            // Begin a new scene for Lighting2D to composite correctly
+            Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
+
+            // End lit pass (composites scene * lighting to screen)
+            Pillar::Lighting2D::EndScene();
+
+            // === UNLIT PASS (overlays) ===
             Pillar::Renderer2D::BeginScene(m_CameraController->GetCamera());
             if (m_BossSystem)
                 m_BossSystem->RenderBossHealthBars();
@@ -1193,6 +1236,13 @@ namespace Game {
         TemporaryCleanupSystem* m_TemporaryCleanupSystem = nullptr;
         BulletTrailSystem* m_BulletTrailSystem = nullptr;
         HazardSystem* m_HazardSystem = nullptr;
+        Pillar::Lighting2DSystem* m_Lighting2DSystem = nullptr;
+
+        // Pools
+        Pillar::BulletPool m_BulletPool;
+
+        // Lighting
+        Pillar::Lighting2DSettings m_LightingSettings;
 
         // Game Managers
         WaveManager m_WaveManager;

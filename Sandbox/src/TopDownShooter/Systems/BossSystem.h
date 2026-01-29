@@ -10,6 +10,7 @@
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
 #include <Pillar/ECS/Components/Gameplay/BulletComponent.h>
 #include <Pillar/ECS/Components/Physics/VelocityComponent.h>
+#include <Pillar/ECS/Components/Rendering/Light2DComponent.h>
 #include <Pillar/Renderer/Renderer2D.h>
 #include <box2d/b2_body.h>
 #include <glm/glm.hpp>
@@ -36,6 +37,7 @@ namespace Game {
 
         void SetOnBossDefeated(OnBossDefeatedCallback callback) { m_OnBossDefeated = callback; }
         void SetOnSpawnMinion(OnSpawnMinionCallback callback) { m_OnSpawnMinion = callback; }
+        void SetBulletPool(Pillar::BulletPool* pool) { m_BulletPool = pool; }
 
         void OnUpdate(float dt) override
         {
@@ -183,6 +185,7 @@ namespace Game {
     private:
         OnBossDefeatedCallback m_OnBossDefeated;
         OnSpawnMinionCallback m_OnSpawnMinion;
+        Pillar::BulletPool* m_BulletPool = nullptr;
 
         glm::vec4 GetHealthBarColor(BossPhase phase)
         {
@@ -379,37 +382,46 @@ namespace Game {
             const glm::vec2& direction,
             float damage)
         {
-            // Create boss projectile
-            auto projectile = m_Scene->CreateEntity("BossProjectile");
-
-            // Position slightly ahead of boss
             glm::vec2 spawnPos = position + direction * 1.0f;
 
-            auto& transform = projectile.GetComponent<Pillar::TransformComponent>();
-            transform.SetPosition(spawnPos);
+            Pillar::Entity projectile;
+            if (m_BulletPool)
+            {
+                projectile = m_BulletPool->SpawnBullet(spawnPos, direction, 10.0f, owner, damage, 6.0f);
+            }
+            else
+            {
+                projectile = m_Scene->CreateEntity("BossProjectile");
+                auto& transform = projectile.GetComponent<Pillar::TransformComponent>();
+                transform.SetPosition(spawnPos);
+                transform.SetRotation(std::atan2(direction.y, direction.x));
+                projectile.AddComponent<Pillar::VelocityComponent>().Velocity = direction * 10.0f;
+                auto& bc = projectile.AddComponent<Pillar::BulletComponent>(owner, damage);
+                bc.Lifetime = 6.0f;
+                projectile.AddComponent<Pillar::SpriteComponent>();
+            }
 
-            // Rotate to face direction
-            float angle = std::atan2(direction.y, direction.x);
-            transform.SetRotation(angle);
-
-            // Large, menacing red/purple projectile
-            auto& sprite = projectile.AddComponent<Pillar::SpriteComponent>();
+            auto& sprite = projectile.GetComponent<Pillar::SpriteComponent>();
             sprite.Size = glm::vec2(0.5f, 0.3f);
             sprite.Color = glm::vec4(0.8f, 0.2f, 0.4f, 1.0f);  // Dark magenta
             sprite.Layer = "Projectiles";
             sprite.OrderInLayer = 6;
+            sprite.Visible = true;
 
-            // Velocity-based movement (slower but larger)
-            auto& velocity = projectile.AddComponent<Pillar::VelocityComponent>();
-            velocity.Velocity = direction * 10.0f;  // Boss projectiles are slower but harder to dodge
+            auto& velocity = projectile.GetComponent<Pillar::VelocityComponent>();
             velocity.MaxSpeed = 12.0f;
 
-            // Bullet component (owned by boss enemy, damages player)
-            auto& bulletComp = projectile.AddComponent<Pillar::BulletComponent>(owner, damage);
-            bulletComp.Lifetime = 6.0f;
+            auto& bulletComp = projectile.GetComponent<Pillar::BulletComponent>();
             bulletComp.Pierce = false;
             bulletComp.MaxHits = 1;
             bulletComp.HitsRemaining = 1;
+
+            // Boss projectiles glow with dark magenta light
+            auto& light = projectile.AddComponent<Pillar::Light2DComponent>();
+            light.Color = glm::vec3(0.8f, 0.2f, 0.4f);
+            light.Intensity = 0.6f;
+            light.Radius = 2.0f;
+            light.CastShadows = false;
         }
         
         // Determine facing direction (north, south, east, west) from a direction vector

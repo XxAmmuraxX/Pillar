@@ -24,6 +24,8 @@ namespace Game {
             m_Scene = nullptr;
         }
 
+        void SetBulletPool(Pillar::BulletPool* pool) { m_BulletPool = pool; }
+
         void OnUpdate(float dt) override
         {
             if (!m_Scene) return;
@@ -56,12 +58,23 @@ namespace Game {
             // Destroy expired bullets
             for (auto entity : toDestroy)
             {
-                m_Scene->DestroyEntity(Pillar::Entity(entity, m_Scene));
+                Pillar::Entity e(entity, m_Scene);
+                if (m_BulletPool)
+                {
+                    if (auto* sprite = e.TryGetComponent<Pillar::SpriteComponent>())
+                        sprite->Visible = false;
+                    m_BulletPool->ReturnBullet(e);
+                }
+                else
+                {
+                    m_Scene->DestroyEntity(e);
+                }
             }
         }
 
     private:
         Pillar::Scene* m_Scene = nullptr;
+        Pillar::BulletPool* m_BulletPool = nullptr;
     };
 
 } // namespace Game

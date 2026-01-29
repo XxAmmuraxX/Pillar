@@ -23,6 +23,8 @@ namespace Game {
     class EnemyAISystem : public Pillar::System
     {
     public:
+        void SetBulletPool(Pillar::BulletPool* pool) { m_BulletPool = pool; }
+
         void OnUpdate(float dt) override
         {
             if (!m_Scene) return;
@@ -250,39 +252,40 @@ namespace Game {
             const Pillar::TransformComponent& transform,
             const glm::vec2& direction)
         {
-            // Create enemy bullet
-            auto bullet = m_Scene->CreateEntity("EnemyBullet");
-
-            // Position slightly ahead of enemy
             glm::vec2 spawnPos = transform.Position + direction * 0.6f;
 
-            auto& bulletTransform = bullet.GetComponent<Pillar::TransformComponent>();
-            bulletTransform.SetPosition(spawnPos);
+            Pillar::Entity bullet;
+            if (m_BulletPool)
+            {
+                bullet = m_BulletPool->SpawnBullet(spawnPos, direction, 12.0f, entity, 10.0f, 5.0f);
+            }
+            else
+            {
+                bullet = m_Scene->CreateEntity("EnemyBullet");
+                auto& bt = bullet.GetComponent<Pillar::TransformComponent>();
+                bt.SetPosition(spawnPos);
+                bt.SetRotation(std::atan2(direction.y, direction.x));
+                bullet.AddComponent<Pillar::VelocityComponent>().Velocity = direction * 12.0f;
+                auto& bc = bullet.AddComponent<Pillar::BulletComponent>(entity, 10.0f);
+                bc.Lifetime = 5.0f;
+                bullet.AddComponent<Pillar::SpriteComponent>();
+            }
 
-            // Rotate to face direction
-            float angle = std::atan2(direction.y, direction.x);
-            bulletTransform.SetRotation(angle);
-
-            // Sprite (red enemy bullet)
-            auto& sprite = bullet.AddComponent<Pillar::SpriteComponent>();
+            auto& sprite = bullet.GetComponent<Pillar::SpriteComponent>();
             sprite.Size = glm::vec2(0.25f, 0.12f);
             sprite.Color = glm::vec4(1.0f, 0.2f, 0.2f, 1.0f);  // Red
             sprite.Layer = "Projectiles";
             sprite.OrderInLayer = 5;
+            sprite.Visible = true;
 
-            // Velocity-based movement
-            auto& velocity = bullet.AddComponent<Pillar::VelocityComponent>();
-            velocity.Velocity = direction * 12.0f;  // Slower than player bullets
+            auto& velocity = bullet.GetComponent<Pillar::VelocityComponent>();
             velocity.MaxSpeed = 15.0f;
 
-            // Bullet component (owned by enemy, damages player)
-            auto& bulletComp = bullet.AddComponent<Pillar::BulletComponent>(entity, 10.0f);
-            bulletComp.Lifetime = 5.0f;
+            auto& bulletComp = bullet.GetComponent<Pillar::BulletComponent>();
             bulletComp.Pierce = false;
             bulletComp.MaxHits = 1;
             bulletComp.HitsRemaining = 1;
 
-            // Play enemy shoot sound
             AudioManager::Instance().PlaySound("enemy_shoot", spawnPos, 0.6f, 1.2f);
         }
         
@@ -330,6 +333,9 @@ namespace Game {
                 anim.Play(targetAnim);
             }
         }
+
+    private:
+        Pillar::BulletPool* m_BulletPool = nullptr;
     };
 
 } // namespace Game

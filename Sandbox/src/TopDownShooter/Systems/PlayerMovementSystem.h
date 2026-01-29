@@ -6,6 +6,7 @@
 #include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
 #include <Pillar/ECS/Components/Rendering/AnimationComponent.h>
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
+#include <Pillar/ECS/Components/Gameplay/ParticleEmitterComponent.h>
 #include <Pillar/Input.h>
 #include <Pillar/KeyCodes.h>
 #include <Pillar/Renderer/OrthographicCamera.h>
@@ -65,7 +66,7 @@ namespace Game {
                 if (player.IsDashing)
                 {
                     player.DashTimer -= dt;
-                    
+
                     // Spawn dash trail particles
                     m_DashTrailTimer -= dt;
                     if (m_DashTrailTimer <= 0.0f)
@@ -74,11 +75,15 @@ namespace Game {
                         EffectFactory::SpawnDashTrail(*m_Scene, transform.Position, playerColor);
                         m_DashTrailTimer = 0.02f;  // Spawn trail every 20ms during dash
                     }
-                    
+
                     if (player.DashTimer <= 0.0f)
                     {
                         player.IsDashing = false;
-                        
+
+                        // Disable dash trail emitter
+                        if (auto* emitter = entityWrapper.TryGetComponent<Pillar::ParticleEmitterComponent>())
+                            emitter->Enabled = false;
+
                         // End invulnerability after dash
                         if (auto* health = entityWrapper.TryGetComponent<Pillar::HealthComponent>())
                         {
@@ -160,13 +165,35 @@ namespace Game {
                     b2Vec2 dashVelocity(moveDir.x * player.DashSpeed,
                                         moveDir.y * player.DashSpeed);
                     rb.Body->SetLinearVelocity(dashVelocity);
-                    
+
+                    // Enable dash trail emitter or create one
+                    if (auto* existingEmitter = entityWrapper.TryGetComponent<Pillar::ParticleEmitterComponent>())
+                    {
+                        existingEmitter->Enabled = true;
+                    }
+                    else
+                    {
+                        auto& newEmitter = entityWrapper.AddComponent<Pillar::ParticleEmitterComponent>();
+                        newEmitter.EmissionRate = 25.0f;
+                        newEmitter.Direction = glm::vec2(0.0f, 0.0f);
+                        newEmitter.DirectionSpread = 180.0f;
+                        newEmitter.Speed = 1.0f;
+                        newEmitter.SpeedVariance = 0.5f;
+                        newEmitter.Lifetime = 0.2f;
+                        newEmitter.LifetimeVariance = 0.05f;
+                        newEmitter.Size = 0.15f;
+                        newEmitter.SizeVariance = 0.05f;
+                        newEmitter.StartColor = glm::vec4(0.5f, 0.7f, 1.0f, 0.6f);
+                        newEmitter.FadeOut = true;
+                        newEmitter.Gravity = glm::vec2(0.0f, 0.0f);
+                    }
+
                     // Make player invulnerable during dash
                     if (auto* health = entityWrapper.TryGetComponent<Pillar::HealthComponent>())
                     {
                         health->IsInvulnerable = true;
                     }
-                    
+
                     // Play dash sound
                     AudioManager::Instance().PlaySound("pickup", 0.5f, 1.5f);  // Higher pitch whoosh
                 }

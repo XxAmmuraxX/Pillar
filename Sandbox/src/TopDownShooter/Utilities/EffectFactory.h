@@ -5,6 +5,7 @@
 #include <Pillar/ECS/Components/Core/TransformComponent.h>
 #include <Pillar/ECS/Components/Rendering/SpriteComponent.h>
 #include <Pillar/ECS/Components/Physics/VelocityComponent.h>
+#include <Pillar/ECS/Components/Rendering/Light2DComponent.h>
 #include <glm/glm.hpp>
 #include <random>
 #include <cmath>
@@ -137,6 +138,40 @@ namespace Game {
         {
             // Use native particle system for dash trail
             ParticleManager::Instance().SpawnDashTrail(position, color);
+        }
+
+        // Spawn temporary muzzle flash light
+        static void SpawnMuzzleFlashLight(Pillar::Scene& scene, const glm::vec2& position)
+        {
+            auto flash = scene.CreateEntity("MuzzleLight");
+            auto& transform = flash.GetComponent<Pillar::TransformComponent>();
+            transform.SetPosition(position);
+
+            auto& light = flash.AddComponent<Pillar::Light2DComponent>();
+            light.Color = glm::vec3(1.0f, 0.85f, 0.3f);
+            light.Intensity = 3.0f;
+            light.Radius = 3.0f;
+            light.CastShadows = false;
+
+            auto& temp = flash.AddComponent<TemporaryComponent>();
+            temp.Lifetime = 0.08f;
+        }
+
+        // Spawn temporary explosion light
+        static void SpawnExplosionLight(Pillar::Scene& scene, const glm::vec2& position, float radius)
+        {
+            auto light = scene.CreateEntity("ExplosionLight");
+            auto& transform = light.GetComponent<Pillar::TransformComponent>();
+            transform.SetPosition(position);
+
+            auto& lightComp = light.AddComponent<Pillar::Light2DComponent>();
+            lightComp.Color = glm::vec3(1.0f, 0.6f, 0.1f);
+            lightComp.Intensity = 5.0f;
+            lightComp.Radius = radius * 2.0f;
+            lightComp.CastShadows = false;
+
+            auto& temp = light.AddComponent<TemporaryComponent>();
+            temp.Lifetime = 0.3f;
         }
     };
 

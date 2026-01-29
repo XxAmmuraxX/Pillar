@@ -8,6 +8,9 @@
 #include <Pillar/ECS/Components/Physics/RigidbodyComponent.h>
 #include <Pillar/ECS/Components/Physics/ColliderComponent.h>
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
+#include <Pillar/ECS/Components/Gameplay/ParticleEmitterComponent.h>
+#include <Pillar/ECS/Components/Rendering/Light2DComponent.h>
+#include <Pillar/ECS/Components/Rendering/ShadowCaster2DComponent.h>
 #include <Pillar/Renderer/Texture.h>
 #include <Pillar/Utils/AssetManager.h>
 #include <box2d/b2_body.h>
@@ -79,6 +82,14 @@ namespace Game {
             auto& anim = player.AddComponent<Pillar::AnimationComponent>();
             anim.Play("red_mage_idle_south");
 
+            // Light - player casts a blue-white pool of light
+            auto& light = player.AddComponent<Pillar::Light2DComponent>();
+            light.Type = Pillar::Light2DType::Point;
+            light.Color = glm::vec3(0.6f, 0.7f, 1.0f);
+            light.Intensity = 1.2f;
+            light.Radius = 6.0f;
+            light.CastShadows = true;
+
             return player;
         }
 
@@ -111,6 +122,18 @@ namespace Game {
                                CollisionCategory::Enemy |
                                CollisionCategory::Bullet;
             wall.AddComponent<Pillar::ColliderComponent>(collider);
+
+            // Shadow caster - walls cast shadows
+            auto& caster = wall.AddComponent<Pillar::ShadowCaster2DComponent>();
+            glm::vec2 halfSize = size * 0.5f;
+            caster.Points = {
+                glm::vec2(-halfSize.x, -halfSize.y),
+                glm::vec2( halfSize.x, -halfSize.y),
+                glm::vec2( halfSize.x,  halfSize.y),
+                glm::vec2(-halfSize.x,  halfSize.y)
+            };
+            caster.Closed = true;
+            caster.TwoSided = false;
 
             return wall;
         }
@@ -319,6 +342,14 @@ namespace Game {
                     break;
             }
 
+            // Light - power-ups glow with their respective colors
+            auto& light = powerUp.AddComponent<Pillar::Light2DComponent>();
+            glm::vec4 c = sprite.Color;
+            light.Color = glm::vec3(c.r, c.g, c.b);
+            light.Intensity = 0.5f;
+            light.Radius = 1.5f;
+            light.CastShadows = false;
+
             return powerUp;
         }
 
@@ -365,6 +396,13 @@ namespace Game {
             auto& xpComp = orb.AddComponent<XPOrbComponent>();
             xpComp.XPValue = xpValue;
             xpComp.OriginalPosition = position;
+
+            // Light - XP orbs emit a subtle cyan glow
+            auto& light = orb.AddComponent<Pillar::Light2DComponent>();
+            light.Color = glm::vec3(0.3f, 0.8f, 1.0f);
+            light.Intensity = 0.3f;
+            light.Radius = 1.0f;
+            light.CastShadows = false;
 
             return orb;
         }
@@ -501,6 +539,30 @@ namespace Game {
             // Hazard component
             auto& hazard = barrel.AddComponent<HazardComponent>(HazardType::ExplosiveBarrel);
 
+            // Particle emitter - subtle orange smoke/embers
+            auto& emitter = barrel.AddComponent<Pillar::ParticleEmitterComponent>();
+            emitter.EmissionRate = 3.0f;
+            emitter.Shape = Pillar::EmissionShape::Circle;
+            emitter.ShapeSize = glm::vec2(0.3f);
+            emitter.Direction = glm::vec2(0.0f, 1.0f);
+            emitter.DirectionSpread = 40.0f;
+            emitter.Speed = 1.0f;
+            emitter.SpeedVariance = 0.5f;
+            emitter.Lifetime = 0.8f;
+            emitter.LifetimeVariance = 0.3f;
+            emitter.Size = 0.08f;
+            emitter.SizeVariance = 0.03f;
+            emitter.StartColor = glm::vec4(1.0f, 0.5f, 0.1f, 0.6f);
+            emitter.FadeOut = true;
+            emitter.Gravity = glm::vec2(0.0f, 0.5f);
+
+            // Light - barrels have a flickering orange glow
+            auto& light = barrel.AddComponent<Pillar::Light2DComponent>();
+            light.Color = glm::vec3(1.0f, 0.5f, 0.15f);
+            light.Intensity = 0.6f;
+            light.Radius = 2.5f;
+            light.CastShadows = false;
+
             // Static physics body so bullets can detect it
             auto& rb = barrel.AddComponent<Pillar::RigidbodyComponent>(b2_staticBody);
 
@@ -584,6 +646,29 @@ namespace Game {
             hazard.DamageRadius = radius;
             hazard.Lifetime = lifetime;
 
+            // Particle emitter - green bubbles
+            auto& emitter = pool.AddComponent<Pillar::ParticleEmitterComponent>();
+            emitter.EmissionRate = 5.0f;
+            emitter.Shape = Pillar::EmissionShape::Circle;
+            emitter.ShapeSize = glm::vec2(radius * 0.8f);
+            emitter.Direction = glm::vec2(0.0f, 1.0f);
+            emitter.DirectionSpread = 60.0f;
+            emitter.Speed = 0.5f;
+            emitter.SpeedVariance = 0.3f;
+            emitter.Lifetime = 1.2f;
+            emitter.Size = 0.1f;
+            emitter.SizeVariance = 0.04f;
+            emitter.StartColor = glm::vec4(0.2f, 0.9f, 0.2f, 0.5f);
+            emitter.FadeOut = true;
+            emitter.Gravity = glm::vec2(0.0f, 0.3f);
+
+            // Light - poison pools glow green
+            auto& light = pool.AddComponent<Pillar::Light2DComponent>();
+            light.Color = glm::vec3(0.2f, 0.9f, 0.2f);
+            light.Intensity = 0.5f;
+            light.Radius = radius * 1.5f;
+            light.CastShadows = false;
+
             return pool;
         }
 
@@ -610,6 +695,29 @@ namespace Game {
             auto& hazard = zone.AddComponent<HazardComponent>(HazardType::DamageZone);
             hazard.DamageRadius = radius;
             hazard.Damage = damage;
+
+            // Particle emitter - fire particles
+            auto& emitter = zone.AddComponent<Pillar::ParticleEmitterComponent>();
+            emitter.EmissionRate = 8.0f;
+            emitter.Shape = Pillar::EmissionShape::Circle;
+            emitter.ShapeSize = glm::vec2(radius * 0.6f);
+            emitter.Direction = glm::vec2(0.0f, 1.0f);
+            emitter.DirectionSpread = 45.0f;
+            emitter.Speed = 1.5f;
+            emitter.SpeedVariance = 0.8f;
+            emitter.Lifetime = 0.6f;
+            emitter.Size = 0.12f;
+            emitter.SizeVariance = 0.05f;
+            emitter.StartColor = glm::vec4(1.0f, 0.4f, 0.1f, 0.7f);
+            emitter.FadeOut = true;
+            emitter.Gravity = glm::vec2(0.0f, 1.0f);
+
+            // Light - damage zones glow orange (fire)
+            auto& light = zone.AddComponent<Pillar::Light2DComponent>();
+            light.Color = glm::vec3(1.0f, 0.4f, 0.1f);
+            light.Intensity = 0.7f;
+            light.Radius = radius * 1.3f;
+            light.CastShadows = false;
 
             return zone;
         }

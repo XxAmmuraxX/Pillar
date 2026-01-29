@@ -8,6 +8,7 @@
 #include <Pillar/ECS/Components/Gameplay/HealthComponent.h>
 #include <Pillar/ECS/Components/Physics/ColliderComponent.h>
 #include <Pillar/ECS/Components/Physics/RigidbodyComponent.h>
+#include <Pillar/ECS/Components/Rendering/Light2DComponent.h>
 #include <Pillar/Logger.h>
 #include <glm/glm.hpp>
 #include <functional>
@@ -231,8 +232,15 @@ namespace Game {
             const Pillar::TransformComponent& transform,
             HazardComponent& hazard)
         {
-            // Explosive barrels only explode when shot (handled by OnBarrelHit)
-            // This just updates visual pulsing
+            // Explosive barrels flicker their light
+            if (!hazard.HasExploded)
+            {
+                Pillar::Entity ent(barrelEntity, m_Scene);
+                if (auto* light = ent.TryGetComponent<Pillar::Light2DComponent>())
+                {
+                    light->Intensity = 0.6f + 0.2f * std::sin(hazard.PulseTimer * 5.0f);
+                }
+            }
         }
 
         void TriggerExplosion(entt::entity barrelEntity)
