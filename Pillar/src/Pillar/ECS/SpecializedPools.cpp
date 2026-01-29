@@ -80,7 +80,9 @@ Entity BulletPool::SpawnBullet(
 	bulletComp.TimeAlive = 0.0f;
 	bulletComp.HitsRemaining = bulletComp.MaxHits;
 
+#ifdef PIL_DEBUG
 	PIL_CORE_TRACE("BulletPool: Spawned bullet at ({0}, {1})", position.x, position.y);
+#endif
 
 	return bullet;
 }
@@ -195,7 +197,9 @@ Entity ParticlePool::SpawnParticle(
 	particleComp.ScaleOverTime = false;
 	particleComp.RotateOverTime = false;
 
+#ifdef PIL_DEBUG
 	PIL_CORE_TRACE("ParticlePool: Spawned particle at ({0}, {1})", position.x, position.y);
+#endif
 
 	return particle;
 }

@@ -111,7 +111,7 @@ namespace Game {
             // Initialize Lighting2D
             Pillar::Lighting2D::Init();
             m_LightingSettings.AmbientColor = glm::vec3(0.15f, 0.12f, 0.18f);
-            m_LightingSettings.AmbientIntensity = 0.2f;
+            m_LightingSettings.AmbientIntensity = 1.0f;
             m_LightingSettings.EnableShadows = true;
 
             PIL_INFO("SwarmSlayerLayer initialized - showing main menu");
@@ -377,8 +377,9 @@ namespace Game {
             // Create Scene
             m_Scene = std::make_unique<Pillar::Scene>("SwarmSlayer");
 
-            // Initialize BulletPool
-            m_BulletPool.Init(m_Scene.get(), 300);
+            // Initialize BulletPool - 600 capacity for high fire-rate weapons (Laser: 20/sec * 3sec = 60 peak)
+            // Extra capacity for enemy bullets + safety margin to avoid pool exhaustion
+            m_BulletPool.Init(m_Scene.get(), 600);
 
             // Initialize Physics (ZERO GRAVITY for top-down!)
             m_PhysicsSystem = new Pillar::PhysicsSystem(glm::vec2(0.0f, 0.0f));
@@ -459,8 +460,9 @@ namespace Game {
             m_TemporaryCleanupSystem = new TemporaryCleanupSystem();
             m_TemporaryCleanupSystem->OnAttach(m_Scene.get());
 
-            // Native Particle System (replaces entity-based particles)
-            ParticleManager::Instance().Init(m_Scene.get(), 2000);
+            // Native Particle System - 500 capacity (peak usage ~280 during boss death)
+            // Reduced from 2000 to save memory while still having headroom
+            ParticleManager::Instance().Init(m_Scene.get(), 500);
 
             // Bullet Trail System
             m_BulletTrailSystem = new BulletTrailSystem();
@@ -526,8 +528,17 @@ namespace Game {
             });
 
             m_DamageSystem->SetOnEnemyKilled([this](const glm::vec2& pos, const glm::vec4& color, EnemyType enemyType) {
-                EffectFactory::SpawnDeathParticles(*m_Scene, pos, color);
-                m_CameraShake.ShakeMedium();
+                // Swarm enemies get lighter effects to reduce spikes
+                if (enemyType == EnemyType::Swarm)
+                {
+                    EffectFactory::SpawnDeathParticles(*m_Scene, pos, color, 6);  // Fewer particles
+                    m_CameraShake.ShakeSmall();  // Lighter shake
+                }
+                else
+                {
+                    EffectFactory::SpawnDeathParticles(*m_Scene, pos, color);
+                    m_CameraShake.ShakeMedium();
+                }
 
                 // Spawn XP orb
                 SpawnXPOrb(pos, 10);

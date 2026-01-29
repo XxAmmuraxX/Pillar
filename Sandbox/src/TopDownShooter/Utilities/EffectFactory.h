@@ -149,12 +149,12 @@ namespace Game {
 
             auto& light = flash.AddComponent<Pillar::Light2DComponent>();
             light.Color = glm::vec3(1.0f, 0.85f, 0.3f);
-            light.Intensity = 3.0f;
-            light.Radius = 3.0f;
+            light.Intensity = 1.2f;  // Reduced from 3.0
+            light.Radius = 1.5f;     // Reduced from 3.0
             light.CastShadows = false;
 
             auto& temp = flash.AddComponent<TemporaryComponent>();
-            temp.Lifetime = 0.08f;
+            temp.Lifetime = 0.05f;   // Reduced from 0.08 (faster fade)
         }
 
         // Spawn temporary explosion light

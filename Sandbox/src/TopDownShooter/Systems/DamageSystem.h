@@ -216,11 +216,16 @@ namespace Game {
                 {
                     auto& transform = e.GetComponent<Pillar::TransformComponent>();
                     auto& sprite = e.GetComponent<Pillar::SpriteComponent>();
-                    PIL_INFO("Enemy killed at ({:.1f}, {:.1f})!", transform.Position.x, transform.Position.y);
 
                     // Play death sound with slight pitch variation
-                    float pitch = 0.9f + (static_cast<float>(rand()) / RAND_MAX) * 0.2f;
-                    AudioManager::Instance().PlaySound("death", transform.Position, 0.8f, pitch);
+                    // Swarm enemies have 50% chance to skip sound (reduce audio spam)
+                    bool playSound = (enemy->Type != EnemyType::Swarm) || (rand() % 2 == 0);
+                    if (playSound)
+                    {
+                        float pitch = 0.9f + (static_cast<float>(rand()) / RAND_MAX) * 0.2f;
+                        float volume = (enemy->Type == EnemyType::Swarm) ? 0.5f : 0.8f;
+                        AudioManager::Instance().PlaySound("death", transform.Position, volume, pitch);
+                    }
                     
                     // Trigger death effect callback
                     if (m_OnEnemyKilled)
@@ -228,8 +233,9 @@ namespace Game {
                         m_OnEnemyKilled(transform.Position, sprite.Color, enemy->Type);
                     }
 
-                    // Chance to drop power-up (30% chance)
-                    if (ShouldDropPowerUp())
+                    // Chance to drop power-up (30% for normal, 10% for swarm)
+                    float dropChance = (enemy->Type == EnemyType::Swarm) ? 0.10f : 0.30f;
+                    if (ShouldDropPowerUp(dropChance))
                     {
                         powerUpSpawnPositions.push_back(transform.Position);
                     }
@@ -269,11 +275,11 @@ namespace Game {
             }
         }
 
-        bool ShouldDropPowerUp()
+        bool ShouldDropPowerUp(float chance = 0.30f)
         {
             static std::mt19937 rng{ std::random_device{}() };
             static std::uniform_real_distribution<float> dist(0.0f, 1.0f);
-            return dist(rng) < 0.30f;  // 30% drop chance
+            return dist(rng) < chance;
         }
     };
 

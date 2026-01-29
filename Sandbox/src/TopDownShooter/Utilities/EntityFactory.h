@@ -39,11 +39,11 @@ namespace Game {
             // Transform
             auto& transform = player.GetComponent<Pillar::TransformComponent>();
             transform.SetPosition(position);
-            transform.SetScale(glm::vec2(1.0f, 1.0f));
+            transform.SetScale(glm::vec2(1.5f, 1.5f));  // Larger player for visibility
 
             // Sprite - Red mage player character
             auto& sprite = player.AddComponent<Pillar::SpriteComponent>();
-            sprite.Size = glm::vec2(1.0f, 1.0f);
+            sprite.Size = glm::vec2(1.5f, 1.5f);  // Larger player for visibility
             sprite.Texture = Pillar::Texture2D::Create(Pillar::AssetManager::GetTexturePath("red_mage_wearing_a_hood/rotations/south.png"));
             sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);  // White tint (no color change)
             sprite.Layer = "Player";
@@ -54,8 +54,8 @@ namespace Game {
             rb.FixedRotation = true;
             rb.LinearDamping = 8.0f;  // Snappy stop when releasing movement keys
 
-            // Collider - Circle for smooth movement around obstacles
-            auto collider = Pillar::ColliderComponent::Circle(0.4f);
+            // Collider - Circle for smooth movement around obstacles (scaled with player)
+            auto collider = Pillar::ColliderComponent::Circle(0.6f);
             collider.Density = 1.0f;
             collider.Friction = 0.0f;
             collider.CategoryBits = CollisionCategory::Player;

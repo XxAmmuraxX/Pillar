@@ -3,6 +3,7 @@
 #include "Pillar/Core.h"
 #include "Entity.h"
 #include <vector>
+#include <unordered_set>
 #include <functional>
 
 namespace Pillar {
@@ -118,6 +119,7 @@ public:
 private:
 	Scene* m_Scene = nullptr;
 	std::vector<Entity> m_AvailableEntities;
+	std::unordered_set<uint32_t> m_InPoolSet;  // O(1) lookup for double-release prevention
 	uint32_t m_TotalEntities = 0;
 
 	std::function<void(Entity)> m_InitCallback;

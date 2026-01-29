@@ -193,7 +193,7 @@ namespace Game {
             // Configure sprite
             auto& sprite = bullet.GetComponent<Pillar::SpriteComponent>();
             sprite.Texture = m_BulletTexture;
-            sprite.Size = glm::vec2(0.4f, 0.4f);
+            sprite.Size = glm::vec2(0.4f, 0.4f);  // Larger bullets for visibility
             sprite.Color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
             sprite.Layer = "Projectiles";
             sprite.OrderInLayer = 5;

@@ -45,6 +45,18 @@ namespace Game {
             LoadBuffer("player_hurt", "player_hurt.wav");
             LoadBuffer("player_death", "player_dies.wav");
 
+            // Pre-allocate audio source pool to avoid runtime allocation
+            m_SourcePool.reserve(m_MaxConcurrentSounds);
+            for (size_t i = 0; i < m_MaxConcurrentSounds; ++i)
+            {
+                auto source = Pillar::AudioEngine::CreateSource();
+                if (source)
+                {
+                    m_SourcePool.push_back(source);
+                }
+            }
+            PIL_INFO("AudioManager: Pre-allocated {} audio sources", m_SourcePool.size());
+
             // Load background music
             m_MusicBuffer = Pillar::AudioEngine::CreateBuffer(
                 Pillar::AssetManager::GetAudioPath("top_down_shooter_background_loop.wav")
@@ -72,7 +84,7 @@ namespace Game {
                 m_MusicSource->Stop();
                 m_MusicSource.reset();
             }
-            m_ActiveSources.clear();
+            m_SourcePool.clear();
             m_MusicBuffer.reset();
             m_Buffers.clear();
             m_Initialized = false;
@@ -92,33 +104,27 @@ namespace Game {
                 return;
             }
 
-            // Enforce max concurrent sound limit
-            CleanupFinishedSources();
-            if (m_ActiveSources.size() >= m_MaxConcurrentSounds)
+            // Get an available source from the pool (no runtime allocation)
+            auto source = AcquireSource();
+            if (!source)
             {
-                return;  // Skip sound to prevent audio clutter
+                return;  // All sources busy, skip sound
             }
 
-            auto source = Pillar::AudioEngine::CreateSource();
-            if (source)
-            {
-                // Apply random pitch variation for natural feel
-                float pitchVariation = pitch * RandomPitchVariation();
+            // Apply random pitch variation for natural feel
+            float pitchVariation = pitch * RandomPitchVariation();
 
-                source->SetBuffer(it->second);
-                source->SetVolume(volume * m_SFXVolume);
-                source->SetPitch(pitchVariation);
-                source->SetPosition(glm::vec3(position, 0.0f));
+            source->SetBuffer(it->second);
+            source->SetVolume(volume * m_SFXVolume);
+            source->SetPitch(pitchVariation);
+            source->SetPosition(glm::vec3(position, 0.0f));
 
-                // Configure 3D audio settings for better audibility
-                source->SetMinDistance(5.0f);
-                source->SetMaxDistance(50.0f);
-                source->SetRolloffFactor(1.0f);
+            // Configure 3D audio settings for better audibility
+            source->SetMinDistance(5.0f);
+            source->SetMaxDistance(50.0f);
+            source->SetRolloffFactor(1.0f);
 
-                source->Play();
-
-                m_ActiveSources.push_back(source);
-            }
+            source->Play();
         }
 
         // Play sound without position (UI sounds, global effects)
@@ -131,24 +137,18 @@ namespace Game {
                 return;
             }
 
-            CleanupFinishedSources();
-            if (m_ActiveSources.size() >= m_MaxConcurrentSounds)
+            auto source = AcquireSource();
+            if (!source)
             {
                 return;
             }
 
-            auto source = Pillar::AudioEngine::CreateSource();
-            if (source)
-            {
-                float pitchVariation = pitch * RandomPitchVariation();
+            float pitchVariation = pitch * RandomPitchVariation();
 
-                source->SetBuffer(it->second);
-                source->SetVolume(volume * m_SFXVolume);
-                source->SetPitch(pitchVariation);
-                source->Play();
-
-                m_ActiveSources.push_back(source);
-            }
+            source->SetBuffer(it->second);
+            source->SetVolume(volume * m_SFXVolume);
+            source->SetPitch(pitchVariation);
+            source->Play();
         }
 
         // Music controls
@@ -224,16 +224,28 @@ namespace Game {
             }
         }
 
-        // Clean up finished sources to prevent unbounded growth
-        void CleanupFinishedSources()
+        // Get an available source from the pre-allocated pool (LRU eviction)
+        std::shared_ptr<Pillar::AudioSource> AcquireSource()
         {
-            m_ActiveSources.erase(
-                std::remove_if(m_ActiveSources.begin(), m_ActiveSources.end(),
-                    [](const std::shared_ptr<Pillar::AudioSource>& source) {
-                        return source->IsStopped();
-                    }),
-                m_ActiveSources.end()
-            );
+            // Find a stopped source first (free slot)
+            for (auto& source : m_SourcePool)
+            {
+                if (source && source->IsStopped())
+                {
+                    return source;
+                }
+            }
+
+            // All sources busy - use LRU eviction (steal first source)
+            // This ensures we never allocate at runtime
+            if (!m_SourcePool.empty())
+            {
+                auto source = m_SourcePool.front();
+                source->Stop();
+                return source;
+            }
+
+            return nullptr;
         }
 
         // Random pitch variation (0.9 - 1.1) for natural sound
@@ -247,8 +259,8 @@ namespace Game {
         static constexpr size_t m_MaxConcurrentSounds = 16;
         std::unordered_map<std::string, std::shared_ptr<Pillar::AudioBuffer>> m_Buffers;
 
-        // Active sound effect sources (kept alive until playback finishes)
-        std::vector<std::shared_ptr<Pillar::AudioSource>> m_ActiveSources;
+        // Pre-allocated audio source pool (no runtime allocation)
+        std::vector<std::shared_ptr<Pillar::AudioSource>> m_SourcePool;
 
         // Music
         std::shared_ptr<Pillar::AudioBuffer> m_MusicBuffer;

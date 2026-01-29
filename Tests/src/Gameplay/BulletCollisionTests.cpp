@@ -40,7 +40,11 @@ TEST(BulletTests, ParameterizedConstructor_SetsDamage)
 // BulletCollisionSystem Tests
 // ========================================
 
-TEST(BulletCollisionTests, BulletLifetime_ExpiresAfterTime)
+// NOTE: BulletCollisionSystem no longer destroys bullets.
+// Lifetime management and destruction is handled by BulletLifetimeSystem (in game code).
+// These tests verify collision detection behavior, not destruction.
+
+TEST(BulletCollisionTests, BulletLifetime_UpdatesTimeAlive)
 {
 	Scene scene;
 	PhysicsSystem physicsSystem;
@@ -50,24 +54,23 @@ TEST(BulletCollisionTests, BulletLifetime_ExpiresAfterTime)
 	bulletSystem.OnAttach(&scene);
 
 	// Create bullet with short lifetime
-	// TransformComponent already added by CreateEntity
 	Entity bullet = scene.CreateEntity("Bullet");
 	bullet.AddComponent<VelocityComponent>(glm::vec2(10, 0));
 	auto& bulletComp = bullet.AddComponent<BulletComponent>();
-	bulletComp.Lifetime = 1.0f; // 1 second lifetime
+	bulletComp.Lifetime = 1.0f;
+	bulletComp.TimeAlive = 0.0f;
 
 	EXPECT_EQ(scene.GetRegistry().alive(), 1);
 
-	// Update for 0.5 seconds (bullet should still exist)
+	// Update for 0.5 seconds (TimeAlive should be tracked by game's BulletLifetimeSystem)
+	// BulletCollisionSystem only handles collision detection now
 	bulletSystem.OnUpdate(0.5f);
+	
+	// Bullet should still exist (collision system doesn't destroy bullets)
 	EXPECT_EQ(scene.GetRegistry().alive(), 1);
-
-	// Update for another 0.6 seconds (total 1.1 seconds, bullet should be destroyed)
-	bulletSystem.OnUpdate(0.6f);
-	EXPECT_EQ(scene.GetRegistry().alive(), 0);
 }
 
-TEST(BulletCollisionTests, BulletHitsRemaining_DestroysAtZero)
+TEST(BulletCollisionTests, BulletHitsRemaining_StopsAtZero)
 {
 	Scene scene;
 	PhysicsSystem physicsSystem;
@@ -77,7 +80,6 @@ TEST(BulletCollisionTests, BulletHitsRemaining_DestroysAtZero)
 	bulletSystem.OnAttach(&scene);
 
 	// Create bullet
-	// TransformComponent already added by CreateEntity
 	Entity bullet = scene.CreateEntity("Bullet");
 	bullet.AddComponent<VelocityComponent>(glm::vec2(10, 0));
 	auto& bulletComp = bullet.AddComponent<BulletComponent>();
@@ -85,12 +87,15 @@ TEST(BulletCollisionTests, BulletHitsRemaining_DestroysAtZero)
 
 	EXPECT_EQ(scene.GetRegistry().alive(), 1);
 
-	// Update (bullet should be destroyed)
+	// BulletCollisionSystem doesn't destroy bullets - it just detects hits
+	// BulletLifetimeSystem (game code) handles destruction based on HitsRemaining
 	bulletSystem.OnUpdate(0.016f);
-	EXPECT_EQ(scene.GetRegistry().alive(), 0);
+	
+	// Bullet still exists (cleanup is done by BulletLifetimeSystem)
+	EXPECT_EQ(scene.GetRegistry().alive(), 1);
 }
 
-TEST(BulletCollisionTests, MultipleBullets_AllProcessed)
+TEST(BulletCollisionTests, MultipleBullets_AllExist)
 {
 	Scene scene;
 	PhysicsSystem physicsSystem;
@@ -100,7 +105,6 @@ TEST(BulletCollisionTests, MultipleBullets_AllProcessed)
 	bulletSystem.OnAttach(&scene);
 
 	// Create multiple bullets with different lifetimes
-	// TransformComponent already added by CreateEntity for all
 	Entity bullet1 = scene.CreateEntity("Bullet1");
 	bullet1.AddComponent<VelocityComponent>(glm::vec2(10, 0));
 	auto& b1 = bullet1.AddComponent<BulletComponent>();
@@ -118,15 +122,13 @@ TEST(BulletCollisionTests, MultipleBullets_AllProcessed)
 
 	EXPECT_EQ(scene.GetRegistry().alive(), 3);
 
-	// Update for 0.6 seconds (bullet1 should be destroyed)
+	// BulletCollisionSystem only detects collisions, doesn't manage lifetime
 	bulletSystem.OnUpdate(0.6f);
-	EXPECT_EQ(scene.GetRegistry().alive(), 2);
+	EXPECT_EQ(scene.GetRegistry().alive(), 3);  // All still exist
 
-	// Update for another 0.5 seconds (bullet2 should be destroyed)
 	bulletSystem.OnUpdate(0.5f);
-	EXPECT_EQ(scene.GetRegistry().alive(), 1);
+	EXPECT_EQ(scene.GetRegistry().alive(), 3);  // All still exist
 
-	// Update for another 0.5 seconds (bullet3 should be destroyed)
 	bulletSystem.OnUpdate(0.5f);
-	EXPECT_EQ(scene.GetRegistry().alive(), 0);
+	EXPECT_EQ(scene.GetRegistry().alive(), 3);  // All still exist
 }

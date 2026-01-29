@@ -32,6 +32,7 @@ namespace Game {
 
             auto& registry = m_Scene->GetRegistry();
             std::vector<entt::entity> toDestroy;
+            toDestroy.reserve(64);  // Pre-allocate to avoid reallocation
 
             auto view = registry.view<Pillar::BulletComponent>();
 
@@ -42,20 +43,14 @@ namespace Game {
                 // Update time alive
                 bullet.TimeAlive += dt;
 
-                // Check if expired
-                if (bullet.TimeAlive >= bullet.Lifetime)
-                {
-                    toDestroy.push_back(entity);
-                }
-
-                // Check if out of hits
-                if (bullet.HitsRemaining == 0)
+                // Check if expired OR out of hits (use single condition to prevent double-push)
+                if (bullet.TimeAlive >= bullet.Lifetime || bullet.HitsRemaining <= 0)
                 {
                     toDestroy.push_back(entity);
                 }
             }
 
-            // Destroy expired bullets
+            // Return expired bullets to pool
             for (auto entity : toDestroy)
             {
                 Pillar::Entity e(entity, m_Scene);
